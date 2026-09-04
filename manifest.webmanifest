@@ -1,0 +1,19 @@
+{
+  "name": "CONOX 2D EEG Simulator",
+  "short_name": "CONOX",
+  "description": "CONOX 2D EEG Simulator with iPad display and iPhone controller modes.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#071118",
+  "theme_color": "#004f99",
+  "icons": [
+    {
+      "src": "./images/conox-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
