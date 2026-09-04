@@ -81,6 +81,37 @@ canvas {
   align-items: center;
   gap: 8px;
 }
+.sb-language-switch {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid #526b78;
+  border-radius: 5px;
+  background: #0c1820;
+}
+.sb-language-switch button {
+  min-width: 38px;
+  padding: 8px 9px;
+  border: 0;
+  border-right: 1px solid #526b78;
+  background: transparent;
+  color: #a8bac3;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+.sb-language-switch button:last-child {
+  border-right: 0;
+}
+.sb-language-switch button.active {
+  background: linear-gradient(180deg, #2b4d61, #18313f);
+  color: #d7f5ff;
+}
+.sb-language-switch button:hover {
+  color: #ffffff;
+}
+.sb-language-switch button.active:hover {
+  color: #ffffff;
+}
 .sb-conox-link {
   padding: 8px 12px;
   border: 1px solid #526b78;
@@ -3042,6 +3073,23 @@ footer {
 }
 .sb-btn:hover {
   border-color: var(--fk-blue-dark);
+  background: var(--fk-blue-dark);
+  color: #fff;
+}
+.sb-language-switch {
+  border-color: var(--fk-blue);
+  background: var(--fk-blue);
+}
+.sb-language-switch button {
+  border-right-color: #ffffff40;
+  color: #eaf4fc;
+}
+.sb-language-switch button.active {
+  background: var(--fk-blue-dark);
+  color: #fff;
+}
+.sb-language-switch button:hover,
+.sb-language-switch button.active:hover {
   background: var(--fk-blue-dark);
   color: #fff;
 }

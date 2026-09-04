@@ -11,6 +11,7 @@ const requiredFiles = [
   "src/data/scenarios.js",
   "src/data/journey.js",
   "src/data/knowledge.js",
+  "src/i18n/index.js",
   "src/simulation/engine.js",
   "public/documents/CONOX_2D_Kontaktvorlage.oft",
   "public/documents/CONOX_2D_Produktbroschuere.pdf",

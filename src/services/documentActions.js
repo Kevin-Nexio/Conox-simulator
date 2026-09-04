@@ -1,3 +1,5 @@
+import { translateStatic } from "../i18n/index.js";
+
 const documentPath = (filename) =>
   `${import.meta.env.BASE_URL}documents/${filename}`;
 
@@ -34,9 +36,7 @@ function downloadOutlookTemplate() {
   download.click();
   download.remove();
 
-  showToast(
-    "Outlook-Template mit Broschüre und Datenblatt bereitgestellt. Bitte die heruntergeladene OFT-Datei öffnen und Empfänger sowie Anrede ergänzen.",
-  );
+  showToast(translateStatic("docs.toast"));
 }
 
 export function initializeDocumentActions() {

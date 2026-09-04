@@ -23,6 +23,14 @@ npm run build
 
 Der fertige Build entsteht in `dist/`.
 
+## Online-Version
+
+Die GitHub-Pages-Version wird bei jedem Push auf `main` automatisch gebaut und veröffentlicht:
+
+<https://Kevin-Nexio.github.io/Conox-simulator/>
+
+Falls die Seite noch nicht erscheint, in GitHub unter `Settings` → `Pages` die Quelle `GitHub Actions` auswählen.
+
 Vollständige Struktur-, Formatierungs- und Build-Prüfung:
 
 ```bash
@@ -74,6 +82,8 @@ npm run format
     │   ├── scenarioFactories.js
     │   ├── scenarios.js
     │   └── index.js
+    ├── i18n/
+    │   └── index.js
     ├── services/
     │   └── documentActions.js
     ├── simulation/
@@ -91,6 +101,7 @@ npm run format
 - `src/data/scenarios.js`: auswählbare Fallbeispiele
 - `src/data/journey.js`: zeitlicher Ablauf der Narkose-Reise
 - `src/data/knowledge.js`: Inhalte von „RAW EEG Knowledge“
+- `src/i18n/index.js`: Sprachumschaltung und Texte für Deutsch, Französisch und Englisch
 - `src/simulation/engine.js`: Interpolation, Ereignishüllen, DSA-Farblogik, Spektral- und Indexberechnung
 - `src/services/documentActions.js`: Broschüre, Datenblatt und Outlook-Kontaktvorlage
 - `src/styles/app.css`: vollständiges Layout und Monitor-Styling

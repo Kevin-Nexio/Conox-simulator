@@ -2,13 +2,10 @@ import * as React from "react";
 import {
   DEFAULT_RENDER_SETTINGS,
   EFFECT_LEVELS,
-  DRUG_PROFILES,
-  SCENARIOS,
   NARKOSE_REISE_DAUER,
-  NARKOSE_REISE,
-  EEG_KNOWLEDGE,
   DSA_COLOR_STOPS,
 } from "./data/index.js";
+import { createI18n, getInitialLocale, LOCALES } from "./i18n/index.js";
 import {
   clamp,
   smoothstep,
@@ -26,10 +23,7 @@ import {
   calculateIndices,
   classifyClinicalState,
 } from "./simulation/engine.js";
-import {
-  DISPLAY_VIEWS,
-  renderDisplayViewIcon as DisplayViewIconFor,
-} from "./components/DisplayViewIcon.jsx";
+import { renderDisplayViewIcon as DisplayViewIconFor } from "./components/DisplayViewIcon.jsx";
 import {
   TrendChart,
   Metric,
@@ -38,6 +32,16 @@ import {
   FactRow,
 } from "./components/UiPrimitives.jsx";
 export default function App() {
+  const [locale, setLocale] = React.useState(getInitialLocale);
+  const {
+    t,
+    tr,
+    displayViews: DISPLAY_VIEWS,
+    drugProfiles: DRUG_PROFILES,
+    scenarios: SCENARIOS,
+    getJourney: NARKOSE_REISE,
+    eegKnowledge: EEG_KNOWLEDGE,
+  } = React.useMemo(() => createI18n(locale), [locale]);
   const DEFAULT_SCENARIO =
     SCENARIOS.find((A) => A.id === "target-a") ?? SCENARIOS[0];
   const [activePanel, setActivePanel] = React.useState("monitor"),
@@ -89,7 +93,7 @@ export default function App() {
     [bolusActive, setBolusActive] = React.useState(!1),
     [bolusProgress, setBolusProgress] = React.useState(0),
     [journeyRunning, setJourneyRunning] = React.useState(!1),
-    [journeyPhase, setJourneyPhase] = React.useState("Bereit"),
+    [journeyPhase, setJourneyPhase] = React.useState(t("journey.ready")),
     [journeyProgress, setJourneyProgress] = React.useState(0),
     rawEegCanvasRef = React.useRef(null),
     dsaCanvasRef = React.useRef(null),
@@ -137,6 +141,10 @@ export default function App() {
       qconAlarmEnabled &&
       (currentIndices.qcon < qconAlarmMin ||
         currentIndices.qcon > qconAlarmMax);
+  React.useEffect(() => {
+    window.localStorage.setItem("conox.locale", locale);
+    document.documentElement.lang = locale;
+  }, [locale]);
   (React.useEffect(() => {
     simulationConfigRef.current = {
       drug: primaryDrug,
@@ -286,8 +294,8 @@ export default function App() {
             (Z.burstEnvelope = Uu),
             eegStatusRef.current &&
               (eegStatusRef.current.textContent = Z.suppressed
-                ? "EEG · SUPPRESSION"
-                : "EEG · AKTIV"));
+                ? t("eeg.status.suppression")
+                : t("eeg.status.active")));
           const Oa = new Array(fe),
             Ia = clamp((Ne - 0.1) / 0.52, 0, 1),
             Ru = Ia * Ia * (3 - 2 * Ia),
@@ -734,7 +742,7 @@ export default function App() {
             cancelAnimationFrame(ve));
         }
       );
-    }, []),
+    }, [t]),
     React.useEffect(() => {
       const A = rawEegCanvasRef.current;
       if (!A) return;
@@ -1103,7 +1111,7 @@ export default function App() {
         R.stroke(),
         (R.fillStyle = "#8ba0aa"),
         (R.font = "11px Arial"),
-        R.fillText("2 Sekunden", 10, A.height - 10),
+        R.fillText(t("learn.canvasWindow"), 10, A.height - 10),
         (R.fillStyle = "#dce8ec"),
         (R.font = "bold 12px Arial"),
         R.fillText(me.title, 10, 18),
@@ -1199,7 +1207,7 @@ export default function App() {
         G === 0 ? R.moveTo(G, Ze) : R.lineTo(G, Ze);
       }
       R.stroke();
-    }, [activePanel, selectedKnowledgeTopic]));
+    }, [activePanel, selectedKnowledgeTopic, t]));
   const trendSamples = React.useMemo(() => {
       const A = dsaPeriodMinutes === 1 ? 60 : dsaPeriodMinutes * 60,
         R = trendHistory.slice(-(A + 1)),
@@ -1215,7 +1223,7 @@ export default function App() {
       }));
     }, [trendHistory, dsaPeriodMinutes]),
     formatTimelineLabel = (A) => {
-      if (A === 4) return "jetzt";
+      if (A === 4) return t("timeline.now");
       if (dsaPeriodMinutes === 1) return `−${60 - A * 15} s`;
       const R = dsaPeriodMinutes - (A / 4) * dsaPeriodMinutes;
       return dsaPeriodMinutes >= 60
@@ -1260,71 +1268,73 @@ export default function App() {
       getEventEnvelope(It, simulationStateRef.current.time) > 0.08,
     Ou =
       eventKind === "alphaDropout"
-        ? "Alpha 8–13 Hz transient reduziert"
+        ? tr("Alpha 8–13 Hz transient reduziert")
         : eventKind === "deltaArousal"
-          ? "Delta 0,5–4 Hz ↑ · Alpha 8–13 Hz ↓"
+          ? tr("Delta 0,5–4 Hz ↑ · Alpha 8–13 Hz ↓")
           : eventKind === "emgArtifact"
-            ? "Breitbandige schnelle Aktivität / EMG"
+            ? tr("Breitbandige schnelle Aktivität / EMG")
             : eventKind === "betaArousal" || eventKind === "nociceptiveBeta"
-              ? "Alpha/Slow ↓ · Beta 12–25 Hz ↑"
+              ? tr("Alpha/Slow ↓ · Beta 12–25 Hz ↑")
               : (It.spindleStrength ?? 0) > 0.7
-                ? "Slow/Delta + Spindles 12–16 Hz"
+                ? tr("Slow/Delta + Spindles 12–16 Hz")
                 : (It.arousalStrength ?? 0) > 0
-                  ? "Alpha/Slow → Beta/Low-Gamma"
+                  ? tr("Alpha/Slow → Beta/Low-Gamma")
                   : It.suppressAlpha
-                    ? "Delta 0,5–4 Hz · Alpha 8–13 Hz nicht erkennbar"
+                    ? tr("Delta 0,5–4 Hz · Alpha 8–13 Hz nicht erkennbar")
                     : ju
-                      ? "Delta 0,5–4 Hz + Alpha 8–13 Hz"
-                      : {
-                          delta: "Delta · 0,5–4 Hz",
-                          theta: "Theta · 4–8 Hz",
-                          alpha: "Alpha · 8–13 Hz",
-                          beta: "Beta · 13–30 Hz",
-                          gamma: "Gamma · 30–45 Hz",
-                        }[ja[0][0]],
+                      ? tr("Delta 0,5–4 Hz + Alpha 8–13 Hz")
+                      : tr(
+                          {
+                            delta: "Delta · 0,5–4 Hz",
+                            theta: "Theta · 4–8 Hz",
+                            alpha: "Alpha · 8–13 Hz",
+                            beta: "Beta · 13–30 Hz",
+                            gamma: "Gamma · 30–45 Hz",
+                          }[ja[0][0]],
+                        ),
     Et = eventKind
       ? eventIsActive
         ? eventKind === "alphaDropout"
-          ? "Alpha-Dropout · Reizantwort"
+          ? tr("Alpha-Dropout · Reizantwort")
           : eventKind === "deltaArousal"
-            ? "Paradoxes Delta-Arousal"
+            ? tr("Paradoxes Delta-Arousal")
             : eventKind === "emgArtifact"
-              ? "EMG-/Muskelartefakt"
+              ? tr("EMG-/Muskelartefakt")
               : eventKind === "nociceptiveBeta"
-                ? "Ausgeprägte Aktivierungsreaktion"
-                : "Beta-Arousal · Aktivierungsreaktion"
-        : "Stabile Ausgangsaktivität · Reizantwort folgt"
+                ? tr("Ausgeprägte Aktivierungsreaktion")
+                : tr("Beta-Arousal · Aktivierungsreaktion")
+        : tr("Stabile Ausgangsaktivität · Reizantwort folgt")
       : It.bs > 12
-        ? "Burst Suppression / Diskontinuität"
+        ? tr("Burst Suppression / Diskontinuität")
         : (It.spindleStrength ?? 0) > 0.7
-          ? "Spindelpakete auf Slow/Delta"
+          ? tr("Spindelpakete auf Slow/Delta")
           : (It.arousalStrength ?? 0) > 0
-            ? "Transiente Aktivierungsreaktion"
+            ? tr("Transiente Aktivierungsreaktion")
             : It.suppressAlpha
-              ? "Delta-dominant ohne Alpha-Peak"
+              ? tr("Delta-dominant ohne Alpha-Peak")
               : ju
-                ? "Alpha/Delta-Komplex"
+                ? tr("Alpha/Delta-Komplex")
                 : zt?.simple === "Schnelle Aktivität"
-                  ? "Schnelle Mischaktivität"
+                  ? tr("Schnelle Mischaktivität")
                   : zt?.simple === "Theta"
-                    ? "Theta-betontes Muster"
+                    ? tr("Theta-betontes Muster")
                     : zt?.simple === "Delta"
-                      ? "Delta-dominantes Muster"
+                      ? tr("Delta-dominantes Muster")
                       : zt?.simple === "Suppression"
-                        ? "Suppression"
+                        ? tr("Suppression")
                         : `${ja[0][0][0].toUpperCase()}${ja[0][0].slice(1)} dominant`,
     ki =
       $a.zone === "red"
-        ? "Suppressionsmuster klinisch prüfen"
+        ? tr("Suppressionsmuster klinisch prüfen")
         : $a.zone === "yellow"
-          ? "Übergang mit Verlauf und Klinik abgleichen"
-          : "Kontinuierliches Zielbild",
+          ? tr("Übergang mit Verlauf und Klinik abgleichen")
+          : tr("Kontinuierliches Zielbild"),
     _u = Object.keys(DRUG_PROFILES).filter(
       (A) => A !== "awake" && A !== primaryDrug,
     ),
     ol = () => {
       (setJourneyRunning(!1),
-        setJourneyPhase("Bereit"),
+        setJourneyPhase(t("journey.ready")),
         (scenarioProfileRef.current = null),
         (scenarioIndicesRef.current = null),
         setSelectedScenarioId(null),
@@ -1333,7 +1343,7 @@ export default function App() {
     ea = (A, R = !1) => {
       (R ||
         (setJourneyRunning(!1),
-        setJourneyPhase("Bereit"),
+        setJourneyPhase(t("journey.ready")),
         setJourneyProgress(0)),
         (scenarioProfileRef.current = A.profile),
         (scenarioIndicesRef.current = A.indices),
@@ -1487,9 +1497,7 @@ export default function App() {
         "popup=yes,width=1180,height=840,resizable=yes,scrollbars=no",
       );
       if (!A) {
-        window.alert(
-          "Das CONOX Window wurde vom Browser blockiert. Bitte Pop-ups für diese Datei erlauben.",
-        );
+        window.alert(t("popup.blocked"));
         return;
       }
       const R = [...document.querySelectorAll("style")]
@@ -1498,7 +1506,7 @@ export default function App() {
         me = new URL(".", document.baseURI).href;
       (A.document.open(),
         A.document.write(`<!doctype html>
-<html lang="de">
+<html lang="${locale}">
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1547,7 +1555,7 @@ body.sb-shell,
     </style>
   </head>
   <body class="sb-shell">
-    <div id="conox-window-root" aria-label="Gespiegelter CONOX Monitor"></div>
+    <div id="conox-window-root" aria-label="${t("popup.aria")}"></div>
   </body>
 </html>`),
         A.document.close(),
@@ -1601,7 +1609,7 @@ body.sb-shell,
     Jr = () => {
       if (journeyRunning) {
         (setJourneyRunning(!1),
-          setJourneyPhase("Beendet"),
+          setJourneyPhase(t("journey.stopped")),
           setJourneyProgress(0));
         return;
       }
@@ -1636,21 +1644,33 @@ body.sb-shell,
         ),
         me.elapsed >= NARKOSE_REISE_DAUER &&
           (setJourneyRunning(!1),
-          setJourneyPhase("Abgeschlossen · wach"),
+          setJourneyPhase(t("journey.done")),
           setJourneyProgress(100)));
     }, 250);
     return () => window.clearInterval(A);
-  }, [journeyRunning, simulationRunning]);
+  }, [journeyRunning, simulationRunning, NARKOSE_REISE, t]);
   return (
     <main className="sb-shell">
       <header className="sb-header">
         <div className="sb-header-title">
           <strong>{"CONOX 2D EEG Simulator"}</strong>
-          <small>
-            {"RAW EEG · DSA · qCON / qNOX · synthetische Lernsignale"}
-          </small>
+          <small>{t("app.subtitle")}</small>
         </div>
         <div className="sb-header-actions">
+          <div className="sb-language-switch" aria-label="Language">
+            {LOCALES.map((item) => (
+              <button
+                key={item.code}
+                type="button"
+                className={locale === item.code ? "active" : ""}
+                title={item.name}
+                aria-pressed={locale === item.code}
+                onClick={() => setLocale(item.code)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
           <button className="sb-btn" type="button" onClick={openConoxWindow}>
             {"CONOX Window"}
           </button>
@@ -1664,7 +1684,7 @@ body.sb-shell,
               href="https://www.fresenius-kabi.com/de-ch"
               target="_blank"
               rel="noreferrer"
-              aria-label="Fresenius Kabi Schweiz öffnen"
+              aria-label={t("brand.open")}
             >
               <img
                 src="./images/fresenius-kabi-logo.png"
@@ -1676,30 +1696,29 @@ body.sb-shell,
               type="button"
               className={`sb-live-switch ${liveSync ? "on" : "off"}`}
               aria-pressed={liveSync}
-              aria-label={
-                liveSync
-                  ? "LIVE an: RAW EEG, DSA und Indexwerte synchron"
-                  : "LIVE aus: Original-Latenzen aktiv"
-              }
+              aria-label={liveSync ? t("live.on") : t("live.off")}
               onClick={toggleLiveSync}
             >
               <span className="sb-live-dot" aria-hidden="true" />
               <strong>{"LIVE"}</strong>
-              <small>{liveSync ? "AN · SYNCHRON" : "AUS · ORIGINAL"}</small>
+              <small>
+                {liveSync ? t("live.status.on") : t("live.status.off")}
+              </small>
             </button>
             <button
               type="button"
               className={`sb-qcon-alarm-key ${qconAlarmEnabled ? "on" : "off"} ${qconAlarmTriggered ? "alert" : ""}`}
               aria-pressed={qconAlarmEnabled}
               aria-label={
-                qconAlarmEnabled
-                  ? "qCON-Hinweissignal deaktivieren"
-                  : "qCON-Hinweissignal aktivieren"
+                qconAlarmEnabled ? t("alarm.disable") : t("alarm.enable")
               }
               title={
                 qconAlarmEnabled
-                  ? `qCON-Alarm aktiv · ${qconAlarmMin}–${qconAlarmMax}`
-                  : "qCON-Hinweissignal aktivieren"
+                  ? t("alarm.activeTitle", {
+                      min: qconAlarmMin,
+                      max: qconAlarmMax,
+                    })
+                  : t("alarm.enable")
               }
               onClick={toggleQconAlarm}
             >
@@ -1736,7 +1755,7 @@ body.sb-shell,
                 >
                   <div className="sb-signal-caption">
                     <b>{"EEG"}</b>
-                    <span>{"Frontal · 0,5–45 Hz"}</span>
+                    <span>{t("eeg.frontal")}</span>
                     <em>
                       {eegWindowSeconds}
                       {" s"}
@@ -1753,7 +1772,7 @@ body.sb-shell,
                       ref={rawEegCanvasRef}
                       width={1e3}
                       height={170}
-                      aria-label="Synthetisches frontales Raw EEG"
+                      aria-label={t("eeg.rawLabel")}
                     />
                   </div>
                   {eegHintsEnabled && (
@@ -1774,15 +1793,15 @@ body.sb-shell,
                 >
                   <div className="sb-signal-caption">
                     <b>{"DSA"}</b>
-                    <span ref={eegStatusRef}>{"EEG · AKTIV"}</span>
-                    <em>{"Übergang 2,8 s"}</em>
+                    <span ref={eegStatusRef}>{t("eeg.status.active")}</span>
+                    <em>{t("dsa.transition")}</em>
                     <div className="sb-dsa-caption-actions">
                       <button
                         type="button"
                         className={`sb-sef-toggle ${sef50Visible ? "active" : ""}`}
                         aria-pressed={sef50Visible}
                         onClick={() => setSef50Visible((A) => !A)}
-                        title="SEF50-Trend im Spektrogramm ein- oder ausblenden"
+                        title={t("dsa.sef50Title")}
                       >
                         {"SEF50"}
                         <i aria-hidden="true" />
@@ -1792,7 +1811,7 @@ body.sb-shell,
                         className={`sb-sef-toggle sef95 ${sef95Visible ? "active" : ""}`}
                         aria-pressed={sef95Visible}
                         onClick={() => setSef95Visible((A) => !A)}
-                        title="SEF95-Trend im Spektrogramm ein- oder ausblenden"
+                        title={t("dsa.sef95Title")}
                       >
                         {"SEF95"}
                         <i aria-hidden="true" />
@@ -1807,11 +1826,11 @@ body.sb-shell,
                         }
                         title={
                           displayView === "dsa-only"
-                            ? "EEG-Wellenform wieder anzeigen"
-                            : "Nur das Spektrogramm anzeigen"
+                            ? t("dsa.showEeg")
+                            : t("dsa.onlyTitle")
                         }
                       >
-                        {displayView === "dsa-only" ? "EEG" : "Nur DSA"}
+                        {displayView === "dsa-only" ? "EEG" : t("dsa.only")}
                       </button>
                     </div>
                   </div>
@@ -1827,14 +1846,14 @@ body.sb-shell,
                         ref={dsaCanvasRef}
                         width={900}
                         height={260}
-                        aria-label="Synthetisches DSA von 0 bis 45 Hertz"
+                        aria-label={t("dsa.label")}
                       />
                       <canvas
                         ref={dsaOverlayRef}
                         className="sb-sef-overlay"
                         width={900}
                         height={260}
-                        aria-label="SEF50- und SEF95-Trend im Spektrogramm"
+                        aria-label={t("dsa.sefLabel")}
                       />
                       <div className="sb-band-guides" aria-hidden="true">
                         <i
@@ -1863,7 +1882,7 @@ body.sb-shell,
                       <div
                         className="sb-db-gradient"
                         role="img"
-                        aria-label="dB Farbskala"
+                        aria-label={t("dsa.scale")}
                       />
                       <div className="sb-db-labels">
                         <span>{"+"}</span>
@@ -1910,18 +1929,23 @@ body.sb-shell,
                   <small>
                     {qconAlarmTriggered
                       ? currentIndices.qcon < qconAlarmMin
-                        ? `qCON-Alarm · unter ${qconAlarmMin}`
-                        : `qCON-Alarm · über ${qconAlarmMax}`
+                        ? t("alarm.below", { min: qconAlarmMin })
+                        : t("alarm.above", { max: qconAlarmMax })
                       : qconAlarmEnabled
-                        ? `Alarm ${qconAlarmMin}–${qconAlarmMax} aktiv`
+                        ? t("alarm.active", {
+                            min: qconAlarmMin,
+                            max: qconAlarmMax,
+                          })
                         : liveSync
-                          ? "Synchron · ohne Latenz"
-                          : "Anzeige verzögert ≈20 s"}
+                          ? t("alarm.sync")
+                          : t("alarm.delayed")}
                   </small>
                 </section>
                 <div
                   className="sb-view-switch"
-                  aria-label={`Displayansicht · aktiv: ${DISPLAY_VIEWS[displayView].label}`}
+                  aria-label={t("display.viewAria", {
+                    label: DISPLAY_VIEWS[displayView].label,
+                  })}
                 >
                   {displayChoices.map((A, R) => (
                     <button
@@ -1939,7 +1963,7 @@ body.sb-shell,
                 </div>
                 <section
                   className={`sb-trendbox ${["eeg-index", "dsa-index", "all"].includes(displayView) ? "" : "hidden"} ${displayView === "all" ? "layout-all-bottom" : ""}`}
-                  aria-label="Indexverlauf"
+                  aria-label={t("display.trendAria")}
                   aria-hidden={
                     !["eeg-index", "dsa-index", "all"].includes(displayView)
                   }
@@ -1970,9 +1994,9 @@ body.sb-shell,
                   </div>
                 </section>
                 <section className="sb-assistant sb-case-picker">
-                  <h3>{"Fallbeispiele"}</h3>
+                  <h3>{t("cases.title")}</h3>
                   <label>
-                    <span>{"Situation auswählen"}</span>
+                    <span>{t("cases.select")}</span>
                     <select
                       value={selectedScenarioId ?? ""}
                       onChange={(A) => {
@@ -1981,15 +2005,15 @@ body.sb-shell,
                         );
                         R && ea(R);
                       }}
-                      aria-label="Fallbeispiel auswählen"
+                      aria-label={t("cases.aria")}
                     >
                       {zt?.group === "journey" && (
-                        <option
-                          value={zt.id}
-                        >{`Narkose-Reise · ${zt.name}`}</option>
+                        <option value={zt.id}>
+                          {t("cases.journey", { name: zt.name })}
+                        </option>
                       )}
                       {!selectedScenarioId && (
-                        <option value="">{"Freie Simulation aktiv"}</option>
+                        <option value="">{t("cases.free")}</option>
                       )}
                       {SCENARIOS.map((A) => (
                         <option key={A.id} value={A.id}>
@@ -1999,7 +2023,7 @@ body.sb-shell,
                     </select>
                   </label>
                   <button type="button" onClick={wi}>
-                    {"Zufällige Auswahl"}
+                    {t("cases.random")}
                   </button>
                   <button
                     type="button"
@@ -2011,25 +2035,27 @@ body.sb-shell,
                       )
                     }
                   >
-                    {simulationRunning ? "Pause" : "Fortsetzen"}
+                    {simulationRunning
+                      ? t("control.pause")
+                      : t("control.resume")}
                   </button>
                 </section>
                 <div
                   className={`sb-monitor-footer ${eegHintsEnabled ? "analysis-on" : "analysis-off"}`}
-                  aria-label="Mustererkennung"
+                  aria-label={t("analysis.aria")}
                 >
                   {eegHintsEnabled ? (
                     <>
                       <span>
-                        <b>{"EEG-Muster"}</b>
+                        <b>{t("analysis.pattern")}</b>
                         {Et}
                       </span>
                       <span>
-                        <b>{"Dominant"}</b>
+                        <b>{t("analysis.dominant")}</b>
                         {Ou}
                       </span>
                       <span>
-                        <b>{"Beurteilung"}</b>
+                        <b>{t("analysis.assessment")}</b>
                         {ki}
                       </span>
                     </>
@@ -2047,17 +2073,14 @@ body.sb-shell,
               <img src="./images/conox-wordmark.png" alt="CONOX" />
             </div>
           </div>
-          <div
-            className="sb-device-actions"
-            aria-label="CONOX Dokumente und Kontakt"
-          >
+          <div className="sb-device-actions" aria-label={t("docs.aria")}>
             <a
               href="#"
               data-embedded-pdf="conox-brochure-pdf"
               target="_blank"
               rel="noreferrer"
             >
-              {"Broschüre"}
+              {t("docs.brochure")}
             </a>
             <a
               href="#"
@@ -2065,28 +2088,28 @@ body.sb-shell,
               target="_blank"
               rel="noreferrer"
             >
-              {"Datenblatt"}
+              {t("docs.datasheet")}
             </a>
             <a
               href="#"
               data-conox-email-draft="true"
-              title="Outlook-Template mit Broschüre und Datenblatt öffnen"
+              title={t("docs.contactTitle")}
             >
-              {"Kontakt"}
+              {t("docs.contact")}
             </a>
           </div>
           <section
             className="sb-simulator-launch sb-journey-launch"
-            aria-label="Narkose-Reise"
+            aria-label={t("journey.title")}
           >
             <div>
-              <b>{"Narkose-Reise"}</b>
+              <b>{t("journey.title")}</b>
               <span>
                 {journeyRunning
-                  ? `Aktiv · ${journeyPhase}`
-                  : journeyPhase === "Abgeschlossen · wach"
+                  ? t("journey.active", { phase: journeyPhase })
+                  : journeyPhase === t("journey.done")
                     ? journeyPhase
-                    : "Wach → Einleitung → Spindles → Arousal → Suppression → Ausleitung"}
+                    : t("journey.default")}
               </span>
               <div className="sb-journey-progress">
                 <i
@@ -2097,19 +2120,14 @@ body.sb-shell,
               </div>
             </div>
             <button type="button" className="sb-btn" onClick={Jr}>
-              {journeyRunning ? "Reise beenden" : "Narkose-Reise starten"}
+              {journeyRunning ? t("journey.stop") : t("journey.start")}
             </button>
           </section>
-          <section
-            className="sb-simulator-launch"
-            aria-label="Simulatorsteuerung"
-          >
+          <section className="sb-simulator-launch" aria-label={t("sim.aria")}>
             <div>
-              <b>{"Medikamentensimulator"}</b>
+              <b>{t("sim.title")}</b>
               <span>
-                {simulatorEnabled
-                  ? "Freie Wirkstoffsimulation eingeblendet"
-                  : "Ausgeblendet · Fallbeispiele steuern den Monitor"}
+                {simulatorEnabled ? t("sim.freeShown") : t("sim.hidden")}
               </span>
             </div>
             <label className="sb-simulator-mode">
@@ -2118,29 +2136,29 @@ body.sb-shell,
                 value={simulatorEnabled ? "active" : "inactive"}
                 onChange={(A) => Ji(A.target.value)}
                 data-testid="simulator-mode"
-                aria-label="Simulator aktivieren oder deaktivieren"
+                aria-label={t("sim.toggleAria")}
               >
-                <option value="inactive">{"Inaktiv"}</option>
-                <option value="active">{"Aktiv"}</option>
+                <option value="inactive">{t("sim.inactive")}</option>
+                <option value="active">{t("sim.active")}</option>
               </select>
             </label>
           </section>
           {simulatorEnabled && (
             <section
               className="sb-simulator active"
-              aria-label="Medikamentensimulator"
+              aria-label={t("sim.title")}
             >
               <header>
                 <div>
                   <span>{"MEDIKAMENTENSIMULATOR"}</span>
-                  <h2>{"Freie Simulation"}</h2>
+                  <h2>{t("sim.heading")}</h2>
                 </div>
               </header>
-              <p>{"Wirkstoffe und Wirkstufen frei verändern."}</p>
+              <p>{t("sim.copy")}</p>
               <fieldset>
                 <div className="sb-simulator-grid">
                   <SelectField
-                    label="Hauptwirkstoff"
+                    label={t("sim.primary")}
                     value={primaryDrug}
                     onChange={(A) => {
                       (setPrimaryDrug(A),
@@ -2156,36 +2174,34 @@ body.sb-shell,
                   {primaryDrug !== "awake" ? (
                     <rf
                       compact={!0}
-                      label="Wirkstufe"
+                      label={t("sim.level")}
                       value={primaryLevel}
                       onChange={(A) => {
                         (setPrimaryLevel(A), ol());
                       }}
                     />
                   ) : (
-                    <div className="sb-awake-note">
-                      {"Wachreferenz · keine Wirkstufe"}
-                    </div>
+                    <div className="sb-awake-note">{t("sim.awakeNote")}</div>
                   )}
                   <SelectField
-                    label="Sedierendes Adjuvans"
+                    label={t("sim.adjunct")}
                     value={adjunctDrug}
                     onChange={(A) => {
                       (setAdjunctDrug(A), ol());
                     }}
                     options={[
-                      ["none", "Kein Adjuvans"],
+                      ["none", t("sim.noAdjunct")],
                       ..._u.map((A) => [A, DRUG_PROFILES[A].label]),
                     ]}
                   />
                   <SelectField
-                    label="Opioid"
+                    label={t("sim.opioid")}
                     value={opioidDrug}
                     onChange={(A) => {
                       (setOpioidDrug(A), ol());
                     }}
                     options={[
-                      ["none", "Kein Opioid"],
+                      ["none", t("sim.noOpioid")],
                       ["remifentanil", "Remifentanil"],
                       ["fentanyl", "Fentanyl"],
                       ["sufentanil", "Sufentanil"],
@@ -2196,7 +2212,7 @@ body.sb-shell,
                   {adjunctDrug !== "none" && (
                     <rf
                       compact={!0}
-                      label="Adjuvans-Stufe"
+                      label={t("sim.adjunctLevel")}
                       value={adjunctLevel}
                       onChange={(A) => {
                         (setAdjunctLevel(A), ol());
@@ -2206,7 +2222,7 @@ body.sb-shell,
                   {opioidDrug !== "none" && (
                     <rf
                       compact={!0}
-                      label="Opioid-Stufe"
+                      label={t("sim.opioidLevel")}
                       value={opioidLevel}
                       onChange={(A) => {
                         (setOpioidLevel(A), ol());
@@ -2216,9 +2232,7 @@ body.sb-shell,
                 </div>
                 {opioidDrug === "sufentanil" && (
                   <div className="sb-simulator-note">
-                    {
-                      "Sufentanil: mit zunehmender Wirkung mehr Delta-/Theta-Leistung und weniger schnelle Aktivität. Analgesie und Bewusstsein bleiben getrennt zu beurteilen."
-                    }
+                    {t("sim.sufentanilNote")}
                   </div>
                 )}
                 <div className="sb-simulator-actions">
@@ -2229,21 +2243,21 @@ body.sb-shell,
                     data-testid="bolus-button"
                     aria-label={
                       primaryDrug === "awake"
-                        ? "Propofol-Bolus aus Wachzustand"
-                        : "Bolus"
+                        ? t("sim.bolusAwakeAria")
+                        : t("sim.bolus")
                     }
                   >
                     <span>
                       {primaryDrug === "awake"
-                        ? "Propofol-Bolus"
+                        ? t("sim.bolusAwake")
                         : bolusActive
-                          ? "Bolus wirkt…"
-                          : "Bolus"}
+                          ? t("sim.bolusActive")
+                          : t("sim.bolus")}
                     </span>
                     <small>
                       {primaryDrug === "awake"
-                        ? "Wach → Sedierung · weiche 2,8-s-Rampe"
-                        : "kurzer Wirkungsanstieg · sanftes Abklingen"}
+                        ? t("sim.bolusAwakeHint")
+                        : t("sim.bolusHint")}
                     </small>
                     <i
                       style={{
@@ -2255,9 +2269,7 @@ body.sb-shell,
                     type="button"
                     onClick={() => setSimulationRunning((A) => !A)}
                   >
-                    {simulationRunning
-                      ? "Simulation pausieren"
-                      : "Simulation fortsetzen"}
+                    {simulationRunning ? t("sim.pause") : t("sim.resume")}
                   </button>
                 </div>
               </fieldset>
@@ -2265,15 +2277,13 @@ body.sb-shell,
           )}
         </section>
         <aside className="sb-panel">
-          <span className="sb-badge">{"CONOX EEG & DSA"}</span>
-          <h1>{"CONOX Steuerung"}</h1>
-          <p className="sb-muted">
-            {"Anzeige konfigurieren und EEG-Wissen gezielt einblenden."}
-          </p>
-          <nav className="sb-tabs" aria-label="CONOX Bereiche">
+          <span className="sb-badge">{t("panel.badge")}</span>
+          <h1>{t("panel.title")}</h1>
+          <p className="sb-muted">{t("panel.copy")}</p>
+          <nav className="sb-tabs" aria-label={t("panel.aria")}>
             {[
-              ["monitor", "Anzeige"],
-              ["learn", "RAW EEG Knowledge"],
+              ["monitor", t("tab.monitor")],
+              ["learn", t("tab.learn")],
             ].map(([A, R]) => (
               <button
                 key={A}
@@ -2287,20 +2297,20 @@ body.sb-shell,
           </nav>
           {activePanel === "monitor" && (
             <div className="sb-tab-panel">
-              <h2>{"Anzeige"}</h2>
+              <h2>{t("display.heading")}</h2>
               <div className="sb-form-grid">
                 <SelectField
-                  label="RAW-Zeitfenster"
+                  label={t("display.window")}
                   value={eegWindowSeconds}
                   onChange={(A) => setEegWindowSeconds(Number(A))}
                   options={[
-                    ["2", "2 Sekunden"],
-                    ["4", "4 Sekunden"],
-                    ["8", "8 Sekunden"],
+                    ["2", t("display.seconds", { count: 2 })],
+                    ["4", t("display.seconds", { count: 4 })],
+                    ["8", t("display.seconds", { count: 8 })],
                   ]}
                 />
                 <SelectField
-                  label="Amplitude"
+                  label={t("display.amplitude")}
                   value={eegAmplitude}
                   onChange={(A) => setEegAmplitude(Number(A))}
                   options={[
@@ -2311,7 +2321,7 @@ body.sb-shell,
                   ]}
                 />
                 <SelectField
-                  label="DSA/Index Zeitraum"
+                  label={t("display.period")}
                   value={dsaPeriodMinutes}
                   disabled={liveSync}
                   onChange={(A) => {
@@ -2320,33 +2330,36 @@ body.sb-shell,
                   }}
                   options={
                     liveSync
-                      ? [["1", "Live · 60 Sekunden"]]
+                      ? [["1", t("display.live60")]]
                       : [
-                          ["5", "5 Minuten · Demonstration"],
-                          ["30", "30 Minuten · CONOX"],
-                          ["120", "2 Stunden · CONOX"],
-                          ["360", "6 Stunden · CONOX"],
+                          ["5", t("display.minutesDemo", { count: 5 })],
+                          ["30", t("display.minutesConox", { count: 30 })],
+                          ["120", t("display.hoursConox", { count: 2 })],
+                          ["360", t("display.hoursConox", { count: 6 })],
                         ]
                   }
                 />
                 <div className="sb-readonly">
-                  <label>{"DSA-Skala"}</label>
+                  <label>{t("display.dsaScale")}</label>
                   <strong>{"0–45 Hz · −30/+50 dB"}</strong>
                 </div>
               </div>
-              <h2>{"qCON-Hinweissignal"}</h2>
+              <h2>{t("alarm.heading")}</h2>
               <div
                 className={`sb-qcon-alarm-control ${qconAlarmEnabled ? "active" : ""} ${qconAlarmTriggered ? "triggered" : ""}`}
               >
                 <div className="sb-qcon-alarm-head">
                   <div>
-                    <strong>{"Alarm qCON"}</strong>
+                    <strong>{t("alarm.label")}</strong>
                     <span>
                       {qconAlarmTriggered
-                        ? "Grenzwert überschritten"
+                        ? t("alarm.limitExceeded")
                         : qconAlarmEnabled
-                          ? `Aktiv · ${qconAlarmMin}–${qconAlarmMax}`
-                          : "Deaktiviert"}
+                          ? t("alarm.active", {
+                              min: qconAlarmMin,
+                              max: qconAlarmMax,
+                            })
+                          : t("alarm.disabled")}
                     </span>
                   </div>
                   <button
@@ -2355,7 +2368,7 @@ body.sb-shell,
                     aria-pressed={qconAlarmEnabled}
                     onClick={toggleQconAlarm}
                   >
-                    {qconAlarmEnabled ? "AN" : "AUS"}
+                    {qconAlarmEnabled ? t("alarm.on") : t("alarm.off")}
                   </button>
                 </div>
                 <div className="sb-qcon-alarm-ranges">
@@ -2368,7 +2381,7 @@ body.sb-shell,
                       <button
                         type="button"
                         onClick={() => changeQconAlarmMin(qconAlarmMin - 1)}
-                        aria-label="Unteren qCON-Grenzwert verringern"
+                        aria-label={t("alarm.minDown")}
                       >
                         {"−"}
                       </button>
@@ -2379,12 +2392,12 @@ body.sb-shell,
                         step="1"
                         value={qconAlarmMin}
                         onChange={(A) => changeQconAlarmMin(A.target.value)}
-                        aria-label="Unterer qCON-Grenzwert 0 bis 100"
+                        aria-label={t("alarm.minRange")}
                       />
                       <button
                         type="button"
                         onClick={() => changeQconAlarmMin(qconAlarmMin + 1)}
-                        aria-label="Unteren qCON-Grenzwert erhöhen"
+                        aria-label={t("alarm.minUp")}
                       >
                         {"+"}
                       </button>
@@ -2399,7 +2412,7 @@ body.sb-shell,
                       <button
                         type="button"
                         onClick={() => changeQconAlarmMax(qconAlarmMax - 1)}
-                        aria-label="Oberen qCON-Grenzwert verringern"
+                        aria-label={t("alarm.maxDown")}
                       >
                         {"−"}
                       </button>
@@ -2410,33 +2423,25 @@ body.sb-shell,
                         step="1"
                         value={qconAlarmMax}
                         onChange={(A) => changeQconAlarmMax(A.target.value)}
-                        aria-label="Oberer qCON-Grenzwert 0 bis 100"
+                        aria-label={t("alarm.maxRange")}
                       />
                       <button
                         type="button"
                         onClick={() => changeQconAlarmMax(qconAlarmMax + 1)}
-                        aria-label="Oberen qCON-Grenzwert erhöhen"
+                        aria-label={t("alarm.maxUp")}
                       >
                         {"+"}
                       </button>
                     </div>
                   </label>
                 </div>
-                <small>
-                  {
-                    "Bei Grenzwertverletzung wechselt der qCON-Wert im Sekundentakt zwischen Weiss und Orange. Synthetische Hinweisfunktion – nicht zur unbeaufsichtigten Überwachung."
-                  }
-                </small>
+                <small>{t("alarm.note")}</small>
               </div>
-              <h2>{"Mustererkennung"}</h2>
+              <h2>{t("detection.heading")}</h2>
               <div className="sb-detection-control">
                 <div>
-                  <strong>{"EEG-Hinweise"}</strong>
-                  <span>
-                    {
-                      "Frequenzband und Muster im RAW EEG sowie im grauen Statusbalken anzeigen."
-                    }
-                  </span>
+                  <strong>{t("detection.title")}</strong>
+                  <span>{t("detection.copy")}</span>
                 </div>
                 <label>
                   <input
@@ -2444,37 +2449,35 @@ body.sb-shell,
                     checked={eegHintsEnabled}
                     onChange={(A) => setEegHintsEnabled(A.target.checked)}
                   />
-                  <span>{eegHintsEnabled ? "Aktiv" : "Inaktiv"}</span>
+                  <span>
+                    {eegHintsEnabled ? t("sim.active") : t("sim.inactive")}
+                  </span>
                 </label>
               </div>
-              <div className="sb-callout">
-                {
-                  "Die Anzeige benennt nur synthetisch erkannte Muster. Mit RAW EEG, DSA, Indizes, Medikamenten und klinischem Verlauf abgleichen."
-                }
-              </div>
+              <div className="sb-callout">{t("detection.callout")}</div>
             </div>
           )}
           {activePanel === "learn" && (
             <div className="sb-tab-panel">
-              <h2>{"RAW EEG Knowledge"}</h2>
+              <h2>{t("learn.heading")}</h2>
               <SelectField
-                label="Frequenztyp"
+                label={t("learn.frequency")}
                 value={selectedKnowledgeTopic}
                 onChange={(A) => setSelectedKnowledgeTopic(A)}
                 options={[
-                  ["awake", "Wach · schnelle Mischaktivität"],
-                  ["delta", "Delta · 0,5–4 Hz"],
-                  ["theta", "Theta · 4–8 Hz"],
-                  ["alpha", "Alpha · 8–13 Hz"],
-                  ["beta", "Beta · 13–30 Hz"],
-                  ["gamma", "Gamma · 30–45 Hz"],
-                  ["spindle", "Spindles · 12–16 Hz"],
-                  ["arousal", "Arousal · Beta-Aktivierung"],
-                  ["alphaDropout", "Alpha-Dropout · Reizantwort"],
-                  ["deltaArousal", "Delta-Arousal · paradox"],
-                  ["emg", "EMG-Artefakt · schnelle Aktivität"],
-                  ["mixed", "Kombiniert · Alpha/Delta"],
-                  ["suppression", "Suppression"],
+                  ["awake", EEG_KNOWLEDGE.awake.title],
+                  ["delta", EEG_KNOWLEDGE.delta.title],
+                  ["theta", EEG_KNOWLEDGE.theta.title],
+                  ["alpha", EEG_KNOWLEDGE.alpha.title],
+                  ["beta", EEG_KNOWLEDGE.beta.title],
+                  ["gamma", EEG_KNOWLEDGE.gamma.title],
+                  ["spindle", EEG_KNOWLEDGE.spindle.title],
+                  ["arousal", EEG_KNOWLEDGE.arousal.title],
+                  ["alphaDropout", EEG_KNOWLEDGE.alphaDropout.title],
+                  ["deltaArousal", EEG_KNOWLEDGE.deltaArousal.title],
+                  ["emg", EEG_KNOWLEDGE.emg.title],
+                  ["mixed", EEG_KNOWLEDGE.mixed.title],
+                  ["suppression", EEG_KNOWLEDGE.suppression.title],
                 ]}
               />
               <canvas
@@ -2486,38 +2489,30 @@ body.sb-shell,
               <div className="sb-learning-card">
                 <h2>{EEG_KNOWLEDGE[selectedKnowledgeTopic].title}</h2>
                 <FactRow
-                  label="Charakter"
+                  label={t("learn.character")}
                   value={EEG_KNOWLEDGE[selectedKnowledgeTopic].morph}
                 />
                 <FactRow
-                  label="Wann sichtbar"
+                  label={t("learn.when")}
                   value={EEG_KNOWLEDGE[selectedKnowledgeTopic].when}
                 />
                 <FactRow
-                  label="Vereinfachte Aussage"
+                  label={t("learn.meaning")}
                   value={EEG_KNOWLEDGE[selectedKnowledgeTopic].meaning}
                 />
                 <FactRow
-                  label="Beeinflusst durch"
+                  label={t("learn.influence")}
                   value={EEG_KNOWLEDGE[selectedKnowledgeTopic].influence}
                 />
                 <div className="sb-drug-note">
-                  <strong>{"Medikamentenhinweis"}</strong>
+                  <strong>{t("learn.drugNote")}</strong>
                   <span>{EEG_KNOWLEDGE[selectedKnowledgeTopic].drugNote}</span>
                 </div>
               </div>
-              <div className="sb-callout">
-                {
-                  "Einzelne Wellen nie isoliert bewerten. Entscheidend sind Muster, Kontinuität, Verlauf und Medikament."
-                }
-              </div>
+              <div className="sb-callout">{t("learn.callout")}</div>
             </div>
           )}
-          <div className="sb-note">
-            {
-              "Synthetische Signale. Keine Dosierungsempfehlung, kein Ersatz für klinische Untersuchung, RASS/SAS, Analgesiebeurteilung, Hämodynamik, Beatmung oder ärztliche Entscheidung."
-            }
-          </div>
+          <div className="sb-note">{t("note.medical")}</div>
         </aside>
       </div>
     </main>
