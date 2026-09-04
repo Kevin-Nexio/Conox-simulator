@@ -25,11 +25,11 @@ Der fertige Build entsteht in `dist/`.
 
 ## Online-Version
 
-Die GitHub-Pages-Version wird bei jedem Push auf `main` automatisch gebaut und veröffentlicht:
+Die GitHub-Pages-Version wird über die Branch `gh-pages` veröffentlicht:
 
-<https://Kevin-Nexio.github.io/Conox-simulator/>
+<https://kevin-nexio.github.io/Conox-simulator/>
 
-Falls die Seite noch nicht erscheint, in GitHub unter `Settings` → `Pages` die Quelle `GitHub Actions` auswählen.
+Der Quellcode bleibt auf `main`. Die Branch `gh-pages` enthält nur den aus `dist/` erzeugten statischen Build.
 
 Vollständige Struktur-, Formatierungs- und Build-Prüfung:
 
