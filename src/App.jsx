@@ -1799,60 +1799,66 @@ export default function App() {
         </div>
         <div className="sb-header-actions">
           <div className="sb-remote-switch" aria-label={t("remote.aria")}>
-            <select
-              value={remoteRole}
-              onChange={(event) => changeRemoteRole(event.target.value)}
-              aria-label={t("remote.role")}
-            >
-              <option value="full">{t("remote.role.full")}</option>
-              <option value="display">{t("remote.role.display")}</option>
-              <option value="controller">{t("remote.role.controller")}</option>
-            </select>
-            <input
-              value={roomCode}
-              inputMode="numeric"
-              pattern="[0-9]*"
-              maxLength={6}
-              aria-label={t("remote.pin")}
-              onChange={(event) => updateRoomCode(event.target.value)}
-            />
-            <button
-              type="button"
-              className="sb-link-button"
-              onClick={() => {
-                requestDisplayFullscreen();
-                changeRemoteRole("display");
-                setLinkPanelOpen(!0);
-              }}
-            >
-              {t("remote.link")}
-            </button>
-            <button type="button" onClick={generateRoomCode}>
-              {t("remote.newPin")}
-            </button>
+            <div className="sb-remote-controls">
+              <select
+                value={remoteRole}
+                onChange={(event) => changeRemoteRole(event.target.value)}
+                aria-label={t("remote.role")}
+              >
+                <option value="full">{t("remote.role.full")}</option>
+                <option value="display">{t("remote.role.display")}</option>
+                <option value="controller">
+                  {t("remote.role.controller")}
+                </option>
+              </select>
+              <input
+                value={roomCode}
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                aria-label={t("remote.pin")}
+                onChange={(event) => updateRoomCode(event.target.value)}
+              />
+              <button
+                type="button"
+                className="sb-link-button"
+                onClick={() => {
+                  requestDisplayFullscreen();
+                  changeRemoteRole("display");
+                  setLinkPanelOpen(!0);
+                }}
+              >
+                {t("remote.link")}
+              </button>
+              <button type="button" onClick={generateRoomCode}>
+                {t("remote.newPin")}
+              </button>
+            </div>
             <small>
               {t(remoteStatus, {
                 count: remotePeers,
               })}
             </small>
           </div>
-          <div className="sb-language-switch" aria-label="Language">
-            {LOCALES.map((item) => (
-              <button
-                key={item.code}
-                type="button"
-                className={locale === item.code ? "active" : ""}
-                title={item.name}
-                aria-pressed={locale === item.code}
-                onClick={() => setLocale(item.code)}
-              >
-                {item.label}
-              </button>
-            ))}
+          <div className="sb-header-tools">
+            <div className="sb-language-switch" aria-label="Language">
+              {LOCALES.map((item) => (
+                <button
+                  key={item.code}
+                  type="button"
+                  className={locale === item.code ? "active" : ""}
+                  title={item.name}
+                  aria-pressed={locale === item.code}
+                  onClick={() => setLocale(item.code)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+            <button className="sb-btn" type="button" onClick={openConoxView}>
+              {t("remote.displayButton")}
+            </button>
           </div>
-          <button className="sb-btn" type="button" onClick={openConoxView}>
-            {t("remote.displayButton")}
-          </button>
         </div>
       </header>
       {remoteRole === "display" && !linkPanelOpen && (
