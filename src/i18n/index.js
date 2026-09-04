@@ -25,6 +25,7 @@ const ui = {
     "remote.pin": "Sitzungs-PIN",
     "remote.link": "Link",
     "remote.newPin": "PIN",
+    "remote.displayButton": "CONOX View",
     "remote.close": "Schliessen",
     "remote.linkTitle": "iPhone verbinden",
     "remote.linkCopy":
@@ -167,9 +168,6 @@ const ui = {
     "learn.canvasWindow": "2 Sekunden",
     "note.medical":
       "Synthetische Signale. Keine Dosierungsempfehlung, kein Ersatz für klinische Untersuchung, RASS/SAS, Analgesiebeurteilung, Hämodynamik, Beatmung oder ärztliche Entscheidung.",
-    "popup.blocked":
-      "Das CONOX Window wurde vom Browser blockiert. Bitte Pop-ups für diese Datei erlauben.",
-    "popup.aria": "Gespiegelter CONOX Monitor",
   },
   fr: {
     "app.subtitle":
@@ -182,6 +180,7 @@ const ui = {
     "remote.pin": "PIN de session",
     "remote.link": "Link",
     "remote.newPin": "PIN",
+    "remote.displayButton": "CONOX View",
     "remote.close": "Fermer",
     "remote.linkTitle": "Connecter l'iPhone",
     "remote.linkCopy":
@@ -327,9 +326,6 @@ const ui = {
     "learn.canvasWindow": "2 secondes",
     "note.medical":
       "Signaux synthétiques. Pas de recommandation posologique, pas de substitut à l'examen clinique, RASS/SAS, évaluation de l'analgésie, hémodynamique, ventilation ou décision médicale.",
-    "popup.blocked":
-      "La fenêtre CONOX a été bloquée par le navigateur. Autorise les pop-ups pour ce fichier.",
-    "popup.aria": "Moniteur CONOX dupliqué",
   },
   en: {
     "app.subtitle": "RAW EEG · DSA · qCON / qNOX · synthetic training signals",
@@ -341,6 +337,7 @@ const ui = {
     "remote.pin": "Session PIN",
     "remote.link": "Link",
     "remote.newPin": "PIN",
+    "remote.displayButton": "CONOX View",
     "remote.close": "Close",
     "remote.linkTitle": "Connect iPhone",
     "remote.linkCopy":
@@ -483,9 +480,6 @@ const ui = {
     "learn.canvasWindow": "2 seconds",
     "note.medical":
       "Synthetic signals. No dosing recommendation, no replacement for clinical examination, RASS/SAS, analgesia assessment, hemodynamics, ventilation or medical decision-making.",
-    "popup.blocked":
-      "The CONOX window was blocked by the browser. Please allow pop-ups for this file.",
-    "popup.aria": "Mirrored CONOX monitor",
   },
 };
 

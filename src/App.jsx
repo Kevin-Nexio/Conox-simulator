@@ -165,8 +165,6 @@ export default function App() {
     trendSequenceRef = React.useRef(0),
     originalDsaPeriod = React.useRef(30),
     soloReturnView = React.useRef("eeg-dsa"),
-    conoxWindowRef = React.useRef(null),
-    conoxWindowFrameRef = React.useRef(0),
     remoteActionRef = React.useRef(null),
     remoteStateRef = React.useRef(null),
     remoteApplyingRef = React.useRef(!1),
@@ -222,17 +220,6 @@ export default function App() {
       const A = window.setInterval(() => setQconAlarmFlash((R) => !R), 1e3);
       return () => window.clearInterval(A);
     }, [qconAlarmTriggered]),
-    React.useEffect(
-      () => () => {
-        const A = conoxWindowRef.current;
-        (conoxWindowFrameRef.current &&
-          A &&
-          !A.closed &&
-          A.cancelAnimationFrame(conoxWindowFrameRef.current),
-          A && !A.closed && A.close());
-      },
-      [],
-    ),
     React.useEffect(() => {
       const A = window.setInterval(() => {
         const R = bolusStartedAtRef.current;
@@ -1506,182 +1493,20 @@ export default function App() {
             : "eeg-index";
       activateDirectView(R);
     },
-    syncConoxMirrorNode = (A, R) => {
-      if (!A || !R || A.nodeType !== R.nodeType) return !1;
-      if (A.nodeType === 3) {
-        return (A.nodeValue !== R.nodeValue && (R.nodeValue = A.nodeValue), !0);
-      }
-      if (A.nodeType !== 1 || A.tagName !== R.tagName) return !1;
-      ([...R.attributes].forEach((me) => {
-        A.hasAttribute(me.name) || R.removeAttribute(me.name);
-      }),
-        [...A.attributes].forEach((me) => {
-          R.getAttribute(me.name) !== me.value &&
-            R.setAttribute(me.name, me.value);
-        }));
-      if (A.tagName === "CANVAS") {
-        ((R.width = A.width), (R.height = A.height));
-        try {
-          const me = R.getContext("2d");
-          me && me.drawImage(A, 0, 0, R.width, R.height);
-        } catch {}
-        return !0;
-      }
-      ("value" in A && R.value !== A.value && (R.value = A.value),
-        "checked" in A && (R.checked = A.checked),
-        "disabled" in A && (R.disabled = A.disabled));
-      const me = [...A.childNodes];
-      me.length !== R.childNodes.length &&
-        R.replaceChildren(...me.map((G) => G.cloneNode(!0)));
-      const ve = [...R.childNodes];
-      return (
-        me.forEach((G, Ze) => {
-          if (!syncConoxMirrorNode(G, ve[Ze])) {
-            const tt = G.cloneNode(!0);
-            (ve[Ze].replaceWith(tt), syncConoxMirrorNode(G, tt));
-          }
-        }),
-        !0
-      );
+    requestDisplayFullscreen = () => {
+      const target = document.documentElement,
+        request =
+          target.requestFullscreen ??
+          target.webkitRequestFullscreen ??
+          target.webkitEnterFullscreen;
+      try {
+        request?.call(target)?.catch?.(() => {});
+      } catch {}
     },
-    mirrorConoxWindow = () => {
-      const A = conoxWindowRef.current;
-      if (!A || A.closed) {
-        conoxWindowFrameRef.current = 0;
-        return;
-      }
-      const R = document.querySelector(".sb-monitor-wrap"),
-        me = A.document.getElementById("conox-window-root");
-      if (R && me) {
-        (R.querySelectorAll("button, select, input, a").forEach((G, ve) => {
-          G.setAttribute("data-conox-mirror-key", String(ve));
-        }),
-          me.firstElementChild || me.replaceChildren(R.cloneNode(!0)));
-        let G = me.firstElementChild;
-        syncConoxMirrorNode(R, G) ||
-          (me.replaceChildren(R.cloneNode(!0)), (G = me.firstElementChild));
-      }
-      conoxWindowFrameRef.current = A.requestAnimationFrame(mirrorConoxWindow);
-    },
-    openConoxWindow = () => {
-      if (conoxWindowRef.current && !conoxWindowRef.current.closed) {
-        conoxWindowRef.current.focus();
-        return;
-      }
-      const A = window.open(
-        "",
-        "CONOXWindow",
-        "popup=yes,width=1180,height=840,resizable=yes,scrollbars=no",
-      );
-      if (!A) {
-        window.alert(t("popup.blocked"));
-        return;
-      }
-      const R = [...document.querySelectorAll("style")]
-          .map((G) => G.textContent)
-          .join("\n"),
-        me = new URL(".", document.baseURI).href;
-      (A.document.open(),
-        A.document.write(`<!doctype html>
-<html lang="${locale}">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <base href="${me}">
-    <title>CONOX Window</title>
-    <link rel="icon" href="./images/conox-icon.svg">
-    <style>
-${R}
-html, body {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  overflow: hidden;
-  background: #071118;
-}
-body.sb-shell {
-  display: flex;
-  min-width: 0;
-  min-height: 0;
-  align-items: center;
-  justify-content: center;
-}
-body.sb-shell,
-#conox-window-root {
-  font-family: var(--font-geist-sans), "Segoe UI", Arial, sans-serif;
-  font-size: 14px;
-  line-height: 1.45;
-}
-#conox-window-root {
-  display: flex;
-  width: 100%;
-  height: 100%;
-  align-items: center;
-  justify-content: center;
-  padding: clamp(4px, 1.2vw, 14px);
-}
-#conox-window-root > .sb-monitor-wrap {
-  width: min(
-    calc(100vw - clamp(8px, 2.4vw, 28px)),
-    calc((100vh - clamp(8px, 2.4vw, 28px)) * 1.43)
-  );
-  height: auto;
-  flex: 0 0 auto;
-  aspect-ratio: 1.43 / 1;
-}
-    </style>
-  </head>
-  <body class="sb-shell">
-    <div id="conox-window-root" aria-label="${t("popup.aria")}"></div>
-  </body>
-</html>`),
-        A.document.close(),
-        (conoxWindowRef.current = A));
-      const sourceMonitor = document.querySelector(".sb-monitor-wrap"),
-        popupRoot = A.document.getElementById("conox-window-root");
-      sourceMonitor &&
-        popupRoot &&
-        (popupRoot.style.fontFamily =
-          window.getComputedStyle(sourceMonitor).fontFamily);
-      const G = (ve) => ve.target.closest?.("[data-conox-mirror-key]") ?? null,
-        ve = (Ze) => {
-          const tt = G(Ze);
-          if (!tt) return null;
-          return document.querySelector(
-            `[data-conox-mirror-key="${tt.getAttribute("data-conox-mirror-key")}"]`,
-          );
-        };
-      (A.document.addEventListener("click", (Ze) => {
-        const tt = G(Ze),
-          Ve = ve(Ze);
-        if (!tt || !Ve || (tt.tagName !== "BUTTON" && tt.tagName !== "A"))
-          return;
-        (Ze.preventDefault(), Ve.click());
-      }),
-        ["input", "change"].forEach((Ze) => {
-          A.document.addEventListener(Ze, (tt) => {
-            const Ve = G(tt),
-              L = ve(tt);
-            if (!Ve || !L) return;
-            ("value" in L && (L.value = Ve.value),
-              "checked" in L && (L.checked = Ve.checked),
-              L.dispatchEvent(
-                new Event(Ze, {
-                  bubbles: !0,
-                }),
-              ));
-          });
-        }),
-        A.addEventListener("beforeunload", () => {
-          (conoxWindowFrameRef.current &&
-            A.cancelAnimationFrame(conoxWindowFrameRef.current),
-            (conoxWindowFrameRef.current = 0),
-            (conoxWindowRef.current = null));
-        }),
-        A.focus(),
-        conoxWindowFrameRef.current &&
-          A.cancelAnimationFrame(conoxWindowFrameRef.current),
-        mirrorConoxWindow());
+    openConoxView = () => {
+      requestDisplayFullscreen();
+      changeRemoteRole("display");
+      setLinkPanelOpen(!1);
     },
     Jr = () => {
       if (journeyRunning) {
@@ -1912,7 +1737,9 @@ body.sb-shell,
     return () => window.clearTimeout(timeoutId);
   }, [remoteRole, roomCode, remoteSnapshot]);
   return (
-    <main className={`sb-shell role-${remoteRole}`}>
+    <main
+      className={`sb-shell role-${remoteRole}${linkPanelOpen ? " link-open" : ""}`}
+    >
       <header className="sb-header">
         <div className="sb-header-title">
           <strong>{"CONOX 2D EEG Simulator"}</strong>
@@ -1941,6 +1768,7 @@ body.sb-shell,
               type="button"
               className="sb-link-button"
               onClick={() => {
+                requestDisplayFullscreen();
                 changeRemoteRole("display");
                 setLinkPanelOpen(!0);
               }}
@@ -1970,8 +1798,8 @@ body.sb-shell,
               </button>
             ))}
           </div>
-          <button className="sb-btn" type="button" onClick={openConoxWindow}>
-            {"CONOX Window"}
+          <button className="sb-btn" type="button" onClick={openConoxView}>
+            {t("remote.displayButton")}
           </button>
         </div>
       </header>

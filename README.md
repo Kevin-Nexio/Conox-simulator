@@ -36,11 +36,13 @@ Der Quellcode bleibt auf `main`. Die Branch `gh-pages` enthält nur den aus `dis
 Für eine Demo mit zwei Geräten:
 
 1. Auf dem iPad die Online-Version öffnen.
-2. Im Remote-Menü `iPad Display` wählen.
+2. `CONOX View` antippen, damit das iPad nur den Monitor zeigt.
 3. `Link` antippen und den QR-Code mit dem iPhone scannen.
 4. Das iPhone öffnet automatisch dieselbe Session als Controller.
 
 Der QR-Code enthält die URL mit dem passenden `room`-PIN. Es braucht kein Login und kein Benutzerkonto. Die Live-Verbindung läuft peer-to-peer im Browser.
+
+Für echtes Vollbild auf dem iPad die Seite in Safari über `Zum Home-Bildschirm` speichern und danach über das neue CONOX-Icon starten.
 
 Vollständige Struktur-, Formatierungs- und Build-Prüfung:
 

@@ -3427,6 +3427,21 @@ footer {
   grid-template-columns: minmax(0, 1fr);
   width: min(1500px, 100%);
 }
+.sb-shell.role-display:not(.link-open) {
+  min-height: 100svh;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(4px, 1.2vw, 14px);
+  overflow: hidden;
+}
+.sb-shell.role-display:not(.link-open) .sb-header {
+  display: none;
+}
+.sb-shell.role-display:not(.link-open) .sb-grid {
+  width: 100%;
+  height: 100%;
+  align-items: center;
+}
 .sb-shell.role-display .sb-panel,
 .sb-shell.role-display .sb-device-actions,
 .sb-shell.role-display .sb-simulator-launch,
@@ -3436,6 +3451,9 @@ footer {
 .sb-shell.role-display .sb-monitor-column {
   width: min(100%, calc((100vh - 118px) * 1.43));
   margin: 0 auto;
+}
+.sb-shell.role-display:not(.link-open) .sb-monitor-column {
+  width: min(100%, calc((100svh - 28px) * 1.43));
 }
 .sb-shell.role-controller .sb-grid {
   grid-template-columns: minmax(0, 560px);
