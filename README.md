@@ -31,6 +31,17 @@ Die GitHub-Pages-Version wird über die Branch `gh-pages` veröffentlicht:
 
 Der Quellcode bleibt auf `main`. Die Branch `gh-pages` enthält nur den aus `dist/` erzeugten statischen Build.
 
+## iPad/iPhone Demo
+
+Für eine Demo mit zwei Geräten:
+
+1. Auf dem iPad die Online-Version öffnen.
+2. Im Remote-Menü `iPad Display` wählen.
+3. `Link` antippen und den QR-Code mit dem iPhone scannen.
+4. Das iPhone öffnet automatisch dieselbe Session als Controller.
+
+Der QR-Code enthält die URL mit dem passenden `room`-PIN. Es braucht kein Login und kein Benutzerkonto. Die Live-Verbindung läuft peer-to-peer im Browser.
+
 Vollständige Struktur-, Formatierungs- und Build-Prüfung:
 
 ```bash

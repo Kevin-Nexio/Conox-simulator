@@ -11,8 +11,10 @@
     "format": "prettier --write ."
   },
   "dependencies": {
+    "qrcode": "^1.5.4",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "trystero": "^0.25.4"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "5.0.4",

@@ -81,6 +81,41 @@ canvas {
   align-items: center;
   gap: 8px;
 }
+.sb-remote-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.sb-remote-switch select,
+.sb-remote-switch input,
+.sb-remote-switch button {
+  height: 35px;
+  border: 1px solid #526b78;
+  border-radius: 5px;
+  background: #0c1820;
+  color: #eff6f8;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0;
+}
+.sb-remote-switch select {
+  max-width: 132px;
+  padding: 0 8px;
+}
+.sb-remote-switch input {
+  width: 78px;
+  padding: 0 8px;
+  text-align: center;
+}
+.sb-remote-switch button {
+  min-width: 42px;
+  padding: 0 10px;
+}
+.sb-remote-switch small {
+  min-width: 86px;
+  color: #93a6af;
+  font-size: 10px;
+}
 .sb-language-switch {
   display: inline-flex;
   overflow: hidden;
@@ -124,6 +159,58 @@ canvas {
 .sb-conox-link:hover {
   border-color: #7edfff;
   color: #d7f5ff;
+}
+.sb-link-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(4, 13, 18, 0.7);
+}
+.sb-link-dialog {
+  position: relative;
+  display: grid;
+  width: min(420px, 100%);
+  gap: 12px;
+  padding: 22px;
+  border: 1px solid #526b78;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #17313e;
+  box-shadow: 0 24px 80px #00000059;
+}
+.sb-link-dialog h2,
+.sb-link-dialog p {
+  margin: 0;
+}
+.sb-link-dialog p,
+.sb-link-dialog small {
+  color: #506976;
+}
+.sb-link-dialog img {
+  width: 280px;
+  height: 280px;
+  margin: 4px auto;
+  border: 1px solid #d1dce1;
+  border-radius: 6px;
+}
+.sb-link-dialog code {
+  overflow-wrap: anywhere;
+  padding: 9px;
+  border: 1px solid #d1dce1;
+  border-radius: 6px;
+  background: #f6fafb;
+  color: #15313f;
+  font-size: 11px;
+}
+.sb-link-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
 }
 .sb-grid {
   display: grid;
@@ -3023,6 +3110,23 @@ footer {
   }
 }
 @media (max-width: 760px) {
+  .sb-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .sb-header-actions {
+    position: static;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .sb-remote-switch {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .sb-remote-switch small {
+    width: 100%;
+    text-align: center;
+  }
   .sb-simulator-launch {
     align-items: stretch;
     flex-direction: column;
@@ -3092,6 +3196,26 @@ footer {
 .sb-language-switch button.active:hover {
   background: var(--fk-blue-dark);
   color: #fff;
+}
+.sb-remote-switch select,
+.sb-remote-switch input,
+.sb-remote-switch button,
+.sb-link-close {
+  border-color: var(--fk-blue);
+  background: var(--fk-blue);
+  color: #fff;
+}
+.sb-remote-switch input {
+  background: #fff;
+  color: var(--fk-blue-dark);
+}
+.sb-remote-switch button:hover,
+.sb-link-close:hover {
+  border-color: var(--fk-blue-dark);
+  background: var(--fk-blue-dark);
+}
+.sb-remote-switch small {
+  color: #496b85;
 }
 .sb-monitor-wrap {
   box-shadow:
@@ -3298,6 +3422,36 @@ footer {
   font-size: 18px;
   font-style: normal;
   line-height: 1;
+}
+.sb-shell.role-display .sb-grid {
+  grid-template-columns: minmax(0, 1fr);
+  width: min(1500px, 100%);
+}
+.sb-shell.role-display .sb-panel,
+.sb-shell.role-display .sb-device-actions,
+.sb-shell.role-display .sb-simulator-launch,
+.sb-shell.role-display .sb-simulator {
+  display: none;
+}
+.sb-shell.role-display .sb-monitor-column {
+  width: min(100%, calc((100vh - 118px) * 1.43));
+  margin: 0 auto;
+}
+.sb-shell.role-controller .sb-grid {
+  grid-template-columns: minmax(0, 560px);
+  justify-content: center;
+}
+.sb-shell.role-controller .sb-monitor-wrap,
+.sb-shell.role-controller .sb-device-actions {
+  display: none;
+}
+.sb-shell.role-controller .sb-monitor-column {
+  display: grid;
+  gap: 14px;
+  order: 2;
+}
+.sb-shell.role-controller .sb-panel {
+  order: 1;
 }
 .sb-simulator-launch,
 .sb-simulator,

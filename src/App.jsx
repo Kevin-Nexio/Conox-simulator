@@ -1,4 +1,6 @@
 import * as React from "react";
+import QRCode from "qrcode";
+import { joinRoom } from "trystero";
 import {
   DEFAULT_RENDER_SETTINGS,
   EFFECT_LEVELS,
@@ -31,6 +33,28 @@ import {
   DoseControl,
   FactRow,
 } from "./components/UiPrimitives.jsx";
+
+const REMOTE_ROLES = ["full", "display", "controller"];
+const REMOTE_ROOM_PREFIX = "conox-room-";
+
+function getInitialRemoteRole() {
+  const role = new URLSearchParams(window.location.search).get("role");
+  return REMOTE_ROLES.includes(role) ? role : "full";
+}
+
+function createRoomCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function getInitialRoomCode() {
+  const params = new URLSearchParams(window.location.search);
+  return (
+    params.get("room") ??
+    window.localStorage.getItem("conox.roomCode") ??
+    createRoomCode()
+  );
+}
+
 export default function App() {
   const [locale, setLocale] = React.useState(getInitialLocale);
   const {
@@ -44,7 +68,13 @@ export default function App() {
   } = React.useMemo(() => createI18n(locale), [locale]);
   const DEFAULT_SCENARIO =
     SCENARIOS.find((A) => A.id === "target-a") ?? SCENARIOS[0];
-  const [activePanel, setActivePanel] = React.useState("monitor"),
+  const [remoteRole, setRemoteRole] = React.useState(getInitialRemoteRole),
+    [roomCode, setRoomCode] = React.useState(getInitialRoomCode),
+    [remotePeers, setRemotePeers] = React.useState(0),
+    [remoteStatus, setRemoteStatus] = React.useState("remote.status.off"),
+    [linkPanelOpen, setLinkPanelOpen] = React.useState(!1),
+    [qrCodeDataUrl, setQrCodeDataUrl] = React.useState(""),
+    [activePanel, setActivePanel] = React.useState("monitor"),
     [displayView, setDisplayView] = React.useState("eeg-dsa"),
     [displayChoices, setDisplayChoices] = React.useState([
       "eeg-index",
@@ -137,6 +167,9 @@ export default function App() {
     soloReturnView = React.useRef("eeg-dsa"),
     conoxWindowRef = React.useRef(null),
     conoxWindowFrameRef = React.useRef(0),
+    remoteActionRef = React.useRef(null),
+    remoteStateRef = React.useRef(null),
+    remoteApplyingRef = React.useRef(!1),
     qconAlarmTriggered =
       qconAlarmEnabled &&
       (currentIndices.qcon < qconAlarmMin ||
@@ -1361,6 +1394,50 @@ export default function App() {
     wi = () => {
       ea(SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)]);
     },
+    changeRemoteRole = (role) => {
+      const nextRole = REMOTE_ROLES.includes(role) ? role : "full";
+      const params = new URLSearchParams(window.location.search);
+      nextRole === "full"
+        ? params.delete("role")
+        : params.set("role", nextRole);
+      roomCode ? params.set("room", roomCode) : params.delete("room");
+      window.history.replaceState(
+        {},
+        "",
+        `${window.location.pathname}${params.toString() ? `?${params}` : ""}`,
+      );
+      setRemoteRole(nextRole);
+    },
+    updateRoomCode = (value) => {
+      const nextCode = value.replace(/\D/g, "").slice(0, 6);
+      const params = new URLSearchParams(window.location.search);
+      nextCode ? params.set("room", nextCode) : params.delete("room");
+      remoteRole === "full"
+        ? params.delete("role")
+        : params.set("role", remoteRole);
+      window.history.replaceState(
+        {},
+        "",
+        `${window.location.pathname}${params.toString() ? `?${params}` : ""}`,
+      );
+      setRoomCode(nextCode);
+    },
+    generateRoomCode = () => {
+      updateRoomCode(createRoomCode());
+    },
+    controllerUrl = React.useMemo(() => {
+      const url = new URL(window.location.href);
+      url.searchParams.set("role", "controller");
+      url.searchParams.set("room", roomCode);
+      return url.toString();
+    }, [roomCode]),
+    displayUrl = React.useMemo(() => {
+      const url = new URL(window.location.href);
+      url.searchParams.set("role", "display");
+      url.searchParams.set("room", roomCode);
+      return url.toString();
+    }, [roomCode]),
+    qrCodeUrl = qrCodeDataUrl,
     Nu = () => {
       simulatorEnabled &&
         (primaryDrug === "awake" &&
@@ -1649,14 +1726,236 @@ body.sb-shell,
     }, 250);
     return () => window.clearInterval(A);
   }, [journeyRunning, simulationRunning, NARKOSE_REISE, t]);
+  React.useEffect(() => {
+    let active = !0;
+    QRCode.toDataURL(controllerUrl, {
+      errorCorrectionLevel: "M",
+      margin: 2,
+      width: 280,
+      color: {
+        dark: "#004f99",
+        light: "#ffffff",
+      },
+    })
+      .then((dataUrl) => {
+        active && setQrCodeDataUrl(dataUrl);
+      })
+      .catch(() => {
+        active && setQrCodeDataUrl("");
+      });
+    return () => {
+      active = !1;
+    };
+  }, [controllerUrl]);
+  const remoteSnapshot = React.useMemo(
+    () => ({
+      version: 1,
+      activePanel,
+      displayView,
+      displayChoices,
+      primaryDrug,
+      primaryLevel,
+      adjunctDrug,
+      adjunctLevel,
+      opioidDrug,
+      opioidLevel,
+      eegWindowSeconds,
+      eegAmplitude,
+      dsaPeriodMinutes,
+      liveSync,
+      qconAlarmEnabled,
+      qconAlarmMin,
+      qconAlarmMax,
+      sef50Visible,
+      sef95Visible,
+      simulationRunning,
+      simulatorEnabled,
+      eegHintsEnabled,
+      selectedScenarioId,
+      selectedKnowledgeTopic,
+      locale,
+    }),
+    [
+      activePanel,
+      displayView,
+      displayChoices,
+      primaryDrug,
+      primaryLevel,
+      adjunctDrug,
+      adjunctLevel,
+      opioidDrug,
+      opioidLevel,
+      eegWindowSeconds,
+      eegAmplitude,
+      dsaPeriodMinutes,
+      liveSync,
+      qconAlarmEnabled,
+      qconAlarmMin,
+      qconAlarmMax,
+      sef50Visible,
+      sef95Visible,
+      simulationRunning,
+      simulatorEnabled,
+      eegHintsEnabled,
+      selectedScenarioId,
+      selectedKnowledgeTopic,
+      locale,
+    ],
+  );
+  React.useEffect(() => {
+    remoteStateRef.current = remoteSnapshot;
+  }, [remoteSnapshot]);
+  const applyRemoteSnapshot = React.useCallback(
+    (snapshot) => {
+      if (!snapshot || snapshot.version !== 1) return;
+      remoteApplyingRef.current = !0;
+      const nextScenario =
+        SCENARIOS.find((item) => item.id === snapshot.selectedScenarioId) ??
+        NARKOSE_REISE().find(
+          (item) => item.scenario.id === snapshot.selectedScenarioId,
+        )?.scenario ??
+        null;
+
+      setActivePanel(snapshot.activePanel ?? "monitor");
+      setDisplayView(snapshot.displayView ?? "eeg-dsa");
+      setDisplayChoices(
+        snapshot.displayChoices ?? ["eeg-index", "dsa-index", "all"],
+      );
+      setPrimaryDrug(snapshot.primaryDrug ?? "propofol");
+      setPrimaryLevel(snapshot.primaryLevel ?? 2);
+      setAdjunctDrug(snapshot.adjunctDrug ?? "none");
+      setAdjunctLevel(snapshot.adjunctLevel ?? 2);
+      setOpioidDrug(snapshot.opioidDrug ?? "none");
+      setOpioidLevel(snapshot.opioidLevel ?? 2);
+      setEegWindowSeconds(snapshot.eegWindowSeconds ?? 4);
+      setEegAmplitude(snapshot.eegAmplitude ?? 120);
+      setDsaPeriodMinutes(snapshot.dsaPeriodMinutes ?? 30);
+      setLiveSync(Boolean(snapshot.liveSync));
+      setQconAlarmEnabled(Boolean(snapshot.qconAlarmEnabled));
+      setQconAlarmMin(snapshot.qconAlarmMin ?? 20);
+      setQconAlarmMax(snapshot.qconAlarmMax ?? 80);
+      setSef50Visible(Boolean(snapshot.sef50Visible));
+      setSef95Visible(Boolean(snapshot.sef95Visible));
+      setSimulationRunning(snapshot.simulationRunning !== !1);
+      setSimulatorEnabled(Boolean(snapshot.simulatorEnabled));
+      setEegHintsEnabled(snapshot.eegHintsEnabled !== !1);
+      setSelectedScenarioId(snapshot.selectedScenarioId ?? null);
+      setSelectedKnowledgeTopic(snapshot.selectedKnowledgeTopic ?? "alpha");
+      setLocale(snapshot.locale ?? locale);
+
+      scenarioProfileRef.current = nextScenario?.profile ?? null;
+      scenarioIndicesRef.current = nextScenario?.indices ?? null;
+      window.setTimeout(() => {
+        remoteApplyingRef.current = !1;
+      }, 0);
+    },
+    [NARKOSE_REISE, SCENARIOS, locale],
+  );
+  React.useEffect(() => {
+    window.localStorage.setItem("conox.roomCode", roomCode);
+  }, [roomCode]);
+  React.useEffect(() => {
+    if (remoteRole === "full" || roomCode.length !== 6) {
+      remoteActionRef.current = null;
+      setRemotePeers(0);
+      setRemoteStatus("remote.status.off");
+      return;
+    }
+
+    setRemoteStatus("remote.status.waiting");
+    const peers = new Set();
+    const room = joinRoom(
+      {
+        appId: "com.nexio.conox-simulator",
+        password: roomCode,
+      },
+      `${REMOTE_ROOM_PREFIX}${roomCode}`,
+    );
+    const stateAction = room.makeAction("simulator-state");
+    remoteActionRef.current = stateAction;
+    stateAction.onMessage = (snapshot) => {
+      if (remoteRole === "display") applyRemoteSnapshot(snapshot);
+    };
+    room.onPeerJoin = (peerId) => {
+      peers.add(peerId);
+      setRemotePeers(peers.size);
+      setRemoteStatus("remote.status.connected");
+      if (remoteRole === "controller" && remoteStateRef.current) {
+        stateAction.send(remoteStateRef.current, { target: peerId });
+      }
+    };
+    room.onPeerLeave = (peerId) => {
+      peers.delete(peerId);
+      setRemotePeers(peers.size);
+      setRemoteStatus(
+        peers.size ? "remote.status.connected" : "remote.status.waiting",
+      );
+    };
+
+    return () => {
+      remoteActionRef.current = null;
+      room.leave();
+    };
+  }, [applyRemoteSnapshot, remoteRole, roomCode]);
+  React.useEffect(() => {
+    if (
+      remoteRole !== "controller" ||
+      roomCode.length !== 6 ||
+      remoteApplyingRef.current ||
+      !remoteActionRef.current
+    )
+      return;
+
+    const timeoutId = window.setTimeout(() => {
+      remoteActionRef.current?.send(remoteSnapshot);
+    }, 80);
+    return () => window.clearTimeout(timeoutId);
+  }, [remoteRole, roomCode, remoteSnapshot]);
   return (
-    <main className="sb-shell">
+    <main className={`sb-shell role-${remoteRole}`}>
       <header className="sb-header">
         <div className="sb-header-title">
           <strong>{"CONOX 2D EEG Simulator"}</strong>
           <small>{t("app.subtitle")}</small>
         </div>
         <div className="sb-header-actions">
+          <div className="sb-remote-switch" aria-label={t("remote.aria")}>
+            <select
+              value={remoteRole}
+              onChange={(event) => changeRemoteRole(event.target.value)}
+              aria-label={t("remote.role")}
+            >
+              <option value="full">{t("remote.role.full")}</option>
+              <option value="display">{t("remote.role.display")}</option>
+              <option value="controller">{t("remote.role.controller")}</option>
+            </select>
+            <input
+              value={roomCode}
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={6}
+              aria-label={t("remote.pin")}
+              onChange={(event) => updateRoomCode(event.target.value)}
+            />
+            <button
+              type="button"
+              className="sb-link-button"
+              onClick={() => {
+                changeRemoteRole("display");
+                setLinkPanelOpen(!0);
+              }}
+            >
+              {t("remote.link")}
+            </button>
+            <button type="button" onClick={generateRoomCode}>
+              {t("remote.newPin")}
+            </button>
+            <small>
+              {t(remoteStatus, {
+                count: remotePeers,
+              })}
+            </small>
+          </div>
           <div className="sb-language-switch" aria-label="Language">
             {LOCALES.map((item) => (
               <button
@@ -1676,6 +1975,30 @@ body.sb-shell,
           </button>
         </div>
       </header>
+      {linkPanelOpen && (
+        <div
+          className="sb-link-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("remote.linkTitle")}
+        >
+          <div className="sb-link-dialog">
+            <button
+              type="button"
+              className="sb-link-close"
+              aria-label={t("remote.close")}
+              onClick={() => setLinkPanelOpen(!1)}
+            >
+              {"×"}
+            </button>
+            <h2>{t("remote.linkTitle")}</h2>
+            <p>{t("remote.linkCopy")}</p>
+            {qrCodeUrl && <img src={qrCodeUrl} alt={t("remote.qrAlt")} />}
+            <code>{controllerUrl}</code>
+            <small>{t("remote.displayUrl", { url: displayUrl })}</small>
+          </div>
+        </div>
+      )}
       <div className="sb-grid">
         <section className="sb-monitor-column">
           <div className="sb-monitor-wrap">
