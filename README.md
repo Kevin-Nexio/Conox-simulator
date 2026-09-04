@@ -41,6 +41,8 @@ Für eine Demo mit zwei Geräten:
 4. Das iPhone öffnet automatisch dieselbe Session als Controller.
 
 Der QR-Code enthält die URL mit dem passenden `room`-PIN. Es braucht kein Login und kein Benutzerkonto. Die Live-Verbindung läuft peer-to-peer im Browser.
+Alle Geräte mit demselben PIN spiegeln denselben Zustand. Die Modi `Normal`, `iPad Display` und `iPhone Control` ändern nur die Ansicht, nicht die Synchronisationsrechte.
+In der `CONOX View` führt der Button `Normalansicht` zurück zur normalen Oberfläche.
 
 Für echtes Vollbild auf dem iPad die Seite in Safari über `Zum Home-Bildschirm` speichern und danach über das neue CONOX-Icon starten.
 

@@ -37,6 +37,13 @@ import {
 const REMOTE_ROLES = ["full", "display", "controller"];
 const REMOTE_ROOM_PREFIX = "conox-room-";
 
+function createClientId() {
+  return (
+    window.crypto?.randomUUID?.() ??
+    `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
+}
+
 function getInitialRemoteRole() {
   const role = new URLSearchParams(window.location.search).get("role");
   return REMOTE_ROLES.includes(role) ? role : "full";
@@ -165,9 +172,14 @@ export default function App() {
     trendSequenceRef = React.useRef(0),
     originalDsaPeriod = React.useRef(30),
     soloReturnView = React.useRef("eeg-dsa"),
+    remoteClientIdRef = React.useRef(createClientId()),
     remoteActionRef = React.useRef(null),
     remoteStateRef = React.useRef(null),
     remoteApplyingRef = React.useRef(!1),
+    remoteInboundStateRef = React.useRef(""),
+    remoteLastLocalStateRef = React.useRef(""),
+    remoteRoomJoinedAtRef = React.useRef(0),
+    remoteSequenceRef = React.useRef(0),
     qconAlarmTriggered =
       qconAlarmEnabled &&
       (currentIndices.qcon < qconAlarmMin ||
@@ -1508,6 +1520,17 @@ export default function App() {
       changeRemoteRole("display");
       setLinkPanelOpen(!1);
     },
+    closeConoxView = () => {
+      const exit =
+        document.exitFullscreen ??
+        document.webkitExitFullscreen ??
+        document.webkitCancelFullScreen;
+      try {
+        exit?.call(document)?.catch?.(() => {});
+      } catch {}
+      changeRemoteRole("full");
+      setLinkPanelOpen(!1);
+    },
     Jr = () => {
       if (journeyRunning) {
         (setJourneyRunning(!1),
@@ -1630,9 +1653,31 @@ export default function App() {
   React.useEffect(() => {
     remoteStateRef.current = remoteSnapshot;
   }, [remoteSnapshot]);
+  const sendRemoteSnapshot = React.useCallback(
+    (targetPeer) => {
+      if (roomCode.length !== 6 || !remoteActionRef.current) return;
+      remoteSequenceRef.current += 1;
+      remoteActionRef.current.send(
+        {
+          clientId: remoteClientIdRef.current,
+          sequence: remoteSequenceRef.current,
+          sentAt: Date.now(),
+          state: remoteStateRef.current,
+          version: 1,
+        },
+        targetPeer ? { target: targetPeer } : undefined,
+      );
+    },
+    [roomCode],
+  );
   const applyRemoteSnapshot = React.useCallback(
-    (snapshot) => {
+    (message) => {
+      const snapshot = message?.state ?? message;
+      if (message?.clientId === remoteClientIdRef.current) return;
       if (!snapshot || snapshot.version !== 1) return;
+      const inboundState = JSON.stringify(snapshot);
+      if (inboundState === remoteInboundStateRef.current) return;
+      remoteInboundStateRef.current = inboundState;
       remoteApplyingRef.current = !0;
       const nextScenario =
         SCENARIOS.find((item) => item.id === snapshot.selectedScenarioId) ??
@@ -1672,7 +1717,7 @@ export default function App() {
       scenarioIndicesRef.current = nextScenario?.indices ?? null;
       window.setTimeout(() => {
         remoteApplyingRef.current = !1;
-      }, 0);
+      }, 120);
     },
     [NARKOSE_REISE, SCENARIOS, locale],
   );
@@ -1680,14 +1725,16 @@ export default function App() {
     window.localStorage.setItem("conox.roomCode", roomCode);
   }, [roomCode]);
   React.useEffect(() => {
-    if (remoteRole === "full" || roomCode.length !== 6) {
+    if (roomCode.length !== 6) {
       remoteActionRef.current = null;
+      remoteRoomJoinedAtRef.current = 0;
       setRemotePeers(0);
       setRemoteStatus("remote.status.off");
       return;
     }
 
     setRemoteStatus("remote.status.waiting");
+    remoteRoomJoinedAtRef.current = Date.now();
     const peers = new Set();
     const room = joinRoom(
       {
@@ -1698,15 +1745,13 @@ export default function App() {
     );
     const stateAction = room.makeAction("simulator-state");
     remoteActionRef.current = stateAction;
-    stateAction.onMessage = (snapshot) => {
-      if (remoteRole === "display") applyRemoteSnapshot(snapshot);
-    };
+    stateAction.onMessage = applyRemoteSnapshot;
     room.onPeerJoin = (peerId) => {
       peers.add(peerId);
       setRemotePeers(peers.size);
       setRemoteStatus("remote.status.connected");
-      if (remoteRole === "controller" && remoteStateRef.current) {
-        stateAction.send(remoteStateRef.current, { target: peerId });
+      if (Date.now() - remoteRoomJoinedAtRef.current > 1000) {
+        sendRemoteSnapshot(peerId);
       }
     };
     room.onPeerLeave = (peerId) => {
@@ -1721,10 +1766,9 @@ export default function App() {
       remoteActionRef.current = null;
       room.leave();
     };
-  }, [applyRemoteSnapshot, remoteRole, roomCode]);
+  }, [applyRemoteSnapshot, roomCode, sendRemoteSnapshot]);
   React.useEffect(() => {
     if (
-      remoteRole !== "controller" ||
       roomCode.length !== 6 ||
       remoteApplyingRef.current ||
       !remoteActionRef.current
@@ -1732,10 +1776,18 @@ export default function App() {
       return;
 
     const timeoutId = window.setTimeout(() => {
-      remoteActionRef.current?.send(remoteSnapshot);
+      const currentState = JSON.stringify(remoteSnapshot);
+      if (!remoteLastLocalStateRef.current) {
+        remoteLastLocalStateRef.current = currentState;
+        return;
+      }
+      if (currentState === remoteLastLocalStateRef.current) return;
+      remoteLastLocalStateRef.current = currentState;
+      if (currentState === remoteInboundStateRef.current) return;
+      sendRemoteSnapshot();
     }, 80);
     return () => window.clearTimeout(timeoutId);
-  }, [remoteRole, roomCode, remoteSnapshot]);
+  }, [roomCode, remoteSnapshot, sendRemoteSnapshot]);
   return (
     <main
       className={`sb-shell role-${remoteRole}${linkPanelOpen ? " link-open" : ""}`}
@@ -1803,6 +1855,15 @@ export default function App() {
           </button>
         </div>
       </header>
+      {remoteRole === "display" && !linkPanelOpen && (
+        <button
+          type="button"
+          className="sb-display-exit"
+          onClick={closeConoxView}
+        >
+          {t("remote.exitDisplay")}
+        </button>
+      )}
       {linkPanelOpen && (
         <div
           className="sb-link-overlay"

@@ -212,6 +212,22 @@ canvas {
   width: 32px;
   height: 32px;
 }
+.sb-display-exit {
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top));
+  right: max(10px, env(safe-area-inset-right));
+  z-index: 15;
+  min-width: 104px;
+  height: 38px;
+  border: 1px solid #526b78;
+  border-radius: 5px;
+  background: #0c1820;
+  color: #eff6f8;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0;
+  box-shadow: 0 8px 22px #00000040;
+}
 .sb-grid {
   display: grid;
   grid-template-columns: minmax(760px, 1fr) 390px;
@@ -3200,7 +3216,8 @@ footer {
 .sb-remote-switch select,
 .sb-remote-switch input,
 .sb-remote-switch button,
-.sb-link-close {
+.sb-link-close,
+.sb-display-exit {
   border-color: var(--fk-blue);
   background: var(--fk-blue);
   color: #fff;
@@ -3210,7 +3227,8 @@ footer {
   color: var(--fk-blue-dark);
 }
 .sb-remote-switch button:hover,
-.sb-link-close:hover {
+.sb-link-close:hover,
+.sb-display-exit:hover {
   border-color: var(--fk-blue-dark);
   background: var(--fk-blue-dark);
 }

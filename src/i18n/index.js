@@ -26,6 +26,7 @@ const ui = {
     "remote.link": "Link",
     "remote.newPin": "PIN",
     "remote.displayButton": "CONOX View",
+    "remote.exitDisplay": "Normalansicht",
     "remote.close": "Schliessen",
     "remote.linkTitle": "iPhone verbinden",
     "remote.linkCopy":
@@ -181,6 +182,7 @@ const ui = {
     "remote.link": "Link",
     "remote.newPin": "PIN",
     "remote.displayButton": "CONOX View",
+    "remote.exitDisplay": "Vue normale",
     "remote.close": "Fermer",
     "remote.linkTitle": "Connecter l'iPhone",
     "remote.linkCopy":
@@ -338,6 +340,7 @@ const ui = {
     "remote.link": "Link",
     "remote.newPin": "PIN",
     "remote.displayButton": "CONOX View",
+    "remote.exitDisplay": "Normal view",
     "remote.close": "Close",
     "remote.linkTitle": "Connect iPhone",
     "remote.linkCopy":
