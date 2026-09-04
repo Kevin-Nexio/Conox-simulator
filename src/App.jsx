@@ -2509,6 +2509,51 @@ export default function App() {
           </nav>
           {activePanel === "monitor" && (
             <div className="sb-tab-panel">
+              <h2>{t("cases.title")}</h2>
+              <div className="sb-panel-cases">
+                <SelectField
+                  label={t("cases.select")}
+                  value={selectedScenarioId ?? ""}
+                  onChange={(value) => {
+                    const nextScenario = SCENARIOS.find(
+                      (scenario) => scenario.id === value,
+                    );
+                    nextScenario && ea(nextScenario);
+                  }}
+                  options={[
+                    ...(zt?.group === "journey"
+                      ? [[zt.id, t("cases.journey", { name: zt.name })]]
+                      : []),
+                    ...(!selectedScenarioId ? [["", t("cases.free")]] : []),
+                    ...SCENARIOS.map((scenario) => [
+                      scenario.id,
+                      scenario.name,
+                    ]),
+                  ]}
+                />
+                <div className="sb-panel-case-actions">
+                  <button type="button" onClick={wi}>
+                    {t("cases.random")}
+                  </button>
+                  <button
+                    type="button"
+                    className={simulationRunning ? "" : "active"}
+                    aria-pressed={!simulationRunning}
+                    onClick={() =>
+                      setSimulationRunning(
+                        (running) => (
+                          (simulationConfigRef.current.running = !running),
+                          !running
+                        ),
+                      )
+                    }
+                  >
+                    {simulationRunning
+                      ? t("control.pause")
+                      : t("control.resume")}
+                  </button>
+                </div>
+              </div>
               <h2>{t("display.heading")}</h2>
               <div className="sb-form-grid">
                 <SelectField
