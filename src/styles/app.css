@@ -3714,3 +3714,54 @@ footer {
     justify-content: center;
   }
 }
+
+/* Screen-only presentation keeps the device view available separately. */
+.sb-shell.role-display.display-borderless:not(.link-open) {
+  height: 100dvh;
+  min-height: 100dvh;
+  padding: 0;
+  background: #071118;
+}
+.sb-shell.role-display.display-borderless:not(.link-open) .sb-grid {
+  height: 100%;
+  padding: 0;
+  gap: 0;
+  max-width: none;
+}
+.sb-shell.role-display.display-borderless:not(.link-open) .sb-monitor-column {
+  width: 100%;
+  height: 100%;
+}
+.sb-shell.role-display.display-borderless:not(.link-open) .sb-monitor-wrap {
+  height: 100%;
+  aspect-ratio: auto;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.sb-shell.role-display.display-borderless:not(.link-open)
+  .sb-monitor-wrap
+  > :not(.sb-monitor-scroll) {
+  display: none;
+}
+.sb-shell.role-display.display-borderless:not(.link-open) .sb-monitor-scroll {
+  inset: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.sb-shell.role-display.display-borderless .sb-display-exit {
+  top: auto;
+  bottom: max(4px, env(safe-area-inset-bottom));
+  right: max(4px, env(safe-area-inset-right));
+  min-width: 0;
+  height: 26px;
+  padding: 0 8px;
+  font-size: 10px;
+  opacity: 0.7;
+}
+.sb-shell.role-display.display-borderless .sb-display-exit:hover,
+.sb-shell.role-display.display-borderless .sb-display-exit:focus-visible {
+  opacity: 1;
+}

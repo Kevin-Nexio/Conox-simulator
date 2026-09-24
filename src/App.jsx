@@ -76,6 +76,7 @@ export default function App() {
   const DEFAULT_SCENARIO =
     SCENARIOS.find((A) => A.id === "target-a") ?? SCENARIOS[0];
   const [remoteRole, setRemoteRole] = React.useState(getInitialRemoteRole),
+    [borderlessDisplay, setBorderlessDisplay] = React.useState(false),
     [roomCode, setRoomCode] = React.useState(getInitialRoomCode),
     [remotePeers, setRemotePeers] = React.useState(0),
     [remoteStatus, setRemoteStatus] = React.useState("remote.status.off"),
@@ -1534,7 +1535,8 @@ export default function App() {
         request?.call(target)?.catch?.(() => {});
       } catch {}
     },
-    openConoxView = () => {
+    openConoxView = (borderless = false) => {
+      setBorderlessDisplay(borderless);
       requestDisplayFullscreen();
       changeRemoteRole("display");
       setLinkPanelOpen(!1);
@@ -1548,6 +1550,7 @@ export default function App() {
         exit?.call(document)?.catch?.(() => {});
       } catch {}
       changeRemoteRole("full");
+      setBorderlessDisplay(false);
       setLinkPanelOpen(!1);
     },
     Jr = () => {
@@ -1809,7 +1812,7 @@ export default function App() {
   }, [roomCode, remoteSnapshot, sendRemoteSnapshot]);
   return (
     <main
-      className={`sb-shell role-${remoteRole}${linkPanelOpen ? " link-open" : ""}`}
+      className={`sb-shell role-${remoteRole}${borderlessDisplay ? " display-borderless" : ""}${linkPanelOpen ? " link-open" : ""}`}
     >
       <header className="sb-header">
         <div className="sb-header-title">
@@ -1874,8 +1877,19 @@ export default function App() {
                 </button>
               ))}
             </div>
-            <button className="sb-btn" type="button" onClick={openConoxView}>
+            <button
+              className="sb-btn"
+              type="button"
+              onClick={() => openConoxView()}
+            >
               {t("remote.displayButton")}
+            </button>
+            <button
+              className="sb-btn"
+              type="button"
+              onClick={() => openConoxView(true)}
+            >
+              {t("remote.fullscreenButton")}
             </button>
           </div>
         </div>
