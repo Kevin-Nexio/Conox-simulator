@@ -790,14 +790,11 @@ export default function App() {
       if (!G) return;
       const ve = 125,
         Ze = 25,
-        tt = ve / Ze,
-        Ve = Array.from(
-          {
-            length: ve * 8,
-          },
-          () => 0,
-        );
-      let L = -Ve.length / ve;
+        tt = ve / Ze;
+      let sweepLength = ve * eegWindowRef.current,
+        Ve = Array(sweepLength).fill(null),
+        sweepCursor = 0,
+        L = 0;
       const ke = () => {
           const ue = simulationConfigRef.current,
             Re = simulationStateRef.current,
@@ -952,9 +949,9 @@ export default function App() {
           const ue = A.width,
             Re = A.height,
             Y = Re / 2,
-            Z = ve * eegWindowRef.current,
-            fe = Ve.slice(-(Z + 1)),
-            Qe = ue / Math.max(1, Z);
+            Qe = ue / Math.max(1, sweepLength),
+            gapSamples = Math.ceil(sweepLength * 0.025);
+          let connected = false;
           ((G.fillStyle = "#010504"),
             G.fillRect(0, 0, ue, Re),
             (G.strokeStyle = "rgba(62,122,96,.18)"),
@@ -973,21 +970,43 @@ export default function App() {
             (G.lineCap = "round"),
             (G.lineJoin = "round"),
             G.beginPath(),
-            fe.forEach((ze, ft) => {
+            Ve.forEach((ze, ft) => {
+              // Break the path at the erase gap and at the screen boundary.
+              const ahead = (ft - sweepCursor + sweepLength) % sweepLength;
+              if (ze === null || ahead < gapSamples) {
+                connected = false;
+                return;
+              }
               const lt = ft * Qe,
                 vt = Y - (ze / eegAmplitudeRef.current) * (Re * 0.43);
-              ft === 0 ? G.moveTo(lt, vt) : G.lineTo(lt, vt);
+              connected ? G.lineTo(lt, vt) : G.moveTo(lt, vt);
+              connected = true;
             }),
+            G.stroke());
+          const cursorX = sweepCursor * Qe;
+          ((G.strokeStyle = "rgba(129,211,171,.65)"),
+            (G.lineWidth = 1),
+            G.beginPath(),
+            G.moveTo(cursorX, 0),
+            G.lineTo(cursorX, Re),
             G.stroke(),
             R.drawImage(me, 0, 0));
         },
         rl = () => {
-          if (simulationConfigRef.current.running) {
-            for (let ue = 0; ue < tt; ue += 1) (Ve.push(ke()), Ve.shift());
-            Mt();
+          const nextLength = ve * eegWindowRef.current;
+          if (nextLength !== sweepLength) {
+            sweepLength = nextLength;
+            Ve = Array(sweepLength).fill(null);
+            sweepCursor = 0;
           }
+          if (simulationConfigRef.current.running) {
+            for (let ue = 0; ue < tt; ue += 1) {
+              Ve[sweepCursor] = ke();
+              sweepCursor = (sweepCursor + 1) % sweepLength;
+            }
+          }
+          Mt();
         };
-      for (let ue = 0; ue < Ve.length; ue += 1) Ve[ue] = ke();
       Mt();
       const zl = window.setInterval(rl, 1e3 / Ze);
       return () => window.clearInterval(zl);
