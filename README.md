@@ -1,6 +1,6 @@
 # CONOX 2D EEG Simulator – React/Vite-Quellprojekt
 
-Rekonstruierter Entwicklungsstand des browserbasierten CONOX-2D-Schulungs- und Demonstrationssimulators. Die Anwendung erzeugt synthetische RAW-EEG-, DSA-, qCON-, qNOX-, SQI-, EMG- und BSR-Verläufe.
+Rekonstruierter Entwicklungsstand des browserbasierten CONOX-2D-Schulungs- und Demonstrationssimulators. Die Anwendung erzeugt synthetische RAW-EEG-, DSA-, qCON-, qNOX-, SQI-, EMG- und BSR-Verläufe inklusive klinisch fokussierter Mustererkennung und einer interaktiven Medikamentensimulation.
 
 Dieser Ordner enthält **keinen exportierten Single-HTML-Build**. Oberfläche, Daten, Simulationslogik, Styles und Assets liegen als getrennte Quelldateien vor.
 
@@ -36,12 +36,12 @@ Der Quellcode bleibt auf `main`. Die Branch `gh-pages` enthält nur den aus `dis
 Für eine Demo mit zwei Geräten:
 
 1. Auf dem iPad die Online-Version öffnen.
-2. `CONOX View` antippen, damit das iPad nur den Monitor zeigt.
-3. `Link` antippen und den QR-Code mit dem iPhone scannen.
-4. Das iPhone öffnet automatisch dieselbe Session als Controller.
+2. Auf beiden Geräten dieselbe feste Sitzung `Demo 1` bis `Demo 10` auswählen.
+3. `CONOX View` antippen, damit das iPad nur den Monitor zeigt.
+4. Optional `Link` antippen und den QR-Code mit einem weiteren Gerät scannen.
 
-Der QR-Code enthält die URL mit dem passenden `room`-PIN. Es braucht kein Login und kein Benutzerkonto. Die Live-Verbindung läuft peer-to-peer im Browser.
-Alle Geräte mit demselben PIN spiegeln denselben Zustand. Die Modi `Normal`, `iPad Display` und `iPhone Control` ändern nur die Ansicht, nicht die Synchronisationsrechte.
+Die Sitzungen `Demo 1` bis `Demo 10` sind dauerhaft definiert. Es braucht keinen PIN, kein Login und kein Benutzerkonto. Die Live-Verbindung läuft peer-to-peer im Browser.
+Alle Geräte in derselben Demo spiegeln denselben Zustand. Zusätzliche iPhones, iPads oder Computer können jederzeit derselben Demo beitreten. Die Modi `Normal`, `iPad Display` und `iPhone Control` ändern nur die Ansicht, nicht die Synchronisationsrechte.
 In der `CONOX View` führt der Button `Normalansicht` zurück zur normalen Oberfläche.
 
 Für echtes Vollbild auf dem iPad die Seite in Safari über `Zum Home-Bildschirm` speichern und danach über das neue CONOX-Icon starten.
@@ -126,6 +126,6 @@ Weitere technische Hintergründe stehen in [docs/ARCHITECTURE.md](docs/ARCHITECT
 
 ## Hinweis zur Nutzung
 
-Die Anwendung erzeugt ausschliesslich synthetische Lernsignale. Sie ist kein Medizinprodukt, keine validierte Gerätesoftware und kein Ersatz für klinische Beurteilung oder das originale CONOX-2D-System.
+Die Anwendung erzeugt ausschliesslich synthetische Lernsignale. Sie ist kein Medizinprodukt, keine validierte Gerätesoftware und kein Ersatz für klinische Beurteilung oder das originale CONOX-System.
 
 Vor einer öffentlichen Veröffentlichung sollten interne Freigaben für Produktname, nachgebildete Bedienoberfläche, Produktunterlagen und Kundennutzung geklärt werden. Siehe [NOTICE.md](NOTICE.md).
