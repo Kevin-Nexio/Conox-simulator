@@ -33,15 +33,23 @@ Der Quellcode bleibt auf `main`. Die Branch `gh-pages` enthält nur den aus `dis
 
 ## iPad/iPhone Demo
 
-Für eine Demo mit zwei Geräten:
+Es gibt zehn feste Demo-Sitzungen, `Demo 1` bis `Demo 10`. Für eine Demo mit mehreren Geräten:
 
-1. Auf dem iPad die Online-Version öffnen.
+1. Auf dem iPad die Online-Version öffnen und im Header eine freie Demo wählen, zum Beispiel `Demo 3`.
 2. `CONOX View` antippen, damit das iPad nur den Monitor zeigt.
 3. `Link` antippen und den QR-Code mit dem iPhone scannen.
-4. Das iPhone öffnet automatisch dieselbe Session als Controller.
+4. Das iPhone öffnet automatisch dieselbe Demo als Controller.
 
-Der QR-Code enthält die URL mit dem passenden `room`-PIN. Es braucht kein Login und kein Benutzerkonto. Die Live-Verbindung läuft peer-to-peer im Browser.
-Alle Geräte mit demselben PIN spiegeln denselben Zustand. Die Modi `Normal`, `iPad Display` und `iPhone Control` ändern nur die Ansicht, nicht die Synchronisationsrechte.
+Der QR-Code enthält die URL mit der gewählten Demo (`?role=controller&demo=3`). Weitere Geräte können dieselbe Demo auch direkt im Header wählen. Die zuletzt gewählte Demo wird im Browser gespeichert (`localStorage`). Es braucht kein Login und kein Benutzerkonto. Die Live-Verbindung läuft peer-to-peer im Browser.
+
+Alle Geräte in derselben Demo teilen denselben Zustand, auch mit drei oder mehr Geräten. Die Modi `Normal`, `iPad Display` und `iPhone Control` ändern nur die Ansicht, nicht die Synchronisationsrechte.
+
+Synchronisation:
+
+- Jede Änderung erhält eine Revision. Bei gleichzeitigen Änderungen gewinnt überall dieselbe Version (höhere Revision, danach das Gerät, das der Demo zuerst beigetreten ist), deshalb laufen die Geräte nicht auseinander.
+- Ein neu verbundenes Gerät übernimmt den laufenden Zustand der Demo, statt ihn zu überschreiben.
+- Ein Heartbeat alle vier Sekunden und ein Abgleich beim Zurückkehren in den Browser (z. B. nach Standby) holen verpasste Änderungen nach.
+
 In der `CONOX View` führt der Button `Normalansicht` zurück zur normalen Oberfläche.
 
 Für echtes Vollbild auf dem iPad die Seite in Safari über `Zum Home-Bildschirm` speichern und danach über das neue CONOX-Icon starten.

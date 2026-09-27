@@ -1,5 +1,12 @@
 # Änderungsverlauf
 
+## Unveröffentlicht – feste Demo-Sitzungen
+
+- zufällige Sitzungs-PINs durch zehn feste Sitzungen `Demo 1` bis `Demo 10` ersetzt
+- zuletzt gewählte Demo im `localStorage`, QR-Code und Links enthalten `demo=<n>`
+- Synchronisation mit Revisionen und einheitlicher Konfliktauflösung für drei und mehr Geräte
+- neue Geräte übernehmen den laufenden Zustand; Heartbeat und Abgleich nach Standby
+
 ## Version 42 – rekonstruierte React/Vite-Entwicklungsstruktur
 
 - echtes `package.json` mit React, ReactDOM, Vite und reproduzierbarem Lockfile

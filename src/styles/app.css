@@ -100,7 +100,6 @@ canvas {
   flex: 0 0 auto;
 }
 .sb-remote-switch select,
-.sb-remote-switch input,
 .sb-remote-switch button {
   height: 35px;
   border: 1px solid #526b78;
@@ -115,10 +114,8 @@ canvas {
   max-width: 132px;
   padding: 0 8px;
 }
-.sb-remote-switch input {
-  width: 78px;
-  padding: 0 8px;
-  text-align: center;
+.sb-remote-switch .sb-demo-select {
+  width: 96px;
 }
 .sb-remote-switch button {
   min-width: 42px;
@@ -3282,7 +3279,6 @@ footer {
   color: #fff;
 }
 .sb-remote-switch select,
-.sb-remote-switch input,
 .sb-remote-switch button,
 .sb-link-close,
 .sb-display-exit {
@@ -3290,7 +3286,7 @@ footer {
   background: var(--fk-blue);
   color: #fff;
 }
-.sb-remote-switch input {
+.sb-remote-switch .sb-demo-select {
   background: #fff;
   color: var(--fk-blue-dark);
 }
@@ -3678,13 +3674,13 @@ footer {
   }
   .sb-remote-controls {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 82px 54px 48px;
+    grid-template-columns: minmax(0, 1fr) 104px 54px;
     width: 100%;
   }
   .sb-remote-switch select {
     max-width: none;
   }
-  .sb-remote-switch input {
+  .sb-remote-switch .sb-demo-select {
     width: 100%;
   }
   .sb-remote-switch small {

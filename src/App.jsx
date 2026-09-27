@@ -35,7 +35,12 @@ import {
 } from "./components/UiPrimitives.jsx";
 
 const REMOTE_ROLES = ["full", "display", "controller"];
-const REMOTE_ROOM_PREFIX = "conox-room-";
+const DEMO_SESSIONS = Array.from({ length: 10 }, (_, index) => index + 1);
+const DEMO_STORAGE_KEY = "conox.demoSession";
+const REMOTE_ROOM_PREFIX = "conox-demo-";
+const REMOTE_STATE_VERSION = 2;
+const REMOTE_HEARTBEAT_MS = 4000;
+const REMOTE_APPLY_SETTLE_MS = 150;
 
 function createClientId() {
   return (
@@ -49,16 +54,62 @@ function getInitialRemoteRole() {
   return REMOTE_ROLES.includes(role) ? role : "full";
 }
 
-function createRoomCode() {
-  return String(Math.floor(100000 + Math.random() * 900000));
+function parseDemoSession(value) {
+  const demo = Number.parseInt(value, 10);
+  return DEMO_SESSIONS.includes(demo) ? demo : null;
 }
 
-function getInitialRoomCode() {
-  const params = new URLSearchParams(window.location.search);
+function readStoredDemoSession() {
+  try {
+    return parseDemoSession(window.localStorage.getItem(DEMO_STORAGE_KEY));
+  } catch {
+    return null;
+  }
+}
+
+function getInitialDemoSession() {
   return (
-    params.get("room") ??
-    window.localStorage.getItem("conox.roomCode") ??
-    createRoomCode()
+    parseDemoSession(new URLSearchParams(window.location.search).get("demo")) ??
+    readStoredDemoSession() ??
+    DEMO_SESSIONS[0]
+  );
+}
+
+function replaceRemoteUrl(role, demo) {
+  const params = new URLSearchParams(window.location.search);
+  role === "full" ? params.delete("role") : params.set("role", role);
+  params.set("demo", String(demo));
+  params.delete("room");
+  window.history.replaceState(
+    {},
+    "",
+    `${window.location.pathname}?${params}${window.location.hash}`,
+  );
+}
+
+function buildRemoteUrl(role, demo) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("role", role);
+  url.searchParams.set("demo", String(demo));
+  url.searchParams.delete("room");
+  return url.toString();
+}
+
+// Total order over state revisions: higher revision wins, then the device
+// that joined the demo first, then the client id as a stable tie-breaker.
+// Every peer applies the same rule, so all devices converge on one state.
+function compareRemoteRevisions(a, b) {
+  if (a.rev !== b.rev) return a.rev - b.rev;
+  if (a.joinedAt !== b.joinedAt) return b.joinedAt - a.joinedAt;
+  if (a.author === b.author) return 0;
+  return a.author < b.author ? 1 : -1;
+}
+
+function isRemoteRevision(value) {
+  return (
+    Number.isFinite(value?.rev) &&
+    Number.isFinite(value?.joinedAt) &&
+    typeof value?.author === "string"
   );
 }
 
@@ -77,9 +128,9 @@ export default function App() {
     SCENARIOS.find((A) => A.id === "target-a") ?? SCENARIOS[0];
   const [remoteRole, setRemoteRole] = React.useState(getInitialRemoteRole),
     [borderlessDisplay, setBorderlessDisplay] = React.useState(false),
-    [roomCode, setRoomCode] = React.useState(getInitialRoomCode),
+    [demoSession, setDemoSession] = React.useState(getInitialDemoSession),
     [remotePeers, setRemotePeers] = React.useState(0),
-    [remoteStatus, setRemoteStatus] = React.useState("remote.status.off"),
+    [remoteStatus, setRemoteStatus] = React.useState("remote.status.waiting"),
     [linkPanelOpen, setLinkPanelOpen] = React.useState(!1),
     [qrCodeDataUrl, setQrCodeDataUrl] = React.useState(""),
     [activePanel, setActivePanel] = React.useState("monitor"),
@@ -176,11 +227,11 @@ export default function App() {
     remoteClientIdRef = React.useRef(createClientId()),
     remoteActionRef = React.useRef(null),
     remoteStateRef = React.useRef(null),
-    remoteApplyingRef = React.useRef(!1),
-    remoteInboundStateRef = React.useRef(""),
-    remoteLastLocalStateRef = React.useRef(""),
-    remoteRoomJoinedAtRef = React.useRef(0),
-    remoteSequenceRef = React.useRef(0),
+    remoteKnownStateRef = React.useRef({ json: "", state: null }),
+    remoteRevisionRef = React.useRef(null),
+    remoteJoinedAtRef = React.useRef(0),
+    remoteApplyingUntilRef = React.useRef(0),
+    remoteMessageHandlerRef = React.useRef(null),
     qconAlarmTriggered =
       qconAlarmEnabled &&
       (currentIndices.qcon < qconAlarmMin ||
@@ -1415,47 +1466,22 @@ export default function App() {
     },
     changeRemoteRole = (role) => {
       const nextRole = REMOTE_ROLES.includes(role) ? role : "full";
-      const params = new URLSearchParams(window.location.search);
-      nextRole === "full"
-        ? params.delete("role")
-        : params.set("role", nextRole);
-      roomCode ? params.set("room", roomCode) : params.delete("room");
-      window.history.replaceState(
-        {},
-        "",
-        `${window.location.pathname}${params.toString() ? `?${params}` : ""}`,
-      );
+      replaceRemoteUrl(nextRole, demoSession);
       setRemoteRole(nextRole);
     },
-    updateRoomCode = (value) => {
-      const nextCode = value.replace(/\D/g, "").slice(0, 6);
-      const params = new URLSearchParams(window.location.search);
-      nextCode ? params.set("room", nextCode) : params.delete("room");
-      remoteRole === "full"
-        ? params.delete("role")
-        : params.set("role", remoteRole);
-      window.history.replaceState(
-        {},
-        "",
-        `${window.location.pathname}${params.toString() ? `?${params}` : ""}`,
-      );
-      setRoomCode(nextCode);
+    changeDemoSession = (value) => {
+      const nextDemo = parseDemoSession(value) ?? DEMO_SESSIONS[0];
+      replaceRemoteUrl(remoteRole, nextDemo);
+      setDemoSession(nextDemo);
     },
-    generateRoomCode = () => {
-      updateRoomCode(createRoomCode());
-    },
-    controllerUrl = React.useMemo(() => {
-      const url = new URL(window.location.href);
-      url.searchParams.set("role", "controller");
-      url.searchParams.set("room", roomCode);
-      return url.toString();
-    }, [roomCode]),
-    displayUrl = React.useMemo(() => {
-      const url = new URL(window.location.href);
-      url.searchParams.set("role", "display");
-      url.searchParams.set("room", roomCode);
-      return url.toString();
-    }, [roomCode]),
+    controllerUrl = React.useMemo(
+      () => buildRemoteUrl("controller", demoSession),
+      [demoSession],
+    ),
+    displayUrl = React.useMemo(
+      () => buildRemoteUrl("display", demoSession),
+      [demoSession],
+    ),
     qrCodeUrl = qrCodeDataUrl,
     Nu = () => {
       simulatorEnabled &&
@@ -1675,32 +1701,32 @@ export default function App() {
   React.useEffect(() => {
     remoteStateRef.current = remoteSnapshot;
   }, [remoteSnapshot]);
-  const sendRemoteSnapshot = React.useCallback(
-    (targetPeer) => {
-      if (roomCode.length !== 6 || !remoteActionRef.current) return;
-      remoteSequenceRef.current += 1;
-      remoteActionRef.current.send(
+  const sendRemoteState = React.useCallback((targetPeer) => {
+    const action = remoteActionRef.current,
+      revision = remoteRevisionRef.current,
+      known = remoteKnownStateRef.current;
+    if (!action || !revision || !known.state) return;
+    action
+      .send(
         {
+          type: "state",
+          version: REMOTE_STATE_VERSION,
           clientId: remoteClientIdRef.current,
-          sequence: remoteSequenceRef.current,
-          sentAt: Date.now(),
-          state: remoteStateRef.current,
-          version: 1,
+          revision,
+          state: known.state,
         },
         targetPeer ? { target: targetPeer } : undefined,
-      );
-    },
-    [roomCode],
-  );
+      )
+      ?.catch?.(() => {});
+  }, []);
   const applyRemoteSnapshot = React.useCallback(
-    (message) => {
-      const snapshot = message?.state ?? message;
-      if (message?.clientId === remoteClientIdRef.current) return;
-      if (!snapshot || snapshot.version !== 1) return;
-      const inboundState = JSON.stringify(snapshot);
-      if (inboundState === remoteInboundStateRef.current) return;
-      remoteInboundStateRef.current = inboundState;
-      remoteApplyingRef.current = !0;
+    (snapshot, revision) => {
+      remoteRevisionRef.current = revision;
+      remoteKnownStateRef.current = {
+        json: JSON.stringify(snapshot),
+        state: snapshot,
+      };
+      remoteApplyingUntilRef.current = Date.now() + REMOTE_APPLY_SETTLE_MS;
       const nextScenario =
         SCENARIOS.find((item) => item.id === snapshot.selectedScenarioId) ??
         NARKOSE_REISE().find(
@@ -1737,79 +1763,112 @@ export default function App() {
 
       scenarioProfileRef.current = nextScenario?.profile ?? null;
       scenarioIndicesRef.current = nextScenario?.indices ?? null;
-      window.setTimeout(() => {
-        remoteApplyingRef.current = !1;
-      }, 120);
     },
     [NARKOSE_REISE, SCENARIOS, locale],
   );
-  React.useEffect(() => {
-    window.localStorage.setItem("conox.roomCode", roomCode);
-  }, [roomCode]);
-  React.useEffect(() => {
-    if (roomCode.length !== 6) {
-      remoteActionRef.current = null;
-      remoteRoomJoinedAtRef.current = 0;
-      setRemotePeers(0);
-      setRemoteStatus("remote.status.off");
+  remoteMessageHandlerRef.current = (message, peerId) => {
+    if (
+      message?.type !== "state" ||
+      message.version !== REMOTE_STATE_VERSION ||
+      message.clientId === remoteClientIdRef.current ||
+      !isRemoteRevision(message.revision) ||
+      !message.state ||
+      !remoteRevisionRef.current
+    )
       return;
-    }
-
+    const order = compareRemoteRevisions(
+      message.revision,
+      remoteRevisionRef.current,
+    );
+    if (order > 0) applyRemoteSnapshot(message.state, message.revision);
+    else if (order < 0) sendRemoteState(peerId);
+  };
+  React.useEffect(() => {
+    try {
+      window.localStorage.setItem(DEMO_STORAGE_KEY, String(demoSession));
+    } catch {}
+  }, [demoSession]);
+  React.useEffect(() => {
+    const joinedAt = Date.now();
+    remoteJoinedAtRef.current = joinedAt;
+    remoteRevisionRef.current = {
+      rev: 0,
+      joinedAt,
+      author: remoteClientIdRef.current,
+    };
+    remoteKnownStateRef.current = {
+      json: JSON.stringify(remoteStateRef.current),
+      state: remoteStateRef.current,
+    };
+    setRemotePeers(0);
     setRemoteStatus("remote.status.waiting");
-    remoteRoomJoinedAtRef.current = Date.now();
+
     const peers = new Set();
+    const roomId = `${REMOTE_ROOM_PREFIX}${demoSession}`;
     const room = joinRoom(
       {
         appId: "com.nexio.conox-simulator",
-        password: roomCode,
+        password: roomId,
       },
-      `${REMOTE_ROOM_PREFIX}${roomCode}`,
+      roomId,
     );
     const stateAction = room.makeAction("simulator-state");
     remoteActionRef.current = stateAction;
-    stateAction.onMessage = applyRemoteSnapshot;
-    room.onPeerJoin = (peerId) => {
-      peers.add(peerId);
-      setRemotePeers(peers.size);
-      setRemoteStatus("remote.status.connected");
-      if (Date.now() - remoteRoomJoinedAtRef.current > 1000) {
-        sendRemoteSnapshot(peerId);
-      }
-    };
-    room.onPeerLeave = (peerId) => {
-      peers.delete(peerId);
+    stateAction.onMessage = (message, context) =>
+      remoteMessageHandlerRef.current?.(message, context?.peerId);
+    const updatePeers = () => {
       setRemotePeers(peers.size);
       setRemoteStatus(
         peers.size ? "remote.status.connected" : "remote.status.waiting",
       );
     };
+    // Every peer sends its state to a newcomer and the newcomer sends its own
+    // back; the revision order decides which one is kept, so a fresh device
+    // adopts the running demo instead of overwriting it.
+    room.onPeerJoin = (peerId) => {
+      peers.add(peerId);
+      updatePeers();
+      sendRemoteState(peerId);
+    };
+    room.onPeerLeave = (peerId) => {
+      peers.delete(peerId);
+      updatePeers();
+    };
+    // Periodic heartbeat heals lost messages; peers holding a newer state
+    // answer with it, so every device catches up within one interval.
+    const heartbeat = window.setInterval(() => {
+      peers.size && sendRemoteState();
+    }, REMOTE_HEARTBEAT_MS);
+    const resync = () => {
+      document.visibilityState !== "hidden" && peers.size && sendRemoteState();
+    };
+    document.addEventListener("visibilitychange", resync);
+    window.addEventListener("online", resync);
 
     return () => {
+      window.clearInterval(heartbeat);
+      document.removeEventListener("visibilitychange", resync);
+      window.removeEventListener("online", resync);
       remoteActionRef.current = null;
-      room.leave();
+      room.leave()?.catch?.(() => {});
     };
-  }, [applyRemoteSnapshot, roomCode, sendRemoteSnapshot]);
+  }, [demoSession, sendRemoteState]);
   React.useEffect(() => {
-    if (
-      roomCode.length !== 6 ||
-      remoteApplyingRef.current ||
-      !remoteActionRef.current
-    )
-      return;
-
     const timeoutId = window.setTimeout(() => {
-      const currentState = JSON.stringify(remoteSnapshot);
-      if (!remoteLastLocalStateRef.current) {
-        remoteLastLocalStateRef.current = currentState;
-        return;
-      }
-      if (currentState === remoteLastLocalStateRef.current) return;
-      remoteLastLocalStateRef.current = currentState;
-      if (currentState === remoteInboundStateRef.current) return;
-      sendRemoteSnapshot();
+      const json = JSON.stringify(remoteSnapshot);
+      if (json === remoteKnownStateRef.current.json) return;
+      remoteKnownStateRef.current = { json, state: remoteSnapshot };
+      // Follow-up updates caused by applying a remote state are not new edits.
+      if (Date.now() < remoteApplyingUntilRef.current) return;
+      remoteRevisionRef.current = {
+        rev: (remoteRevisionRef.current?.rev ?? 0) + 1,
+        joinedAt: remoteJoinedAtRef.current,
+        author: remoteClientIdRef.current,
+      };
+      sendRemoteState();
     }, 80);
     return () => window.clearTimeout(timeoutId);
-  }, [roomCode, remoteSnapshot, sendRemoteSnapshot]);
+  }, [remoteSnapshot, sendRemoteState]);
   return (
     <main
       className={`sb-shell role-${remoteRole}${borderlessDisplay ? " display-borderless" : ""}${linkPanelOpen ? " link-open" : ""}`}
@@ -1833,14 +1892,18 @@ export default function App() {
                   {t("remote.role.controller")}
                 </option>
               </select>
-              <input
-                value={roomCode}
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={6}
-                aria-label={t("remote.pin")}
-                onChange={(event) => updateRoomCode(event.target.value)}
-              />
+              <select
+                className="sb-demo-select"
+                value={demoSession}
+                onChange={(event) => changeDemoSession(event.target.value)}
+                aria-label={t("remote.demo")}
+              >
+                {DEMO_SESSIONS.map((demo) => (
+                  <option key={demo} value={demo}>
+                    {t("remote.demoName", { number: demo })}
+                  </option>
+                ))}
+              </select>
               <button
                 type="button"
                 className="sb-link-button"
@@ -1851,9 +1914,6 @@ export default function App() {
                 }}
               >
                 {t("remote.link")}
-              </button>
-              <button type="button" onClick={generateRoomCode}>
-                {t("remote.newPin")}
               </button>
             </div>
             <small>
