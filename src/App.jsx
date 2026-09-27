@@ -1918,7 +1918,8 @@ export default function App() {
             </div>
             <small>
               {t(remoteStatus, {
-                count: remotePeers,
+                // Peers exclude this device; show the total in the demo.
+                count: remotePeers + 1,
               })}
             </small>
           </div>
