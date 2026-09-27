@@ -761,15 +761,51 @@ canvas {
   font-weight: 900;
   line-height: 1;
 }
-.sb-db-labels span {
+.sb-db-labels button {
   position: absolute;
-  left: 0.25cqw;
+  left: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  height: 22%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
-.sb-db-labels span:first-child {
-  top: 5%;
+.sb-db-labels button:first-child {
+  top: 0;
 }
-.sb-db-labels span:last-child {
-  bottom: 3%;
+.sb-db-labels button:last-of-type {
+  bottom: 0;
+}
+.sb-db-labels button:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.18);
+}
+.sb-db-labels button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.sb-db-labels button:focus-visible {
+  outline: 2px solid #8fd3ff;
+  outline-offset: -2px;
+}
+.sb-db-level {
+  position: absolute;
+  left: 18%;
+  width: 64%;
+  height: 2px;
+  border-radius: 1px;
+  background: #edf3f5;
+  transform: translateY(-50%);
+  pointer-events: none;
 }
 .sb-db-scale b {
   position: absolute;

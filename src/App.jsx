@@ -34,10 +34,17 @@ import {
   FactRow,
 } from "./components/UiPrimitives.jsx";
 
+// Spectrogram colour scaling (IFU §5.2.7): "+" shifts saturation towards red,
+// "−" towards blue. Each step shifts the dB colour mapping by DSA_SCALE_STEP_DB.
+const DSA_SCALE_MIN = -4;
+const DSA_SCALE_MAX = 4;
+const DSA_SCALE_STEP_DB = 4;
+
 const REMOTE_ROLES = ["full", "display", "controller"];
 const DEMO_SESSIONS = Array.from({ length: 10 }, (_, index) => index + 1);
 const DEMO_STORAGE_KEY = "conox.demoSession";
-const REMOTE_ROOM_PREFIX = "conox-demo-";
+const REMOTE_ROOM_PREFIX =
+  import.meta.env.VITE_REMOTE_ROOM_PREFIX || "conox-demo-";
 const REMOTE_STATE_VERSION = 2;
 const REMOTE_HEARTBEAT_MS = 4000;
 const REMOTE_APPLY_SETTLE_MS = 150;
@@ -149,6 +156,7 @@ export default function App() {
     [eegWindowSeconds, setEegWindowSeconds] = React.useState(4),
     [eegAmplitude, setEegAmplitude] = React.useState(120),
     [dsaPeriodMinutes, setDsaPeriodMinutes] = React.useState(30),
+    [dsaColorScale, setDsaColorScale] = React.useState(0),
     [liveSync, setLiveSync] = React.useState(!1),
     [qconAlarmEnabled, setQconAlarmEnabled] = React.useState(!1),
     [qconAlarmMin, setQconAlarmMin] = React.useState(20),
@@ -221,6 +229,7 @@ export default function App() {
     eegWindowRef = React.useRef(eegWindowSeconds),
     eegAmplitudeRef = React.useRef(eegAmplitude),
     dsaPeriodRef = React.useRef(dsaPeriodMinutes),
+    dsaColorOffsetRef = React.useRef(0),
     trendSequenceRef = React.useRef(0),
     originalDsaPeriod = React.useRef(30),
     soloReturnView = React.useRef("eeg-dsa"),
@@ -270,6 +279,10 @@ export default function App() {
       dsaPeriodRef.current = dsaPeriodMinutes;
       window.dispatchEvent(new Event("conox-dsa-period-change"));
     }, [dsaPeriodMinutes]),
+    React.useEffect(() => {
+      dsaColorOffsetRef.current = dsaColorScale * DSA_SCALE_STEP_DB;
+      window.dispatchEvent(new Event("conox-dsa-period-change"));
+    }, [dsaColorScale]),
     React.useEffect(() => {
       ((sef50VisibleRef.current = sef50Visible),
         (sef95VisibleRef.current = sef95Visible),
@@ -660,7 +673,10 @@ export default function App() {
             for (let ze = 0; ze < A.height; ze += fe) {
               const ft = Math.min(A.height - 1, ze + Math.floor(fe / 2)),
                 lt = ((A.height - 1 - ft) / (A.height - 1)) * (Z.length - 1),
-                [vt, dl, El] = dsaDbToRgb(Z[Math.round(lt)]),
+                [vt, dl, El] = dsaDbToRgb(
+                  Z[Math.round(lt)],
+                  dsaColorOffsetRef.current,
+                ),
                 Ne = Math.min(A.height, ze + fe);
               for (let ge = ze; ge < Ne; ge += 1) {
                 const Ee = (ge * Y.width + Qe) * 4;
@@ -688,7 +704,10 @@ export default function App() {
             for (let El = 0; El < A.height; El += Qe) {
               const Ne = Math.min(A.height - 1, El + Math.floor(Qe / 2)),
                 ge = ((A.height - 1 - Ne) / (A.height - 1)) * (vt.length - 1),
-                [Ee, we, Xt] = dsaDbToRgb(vt[Math.round(ge)]),
+                [Ee, we, Xt] = dsaDbToRgb(
+                  vt[Math.round(ge)],
+                  dsaColorOffsetRef.current,
+                ),
                 Ml = Math.min(A.height, El + Qe);
               for (let Tl = El; Tl < Ml; Tl += 1) {
                 const hl = (Tl * A.width + ze) * 4;
@@ -1658,6 +1677,7 @@ export default function App() {
       eegWindowSeconds,
       eegAmplitude,
       dsaPeriodMinutes,
+      dsaColorScale,
       liveSync,
       qconAlarmEnabled,
       qconAlarmMin,
@@ -1684,6 +1704,7 @@ export default function App() {
       eegWindowSeconds,
       eegAmplitude,
       dsaPeriodMinutes,
+      dsaColorScale,
       liveSync,
       qconAlarmEnabled,
       qconAlarmMin,
@@ -1748,6 +1769,7 @@ export default function App() {
       setEegWindowSeconds(snapshot.eegWindowSeconds ?? 4);
       setEegAmplitude(snapshot.eegAmplitude ?? 120);
       setDsaPeriodMinutes(snapshot.dsaPeriodMinutes ?? 30);
+      setDsaColorScale(snapshot.dsaColorScale ?? 0);
       setLiveSync(Boolean(snapshot.liveSync));
       setQconAlarmEnabled(Boolean(snapshot.qconAlarmEnabled));
       setQconAlarmMin(snapshot.qconAlarmMin ?? 20);
@@ -2196,9 +2218,51 @@ export default function App() {
                         role="img"
                         aria-label={t("dsa.scale")}
                       />
-                      <div className="sb-db-labels">
-                        <span>{"+"}</span>
-                        <span>{"−"}</span>
+                      <div
+                        className="sb-db-labels"
+                        role="group"
+                        aria-label={t("dsa.scaleLevel", {
+                          level:
+                            dsaColorScale > 0
+                              ? `+${dsaColorScale}`
+                              : String(dsaColorScale),
+                        })}
+                      >
+                        <button
+                          type="button"
+                          title={t("dsa.scaleUp")}
+                          aria-label={t("dsa.scaleUp")}
+                          disabled={dsaColorScale >= DSA_SCALE_MAX}
+                          onClick={() =>
+                            setDsaColorScale((level) =>
+                              Math.min(DSA_SCALE_MAX, level + 1),
+                            )
+                          }
+                        >
+                          {"+"}
+                        </button>
+                        {dsaColorScale !== 0 && (
+                          <i
+                            className="sb-db-level"
+                            style={{
+                              top: `${50 - (dsaColorScale / DSA_SCALE_MAX) * 32}%`,
+                            }}
+                            aria-hidden="true"
+                          />
+                        )}
+                        <button
+                          type="button"
+                          title={t("dsa.scaleDown")}
+                          aria-label={t("dsa.scaleDown")}
+                          disabled={dsaColorScale <= DSA_SCALE_MIN}
+                          onClick={() =>
+                            setDsaColorScale((level) =>
+                              Math.max(DSA_SCALE_MIN, level - 1),
+                            )
+                          }
+                        >
+                          {"−"}
+                        </button>
                       </div>
                     </div>
                   </div>

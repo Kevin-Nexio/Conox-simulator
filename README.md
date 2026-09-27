@@ -50,6 +50,8 @@ Synchronisation:
 - Ein neu verbundenes Gerät übernimmt den laufenden Zustand der Demo, statt ihn zu überschreiben.
 - Ein Heartbeat alle vier Sekunden und ein Abgleich beim Zurückkehren in den Browser (z. B. nach Standby) holen verpasste Änderungen nach.
 
+DSA-Farbskalierung: Die Tasten `+` und `−` neben der dB-Farbskala verschieben die Farbzuordnung des Spektrogramms (gemäss Conox 2D IFU, Kap. 5.2.7). `+` erhöht die Farbsättigung Richtung Rot, `−` Richtung Blau. Es gibt je vier Stufen à 4 dB; eine weisse Markierung zeigt die aktuelle Stufe. Die Einstellung wird mit den anderen Geräten derselben Demo synchronisiert.
+
 In der `CONOX View` führt der Button `Normalansicht` zurück zur normalen Oberfläche.
 
 Für echtes Vollbild auf dem iPad die Seite in Safari über `Zum Home-Bildschirm` speichern und danach über das neue CONOX-Icon starten.

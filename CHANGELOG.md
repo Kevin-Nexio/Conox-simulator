@@ -6,6 +6,7 @@
 - zuletzt gewählte Demo im `localStorage`, QR-Code und Links enthalten `demo=<n>`
 - Synchronisation mit Revisionen und einheitlicher Konfliktauflösung für drei und mehr Geräte
 - neue Geräte übernehmen den laufenden Zustand; Heartbeat und Abgleich nach Standby
+- funktionierende `+`/`−`-Tasten der DSA-Farbskala (Sättigung Richtung Rot/Blau, ±4 Stufen à 4 dB)
 
 ## Version 42 – rekonstruierte React/Vite-Entwicklungsstruktur
 

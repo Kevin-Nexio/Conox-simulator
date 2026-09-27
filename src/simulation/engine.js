@@ -59,8 +59,8 @@ function St() {
   return Math.sqrt(-2 * Math.log(b)) * Math.cos(2 * Math.PI * j);
 }
 
-function xm(b) {
-  const j = re(b, -30, 50);
+function xm(b, offset = 0) {
+  const j = re(b + offset, -30, 50);
   for (let M = 0; M < of.length - 1; M += 1) {
     const [d, x] = of[M],
       [C, q] = of[M + 1];
