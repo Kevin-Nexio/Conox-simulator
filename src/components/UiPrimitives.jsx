@@ -66,13 +66,19 @@ export function SelectField({
   );
 }
 
-export function DoseControl({ label, value, onChange, compact = false }) {
+export function DoseControl({
+  label,
+  value,
+  onChange,
+  compact = false,
+  effectLabels = EFFECT_LABELS,
+}) {
   return (
     <div className={`sb-dose-control ${compact ? "compact" : ""}`}>
       <div>
         <span>{label}</span>
         <strong>
-          {value} · {EFFECT_LABELS[value]}
+          {value} · {effectLabels[value]}
         </strong>
       </div>
       <div className="sb-dose-steps">
@@ -82,10 +88,10 @@ export function DoseControl({ label, value, onChange, compact = false }) {
             type="button"
             className={value === level ? "active" : ""}
             onClick={() => onChange(level)}
-            title={EFFECT_LABELS[level]}
+            title={effectLabels[level]}
           >
             <b>{level}</b>
-            {!compact && <small>{EFFECT_LABELS[level]}</small>}
+            {!compact && <small>{effectLabels[level]}</small>}
           </button>
         ))}
       </div>
@@ -107,6 +113,8 @@ export function MedicationChannel({
   bolusProgress,
   onBolus,
   bolusDisabled = false,
+  labels = {},
+  effectLabels = EFFECT_LABELS,
 }) {
   return (
     <section className="sb-medication-channel" data-category={category}>
@@ -115,7 +123,7 @@ export function MedicationChannel({
           <span>{title}</span>
           <small>{description}</small>
         </div>
-        <b>{EFFECT_LABELS[level]}</b>
+        <b>{effectLabels[level]}</b>
       </header>
       <SelectField
         label={drugLabel}
@@ -125,9 +133,10 @@ export function MedicationChannel({
       />
       <DoseControl
         compact
-        label="Wirkstufe"
+        label={labels.level ?? "Wirkstufe"}
         value={level}
         onChange={onLevelChange}
+        effectLabels={effectLabels}
       />
       <button
         type="button"
@@ -138,15 +147,15 @@ export function MedicationChannel({
       >
         <span>
           {bolusDisabled
-            ? "Wirkstoff auswahlen"
+            ? (labels.bolusDisabled ?? "Wirkstoff auswahlen")
             : bolusActive
-              ? "Bolus wirkt..."
-              : "Bolus auslosen"}
+              ? (labels.bolusActive ?? "Bolus wirkt...")
+              : (labels.bolus ?? "Bolus auslosen")}
         </span>
         <small>
           {bolusDisabled
-            ? "kein Bolus ohne Wirkstoff"
-            : "kurzer zusatzlicher Wirkungspeak"}
+            ? (labels.bolusDisabledHint ?? "kein Bolus ohne Wirkstoff")
+            : (labels.bolusHint ?? "kurzer zusatzlicher Wirkungspeak")}
         </small>
         <i style={{ width: `${bolusProgress}%` }} />
       </button>

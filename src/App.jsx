@@ -1505,6 +1505,21 @@ export default function App() {
       drug,
       ANALGESIC_PROFILES[drug].label,
     ]),
+    medicationEffectLabels = {
+      0: t("sim.effect.inactive"),
+      1: t("sim.effect.low"),
+      2: t("sim.effect.mid"),
+      3: t("sim.effect.high"),
+      4: t("sim.effect.overdose"),
+    },
+    medicationBolusLabels = {
+      level: t("sim.level"),
+      bolus: t("sim.bolusTrigger"),
+      bolusActive: t("sim.bolusActive"),
+      bolusDisabled: t("sim.bolusDisabled"),
+      bolusHint: t("sim.bolusHint"),
+      bolusDisabledHint: t("sim.bolusDisabledHint"),
+    },
     ol = () => {
       (setJourneyRunning(!1),
         setJourneyPhase(t("journey.ready")),
@@ -2618,9 +2633,9 @@ export default function App() {
                 <div className="sb-medication-grid">
                   <MedicationChannel
                     category="primary"
-                    title="Primäres Sedativum"
-                    description="führende hypnotische Signatur"
-                    drugLabel="Sedativum"
+                    title={t("sim.primaryTitle")}
+                    description={t("sim.primaryDescription")}
+                    drugLabel={t("sim.primaryDrugLabel")}
                     drug={primaryDrug}
                     drugOptions={primaryDrugOptions}
                     onDrugChange={(drug) => {
@@ -2636,12 +2651,14 @@ export default function App() {
                     bolusActive={bolusActive.primary}
                     bolusProgress={bolusProgress.primary}
                     onBolus={() => triggerMedicationBolus("primary")}
+                    labels={medicationBolusLabels}
+                    effectLabels={medicationEffectLabels}
                   />
                   <MedicationChannel
                     category="adjunct"
-                    title="Sekundäre Sedierung / Adjuvans"
-                    description="additive oder modifizierende Signatur"
-                    drugLabel="Sedativum / Adjuvans"
+                    title={t("sim.adjunctTitle")}
+                    description={t("sim.adjunctDescription")}
+                    drugLabel={t("sim.adjunctDrugLabel")}
                     drug={adjunctDrug}
                     drugOptions={[
                       ["none", t("sim.noAdjunct")],
@@ -2660,12 +2677,14 @@ export default function App() {
                     bolusProgress={bolusProgress.adjunct}
                     onBolus={() => triggerMedicationBolus("adjunct")}
                     bolusDisabled={adjunctDrug === "none"}
+                    labels={medicationBolusLabels}
+                    effectLabels={medicationEffectLabels}
                   />
                   <MedicationChannel
                     category="analgesia"
-                    title="Analgesie"
-                    description="qNOX- und opioidtypische EEG-Wirkung"
-                    drugLabel="Analgetikum"
+                    title={t("sim.analgesiaTitle")}
+                    description={t("sim.analgesiaDescription")}
+                    drugLabel={t("sim.analgesiaDrugLabel")}
                     drug={opioidDrug}
                     drugOptions={[
                       ["none", t("sim.noOpioid")],
@@ -2684,15 +2703,15 @@ export default function App() {
                     bolusProgress={bolusProgress.analgesia}
                     onBolus={() => triggerMedicationBolus("analgesia")}
                     bolusDisabled={opioidDrug === "none"}
+                    labels={medicationBolusLabels}
+                    effectLabels={medicationEffectLabels}
                   />
                 </div>
                 <div className="sb-simulator-note">
                   {opioidDrug !== "none"
-                    ? ANALGESIC_PROFILES[opioidDrug].signature
-                    : "Stufe 0 ist inaktiv. Ein Bolus erzeugt auch bei Stufe 0 einen kurzen, kategorietypischen Wirkungspeak."}
-                  {
-                    " Analgesie und Bewusstsein bleiben getrennt zu beurteilen; Opioide erzeugen nicht automatisch eine ausreichende Hypnose."
-                  }
+                    ? t(`sim.analgesicSignature.${opioidDrug}`)
+                    : t("sim.medicationNoteInactive")}
+                  {t("sim.medicationNoteCommon")}
                 </div>
                 <div className="sb-simulator-actions">
                   <button
