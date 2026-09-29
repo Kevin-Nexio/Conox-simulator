@@ -76,7 +76,7 @@ export function DoseControl({ label, value, onChange, compact = false }) {
         </strong>
       </div>
       <div className="sb-dose-steps">
-        {[1, 2, 3, 4].map((level) => (
+        {[0, 1, 2, 3, 4].map((level) => (
           <button
             key={level}
             type="button"
@@ -90,6 +90,67 @@ export function DoseControl({ label, value, onChange, compact = false }) {
         ))}
       </div>
     </div>
+  );
+}
+
+export function MedicationChannel({
+  category,
+  title,
+  description,
+  drugLabel,
+  drug,
+  drugOptions,
+  onDrugChange,
+  level,
+  onLevelChange,
+  bolusActive,
+  bolusProgress,
+  onBolus,
+  bolusDisabled = false,
+}) {
+  return (
+    <section className="sb-medication-channel" data-category={category}>
+      <header>
+        <div>
+          <span>{title}</span>
+          <small>{description}</small>
+        </div>
+        <b>{EFFECT_LABELS[level]}</b>
+      </header>
+      <SelectField
+        label={drugLabel}
+        value={drug}
+        options={drugOptions}
+        onChange={onDrugChange}
+      />
+      <DoseControl
+        compact
+        label="Wirkstufe"
+        value={level}
+        onChange={onLevelChange}
+      />
+      <button
+        type="button"
+        className={`sb-bolus ${bolusActive ? "active" : ""}`}
+        onClick={onBolus}
+        disabled={bolusDisabled}
+        data-testid={`${category}-bolus-button`}
+      >
+        <span>
+          {bolusDisabled
+            ? "Wirkstoff auswahlen"
+            : bolusActive
+              ? "Bolus wirkt..."
+              : "Bolus auslosen"}
+        </span>
+        <small>
+          {bolusDisabled
+            ? "kein Bolus ohne Wirkstoff"
+            : "kurzer zusatzlicher Wirkungspeak"}
+        </small>
+        <i style={{ width: `${bolusProgress}%` }} />
+      </button>
+    </section>
   );
 }
 

@@ -1,4 +1,5 @@
 export * from "./defaults.js";
+export * from "./analgesicProfiles.js";
 export * from "./drugProfiles.js";
 export * from "./eegPatterns.js";
 export * from "./scenarioFactories.js";

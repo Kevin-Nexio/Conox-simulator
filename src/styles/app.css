@@ -1465,6 +1465,88 @@ canvas {
 .sb-simulator-actions {
   margin-top: 3px;
 }
+.sb-medication-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.sb-medication-channel {
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid #2b4555;
+  border-top: 3px solid #0b6fc4;
+  border-radius: 7px;
+  background: #0b1820;
+}
+.sb-medication-channel[data-category="adjunct"] {
+  border-top-color: #5f83c9;
+}
+.sb-medication-channel[data-category="analgesia"] {
+  border-top-color: #0b6fc4;
+}
+.sb-medication-channel > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 42px;
+  margin-bottom: 8px;
+}
+.sb-medication-channel > header span,
+.sb-medication-channel > header small {
+  display: block;
+}
+.sb-medication-channel > header span {
+  color: #dcebf4;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.sb-medication-channel > header small {
+  margin-top: 3px;
+  color: #8fa3af;
+  font-size: 8px;
+  line-height: 1.3;
+}
+.sb-medication-channel > header b {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #0f3045;
+  color: #b8e9f7;
+  font-size: 8px;
+  white-space: nowrap;
+}
+.sb-medication-channel .sb-field {
+  margin-bottom: 8px;
+}
+.sb-medication-channel .sb-dose-control {
+  margin: 0 0 9px;
+}
+.sb-medication-channel .sb-dose-steps {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.sb-medication-channel .sb-dose-steps button {
+  min-width: 0;
+  padding: 4px 1px;
+}
+.sb-medication-channel .sb-bolus {
+  position: relative;
+  width: 100%;
+  min-height: 43px;
+  overflow: hidden;
+  padding: 7px 8px;
+}
+.sb-medication-channel .sb-bolus span,
+.sb-medication-channel .sb-bolus small {
+  display: block;
+}
+.sb-medication-channel .sb-bolus small {
+  margin-top: 2px;
+  font-size: 8px;
+}
 .sb-simulator-actions button {
   position: relative;
   min-height: 45px;
@@ -1993,7 +2075,8 @@ canvas {
   }
   .sb-simulator-grid,
   .sb-simulator-levels,
-  .sb-simulator-actions {
+  .sb-simulator-actions,
+  .sb-medication-grid {
     grid-template-columns: 1fr;
   }
   .sb-header {

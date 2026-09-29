@@ -4,6 +4,7 @@ import { joinRoom } from "trystero";
 import {
   DEFAULT_RENDER_SETTINGS,
   EFFECT_LEVELS,
+  ANALGESIC_PROFILES,
   NARKOSE_REISE_DAUER,
   DSA_COLOR_STOPS,
 } from "./data/index.js";
@@ -20,8 +21,11 @@ import {
   powerToDb,
   interpolateDrugProfile,
   combineDrugProfiles,
-  getBolusDepth,
+  getMedicationBolusProgress,
+  getMedicationEffects,
   applyDrugSpectralSignature,
+  applyAnalgesicSpectralSignature,
+  getAnalgesicRawSignal,
   calculateIndices,
   classifyClinicalState,
 } from "./simulation/engine.js";
@@ -31,6 +35,7 @@ import {
   Metric,
   SelectField,
   DoseControl,
+  MedicationChannel,
   FactRow,
 } from "./components/UiPrimitives.jsx";
 
@@ -48,6 +53,11 @@ const REMOTE_ROOM_PREFIX =
 const REMOTE_STATE_VERSION = 2;
 const REMOTE_HEARTBEAT_MS = 4000;
 const REMOTE_APPLY_SETTLE_MS = 150;
+const MEDICATION_BOLUS_DURATIONS_MS = {
+  primary: 15000,
+  adjunct: 13200,
+  analgesia: 10000,
+};
 
 function createClientId() {
   return (
@@ -150,9 +160,9 @@ export default function App() {
     [primaryDrug, setPrimaryDrug] = React.useState("propofol"),
     [primaryLevel, setPrimaryLevel] = React.useState(2),
     [adjunctDrug, setAdjunctDrug] = React.useState("none"),
-    [adjunctLevel, setAdjunctLevel] = React.useState(2),
+    [adjunctLevel, setAdjunctLevel] = React.useState(0),
     [opioidDrug, setOpioidDrug] = React.useState("none"),
-    [opioidLevel, setOpioidLevel] = React.useState(2),
+    [opioidLevel, setOpioidLevel] = React.useState(0),
     [eegWindowSeconds, setEegWindowSeconds] = React.useState(4),
     [eegAmplitude, setEegAmplitude] = React.useState(120),
     [dsaPeriodMinutes, setDsaPeriodMinutes] = React.useState(30),
@@ -187,8 +197,21 @@ export default function App() {
         }),
       ),
     ),
-    [bolusActive, setBolusActive] = React.useState(!1),
-    [bolusProgress, setBolusProgress] = React.useState(0),
+    [bolusActive, setBolusActive] = React.useState({
+      primary: !1,
+      adjunct: !1,
+      analgesia: !1,
+    }),
+    [bolusProgress, setBolusProgress] = React.useState({
+      primary: 0,
+      adjunct: 0,
+      analgesia: 0,
+    }),
+    [bolusEpochs, setBolusEpochs] = React.useState({
+      primary: null,
+      adjunct: null,
+      analgesia: null,
+    }),
     [journeyRunning, setJourneyRunning] = React.useState(!1),
     [journeyPhase, setJourneyPhase] = React.useState(t("journey.ready")),
     [journeyProgress, setJourneyProgress] = React.useState(0),
@@ -199,7 +222,11 @@ export default function App() {
     sef95VisibleRef = React.useRef(!1),
     knowledgeCanvasRef = React.useRef(null),
     eegStatusRef = React.useRef(null),
-    bolusStartedAtRef = React.useRef(null),
+    bolusStartedAtRef = React.useRef({
+      primary: null,
+      adjunct: null,
+      analgesia: null,
+    }),
     journeyStateRef = React.useRef({
       elapsed: 0,
       last: 0,
@@ -223,6 +250,7 @@ export default function App() {
       adjunctLevel: adjunctLevel,
       opioid: opioidDrug,
       opioidLevel: opioidLevel,
+      bolusStartedAt: bolusStartedAtRef.current,
       running: simulationRunning,
       render: DEFAULT_RENDER_SETTINGS,
     }),
@@ -257,6 +285,7 @@ export default function App() {
       adjunctLevel: adjunctLevel,
       opioid: opioidDrug,
       opioidLevel: opioidLevel,
+      bolusStartedAt: bolusStartedAtRef.current,
       running: simulationRunning,
       render: DEFAULT_RENDER_SETTINGS,
     };
@@ -299,14 +328,27 @@ export default function App() {
     }, [qconAlarmTriggered]),
     React.useEffect(() => {
       const A = window.setInterval(() => {
-        const R = bolusStartedAtRef.current;
-        if (R !== null) {
-          const me = (performance.now() - R) / 1e3;
-          (setBolusActive(me < 15),
-            setBolusProgress(clamp((me / 15) * 100, 0, 100)),
-            me >= 15 && (bolusStartedAtRef.current = null));
-        }
-      }, 1e3);
+        const now = performance.now();
+        const categories = ["primary", "adjunct", "analgesia"];
+        const nextActive = {};
+        const nextProgress = {};
+        categories.forEach((category) => {
+          const startedAt = bolusStartedAtRef.current[category];
+          const progress = getMedicationBolusProgress(startedAt, now, category);
+          nextProgress[category] = progress;
+          nextActive[category] = startedAt !== null && progress < 100;
+          if (progress >= 100) {
+            bolusStartedAtRef.current[category] = null;
+            setBolusEpochs((current) =>
+              current[category] === null
+                ? current
+                : { ...current, [category]: null },
+            );
+          }
+        });
+        setBolusActive(nextActive);
+        setBolusProgress(nextProgress);
+      }, 250);
       return () => window.clearInterval(A);
     }, [simulationRunning]),
     React.useEffect(() => {
@@ -332,6 +374,7 @@ export default function App() {
       const Mt = () => {
           const Y = simulationConfigRef.current,
             Z = simulationStateRef.current,
+            medicationEffects = getMedicationEffects(Y, performance.now()),
             fe = 180,
             Qe = {
               d: Z.bands.delta / 100,
@@ -352,8 +395,8 @@ export default function App() {
             El = Y.render.freqSmooth / 100,
             Ne = Z.bs / 100,
             ge = Z.depth / 100,
-            Ee = Y.adjunct === "none" ? 0 : EFFECT_LEVELS[Y.adjunctLevel] / 100,
-            we = Y.opioid === "none" ? 0 : Y.opioidLevel / 4,
+            Ee = medicationEffects.adjunct,
+            we = medicationEffects.analgesia,
             Xt = Y.drug === "propofol" || Y.adjunct === "propofol",
             Ml =
               Y.drug === "dexmedetomidine"
@@ -458,6 +501,7 @@ export default function App() {
                       0.24 * gaussian(X, 31.5, 5.2))));
               }
             }
+            le = applyAnalgesicSpectralSignature(le, Y.opioid, we, X);
             (Y.opioid === "fentanyl" &&
               ((le += 0.16 * we * gaussian(X, 5.8, 1.15)),
               X > 14 && (le *= 1 - 0.25 * we)),
@@ -766,18 +810,20 @@ export default function App() {
             Qe = Math.min((Y - tt) / 1e3, 0.1);
           if (((tt = Y), Z.running)) {
             const ze = scenarioProfileRef.current,
+              medicationEffects = getMedicationEffects(Z, Y),
               ft =
                 Z.drug === "awake"
                   ? 0
                   : clamp(
-                      EFFECT_LEVELS[Z.level] +
-                        (ze ? 0 : getBolusDepth(bolusStartedAtRef.current, Y)),
+                      ze
+                        ? EFFECT_LEVELS[Z.level]
+                        : medicationEffects.primaryValue,
                       0,
                       100,
                     ),
               lt = 1 - Math.exp(-Qe / 2.8);
             fe.depth += (ft - fe.depth) * lt;
-            const vt = ze ?? combineDrugProfiles(Z, ft),
+            const vt = ze ?? combineDrugProfiles(Z, ft, medicationEffects),
               dl =
                 Object.keys(fe.bands).reduce(
                   (ge, Ee) => ge + Math.abs(vt.bands[Ee] - fe.bands[Ee]),
@@ -869,40 +915,40 @@ export default function App() {
       const ke = () => {
           const ue = simulationConfigRef.current,
             Re = simulationStateRef.current,
+            medicationEffects = getMedicationEffects(ue, performance.now()),
             Y = Re.bands,
             Z = scenarioProfileRef.current,
             fe =
               ue.drug === "propofol"
                 ? Re.depth / 100
                 : ue.adjunct === "propofol"
-                  ? EFFECT_LEVELS[ue.adjunctLevel] / 100
+                  ? medicationEffects.adjunct
                   : 0,
             Qe =
               ue.drug === "midazolam"
                 ? Re.depth / 100
                 : ue.adjunct === "midazolam"
-                  ? EFFECT_LEVELS[ue.adjunctLevel] / 100
+                  ? medicationEffects.adjunct
                   : 0,
             ze =
               ue.drug === "dexmedetomidine"
                 ? Re.depth / 100
                 : ue.adjunct === "dexmedetomidine"
-                  ? EFFECT_LEVELS[ue.adjunctLevel] / 100
+                  ? medicationEffects.adjunct
                   : 0,
             ft =
               ue.drug === "ketamine"
                 ? Re.depth / 100
                 : ue.adjunct === "ketamine"
-                  ? EFFECT_LEVELS[ue.adjunctLevel] / 100
+                  ? medicationEffects.adjunct
                   : 0,
             lt =
               ue.drug === "sevoflurane"
                 ? Re.depth / 100
                 : ue.adjunct === "sevoflurane"
-                  ? EFFECT_LEVELS[ue.adjunctLevel] / 100
+                  ? medicationEffects.adjunct
                   : 0,
-            vt = ue.opioid === "none" ? 0 : ue.opioidLevel / 4,
-            dl = ue.opioid === "sufentanil" ? ue.opioidLevel / 4 : 0;
+            vt = medicationEffects.analgesia;
           if (((L += 1 / ve), Re.bs > 0 && Re.suppressed))
             return gaussianNoise() * (0.7 + (100 - Re.bs) * 0.018);
           const El = Math.sin(2 * Math.PI * 0.85 * L),
@@ -979,9 +1025,7 @@ export default function App() {
                       0.85 * Math.sin(2 * Math.PI * 0.17 * L),
                   )) +
             lt * 11 * Math.sin(2 * Math.PI * 2.1 * L + 1.1) +
-            dl *
-              (11 * Math.sin(2 * Math.PI * 1.4 * L + 0.5) +
-                4.5 * Math.sin(2 * Math.PI * 5.6 * L + 1.2));
+            getAnalgesicRawSignal(ue.opioid, vt, L);
           if (Ee > 0) {
             const ml = Z?.eventType ?? "betaArousal";
             ml === "alphaDropout"
@@ -1454,6 +1498,13 @@ export default function App() {
     _u = Object.keys(DRUG_PROFILES).filter(
       (A) => A !== "awake" && A !== primaryDrug,
     ),
+    primaryDrugOptions = Object.keys(DRUG_PROFILES)
+      .filter((drug) => drug !== "awake")
+      .map((drug) => [drug, DRUG_PROFILES[drug].label]),
+    analgesicOptions = Object.keys(ANALGESIC_PROFILES).map((drug) => [
+      drug,
+      ANALGESIC_PROFILES[drug].label,
+    ]),
     ol = () => {
       (setJourneyRunning(!1),
         setJourneyPhase(t("journey.ready")),
@@ -1469,6 +1520,14 @@ export default function App() {
         setJourneyProgress(0)),
         (scenarioProfileRef.current = A.profile),
         (scenarioIndicesRef.current = A.indices),
+        (bolusStartedAtRef.current.primary = null),
+        (bolusStartedAtRef.current.adjunct = null),
+        (bolusStartedAtRef.current.analgesia = null),
+        setBolusEpochs({
+          primary: null,
+          adjunct: null,
+          analgesia: null,
+        }),
         (simulationStateRef.current.time = 0),
         setPrimaryDrug(A.drug),
         setPrimaryLevel(A.level),
@@ -1482,6 +1541,16 @@ export default function App() {
     },
     wi = () => {
       ea(SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)]);
+    },
+    triggerMedicationBolus = (category) => {
+      if (!simulatorEnabled) return;
+      if (category === "adjunct" && adjunctDrug === "none") return;
+      if (category === "analgesia" && opioidDrug === "none") return;
+      bolusStartedAtRef.current[category] = performance.now();
+      setBolusEpochs((current) => ({ ...current, [category]: Date.now() }));
+      setBolusActive((current) => ({ ...current, [category]: !0 }));
+      setBolusProgress((current) => ({ ...current, [category]: 0 }));
+      ol();
     },
     changeRemoteRole = (role) => {
       const nextRole = REMOTE_ROLES.includes(role) ? role : "full";
@@ -1502,16 +1571,12 @@ export default function App() {
       [demoSession],
     ),
     qrCodeUrl = qrCodeDataUrl,
-    Nu = () => {
-      simulatorEnabled &&
-        (primaryDrug === "awake" &&
-          (setPrimaryDrug("propofol"), setPrimaryLevel(2), ol()),
-        (bolusStartedAtRef.current = performance.now()),
-        setBolusActive(!0),
-        setBolusProgress(0));
-    },
     Ji = (A) => {
       if (A === "active") {
+        if (primaryDrug === "awake") {
+          setPrimaryDrug("propofol");
+          setPrimaryLevel(0);
+        }
         simulatorEnabled || ol();
         return;
       }
@@ -1674,6 +1739,7 @@ export default function App() {
       adjunctLevel,
       opioidDrug,
       opioidLevel,
+      bolusEpochs,
       eegWindowSeconds,
       eegAmplitude,
       dsaPeriodMinutes,
@@ -1701,6 +1767,7 @@ export default function App() {
       adjunctLevel,
       opioidDrug,
       opioidLevel,
+      bolusEpochs,
       eegWindowSeconds,
       eegAmplitude,
       dsaPeriodMinutes,
@@ -1763,9 +1830,25 @@ export default function App() {
       setPrimaryDrug(snapshot.primaryDrug ?? "propofol");
       setPrimaryLevel(snapshot.primaryLevel ?? 2);
       setAdjunctDrug(snapshot.adjunctDrug ?? "none");
-      setAdjunctLevel(snapshot.adjunctLevel ?? 2);
+      setAdjunctLevel(snapshot.adjunctLevel ?? 0);
       setOpioidDrug(snapshot.opioidDrug ?? "none");
-      setOpioidLevel(snapshot.opioidLevel ?? 2);
+      setOpioidLevel(snapshot.opioidLevel ?? 0);
+      if (snapshot.bolusEpochs) {
+        const nextEpochs = {
+          primary: snapshot.bolusEpochs.primary ?? null,
+          adjunct: snapshot.bolusEpochs.adjunct ?? null,
+          analgesia: snapshot.bolusEpochs.analgesia ?? null,
+        };
+        const now = Date.now();
+        Object.entries(nextEpochs).forEach(([category, epoch]) => {
+          const age = epoch === null ? Infinity : now - epoch;
+          bolusStartedAtRef.current[category] =
+            age >= 0 && age < MEDICATION_BOLUS_DURATIONS_MS[category]
+              ? performance.now() - age
+              : null;
+        });
+        setBolusEpochs(nextEpochs);
+      }
       setEegWindowSeconds(snapshot.eegWindowSeconds ?? 4);
       setEegAmplitude(snapshot.eegAmplitude ?? 120);
       setDsaPeriodMinutes(snapshot.dsaPeriodMinutes ?? 30);
@@ -2532,115 +2615,86 @@ export default function App() {
               </header>
               <p>{t("sim.copy")}</p>
               <fieldset>
-                <div className="sb-simulator-grid">
-                  <SelectField
-                    label={t("sim.primary")}
-                    value={primaryDrug}
-                    onChange={(A) => {
-                      (setPrimaryDrug(A),
-                        A === "awake" && setPrimaryLevel(1),
-                        A === adjunctDrug && setAdjunctDrug("none"),
-                        ol());
+                <div className="sb-medication-grid">
+                  <MedicationChannel
+                    category="primary"
+                    title="Primäres Sedativum"
+                    description="führende hypnotische Signatur"
+                    drugLabel="Sedativum"
+                    drug={primaryDrug}
+                    drugOptions={primaryDrugOptions}
+                    onDrugChange={(drug) => {
+                      setPrimaryDrug(drug);
+                      if (drug === adjunctDrug) setAdjunctDrug("none");
+                      ol();
                     }}
-                    options={Object.keys(DRUG_PROFILES).map((A) => [
-                      A,
-                      DRUG_PROFILES[A].label,
-                    ])}
+                    level={primaryLevel}
+                    onLevelChange={(level) => {
+                      setPrimaryLevel(level);
+                      ol();
+                    }}
+                    bolusActive={bolusActive.primary}
+                    bolusProgress={bolusProgress.primary}
+                    onBolus={() => triggerMedicationBolus("primary")}
                   />
-                  {primaryDrug !== "awake" ? (
-                    <rf
-                      compact={!0}
-                      label={t("sim.level")}
-                      value={primaryLevel}
-                      onChange={(A) => {
-                        (setPrimaryLevel(A), ol());
-                      }}
-                    />
-                  ) : (
-                    <div className="sb-awake-note">{t("sim.awakeNote")}</div>
-                  )}
-                  <SelectField
-                    label={t("sim.adjunct")}
-                    value={adjunctDrug}
-                    onChange={(A) => {
-                      (setAdjunctDrug(A), ol());
-                    }}
-                    options={[
+                  <MedicationChannel
+                    category="adjunct"
+                    title="Sekundäre Sedierung / Adjuvans"
+                    description="additive oder modifizierende Signatur"
+                    drugLabel="Sedativum / Adjuvans"
+                    drug={adjunctDrug}
+                    drugOptions={[
                       ["none", t("sim.noAdjunct")],
-                      ..._u.map((A) => [A, DRUG_PROFILES[A].label]),
+                      ..._u.map((drug) => [drug, DRUG_PROFILES[drug].label]),
                     ]}
-                  />
-                  <SelectField
-                    label={t("sim.opioid")}
-                    value={opioidDrug}
-                    onChange={(A) => {
-                      (setOpioidDrug(A), ol());
+                    onDrugChange={(drug) => {
+                      setAdjunctDrug(drug);
+                      ol();
                     }}
-                    options={[
+                    level={adjunctLevel}
+                    onLevelChange={(level) => {
+                      setAdjunctLevel(level);
+                      ol();
+                    }}
+                    bolusActive={bolusActive.adjunct}
+                    bolusProgress={bolusProgress.adjunct}
+                    onBolus={() => triggerMedicationBolus("adjunct")}
+                    bolusDisabled={adjunctDrug === "none"}
+                  />
+                  <MedicationChannel
+                    category="analgesia"
+                    title="Analgesie"
+                    description="qNOX- und opioidtypische EEG-Wirkung"
+                    drugLabel="Analgetikum"
+                    drug={opioidDrug}
+                    drugOptions={[
                       ["none", t("sim.noOpioid")],
-                      ["remifentanil", "Remifentanil"],
-                      ["fentanyl", "Fentanyl"],
-                      ["sufentanil", "Sufentanil"],
+                      ...analgesicOptions,
                     ]}
+                    onDrugChange={(drug) => {
+                      setOpioidDrug(drug);
+                      ol();
+                    }}
+                    level={opioidLevel}
+                    onLevelChange={(level) => {
+                      setOpioidLevel(level);
+                      ol();
+                    }}
+                    bolusActive={bolusActive.analgesia}
+                    bolusProgress={bolusProgress.analgesia}
+                    onBolus={() => triggerMedicationBolus("analgesia")}
+                    bolusDisabled={opioidDrug === "none"}
                   />
                 </div>
-                <div className="sb-simulator-levels">
-                  {adjunctDrug !== "none" && (
-                    <rf
-                      compact={!0}
-                      label={t("sim.adjunctLevel")}
-                      value={adjunctLevel}
-                      onChange={(A) => {
-                        (setAdjunctLevel(A), ol());
-                      }}
-                    />
-                  )}
-                  {opioidDrug !== "none" && (
-                    <rf
-                      compact={!0}
-                      label={t("sim.opioidLevel")}
-                      value={opioidLevel}
-                      onChange={(A) => {
-                        (setOpioidLevel(A), ol());
-                      }}
-                    />
-                  )}
+                <div className="sb-simulator-note">
+                  {opioidDrug !== "none"
+                    ? ANALGESIC_PROFILES[opioidDrug].signature
+                    : "Stufe 0 ist inaktiv. Ein Bolus erzeugt auch bei Stufe 0 einen kurzen, kategorietypischen Wirkungspeak."}
+                  {
+                    " Analgesie und Bewusstsein bleiben getrennt zu beurteilen; Opioide erzeugen nicht automatisch eine ausreichende Hypnose."
+                  }
                 </div>
-                {opioidDrug === "sufentanil" && (
-                  <div className="sb-simulator-note">
-                    {t("sim.sufentanilNote")}
-                  </div>
-                )}
                 <div className="sb-simulator-actions">
-                  <button
-                    type="button"
-                    className={`sb-bolus ${bolusActive ? "active" : ""}`}
-                    onClick={Nu}
-                    data-testid="bolus-button"
-                    aria-label={
-                      primaryDrug === "awake"
-                        ? t("sim.bolusAwakeAria")
-                        : t("sim.bolus")
-                    }
-                  >
-                    <span>
-                      {primaryDrug === "awake"
-                        ? t("sim.bolusAwake")
-                        : bolusActive
-                          ? t("sim.bolusActive")
-                          : t("sim.bolus")}
-                    </span>
-                    <small>
-                      {primaryDrug === "awake"
-                        ? t("sim.bolusAwakeHint")
-                        : t("sim.bolusHint")}
-                    </small>
-                    <i
-                      style={{
-                        width: `${bolusProgress}%`,
-                      }}
-                    />
-                  </button>
                   <button
                     type="button"
                     onClick={() => setSimulationRunning((A) => !A)}

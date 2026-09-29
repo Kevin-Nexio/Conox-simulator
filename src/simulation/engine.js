@@ -1,4 +1,4 @@
-import { Da, sl, yl, of } from "../data/index.js";
+import { ANALGESIC_PROFILES, Da, sl, yl, of } from "../data/index.js";
 
 function re(b, j, M) {
   return Math.max(j, Math.min(M, b));
@@ -127,12 +127,75 @@ function Vi(b, j) {
   );
 }
 
-function _m(b, j) {
+function getMedicationBolusEnvelope(startedAt, nowMs, category = "primary") {
+  if (startedAt === null || startedAt === undefined) return 0;
+  const seconds = (nowMs - startedAt) / 1000;
+  const timing = {
+    primary: { attack: 1.2, hold: 3.8, decay: 10 },
+    adjunct: { attack: 1, hold: 3.2, decay: 9 },
+    analgesia: { attack: 0.55, hold: 2.45, decay: 7 },
+  }[category];
+  if (seconds < 0 || seconds >= timing.attack + timing.hold + timing.decay)
+    return 0;
+  if (seconds < timing.attack)
+    return Math.sin((seconds / timing.attack) * Math.PI * 0.5);
+  if (seconds < timing.attack + timing.hold) return 1;
+  return Math.exp(
+    -((seconds - timing.attack - timing.hold) / (timing.decay * 0.34)),
+  );
+}
+
+function getMedicationBolusProgress(startedAt, nowMs, category = "primary") {
+  if (startedAt === null || startedAt === undefined) return 0;
+  const duration = { primary: 15, adjunct: 13.2, analgesia: 10 }[category];
+  return re(((nowMs - startedAt) / 1000 / duration) * 100, 0, 100);
+}
+
+function getMedicationEffects(config, nowMs = performance.now()) {
+  const starts = config.bolusStartedAt ?? {};
+  const primaryBolus = getMedicationBolusEnvelope(
+    starts.primary,
+    nowMs,
+    "primary",
+  );
+  const adjunctBolus = getMedicationBolusEnvelope(
+    starts.adjunct,
+    nowMs,
+    "adjunct",
+  );
+  const analgesiaBolus = getMedicationBolusEnvelope(
+    starts.analgesia,
+    nowMs,
+    "analgesia",
+  );
+  const primaryBase = config.drug === "awake" ? 0 : (sl[config.level] ?? 0);
+  const adjunctBase =
+    config.adjunct === "none" ? 0 : (sl[config.adjunctLevel] ?? 0);
+  const analgesiaBase =
+    config.opioid === "none" ? 0 : (sl[config.opioidLevel] ?? 0);
+
+  return {
+    primaryValue: re(primaryBase + primaryBolus * 22, 0, 100),
+    adjunctValue: re(adjunctBase + adjunctBolus * 20, 0, 100),
+    analgesiaValue: re(analgesiaBase + analgesiaBolus * 34, 0, 100),
+    primary: re((primaryBase + primaryBolus * 22) / 100, 0, 1),
+    adjunct: re((adjunctBase + adjunctBolus * 20) / 100, 0, 1),
+    analgesia: re((analgesiaBase + analgesiaBolus * 34) / 100, 0, 1),
+    bolus: {
+      primary: primaryBolus,
+      adjunct: adjunctBolus,
+      analgesia: analgesiaBolus,
+    },
+  };
+}
+
+function _m(b, j, effects = null) {
   const M = Vi(yl[b.drug], j);
-  if (b.adjunct === "none") return M;
-  const d = sl[b.adjunctLevel],
-    x = Vi(yl[b.adjunct], d),
-    C = 0.35 + b.adjunctLevel * 0.11,
+  const medicationEffects = effects ?? getMedicationEffects(b),
+    d = medicationEffects.adjunctValue;
+  if (b.adjunct === "none" || d <= 0) return M;
+  const x = Vi(yl[b.adjunct], d),
+    C = 0.35 + medicationEffects.adjunct * 0.44,
     q = {};
   if (
     (Object.keys(M.bands).forEach((J) => {
@@ -142,7 +205,7 @@ function _m(b, j) {
     (b.drug === "propofol" && b.adjunct === "ketamine") ||
       (b.drug === "ketamine" && b.adjunct === "propofol"))
   ) {
-    const J = 6 + b.adjunctLevel * 3;
+    const J = 6 + medicationEffects.adjunct * 12;
     ((q.alpha = re(q.alpha - J * 0.55, 0, 100)),
       (q.beta = re(q.beta + J, 0, 100)),
       (q.gamma = re(q.gamma + J * 0.55, 0, 100)));
@@ -207,10 +270,41 @@ function oh(b, j, M, d, x, C) {
   return q;
 }
 
+function applyAnalgesicSpectralSignature(power, drug, effect, frequency) {
+  const profile = ANALGESIC_PROFILES[drug];
+  if (!profile || effect <= 0) return power;
+  const signature = profile.spectral;
+  let adjusted =
+    power +
+    effect *
+      signature.deltaGain *
+      se(frequency, signature.deltaHz, signature.deltaWidth) +
+    effect * signature.thetaGain * se(frequency, signature.thetaHz, 1.5);
+  if (frequency > 13) {
+    adjusted *= 1 - signature.highFrequencyDamping * effect;
+  }
+  return adjusted;
+}
+
+function getAnalgesicRawSignal(drug, effect, time) {
+  if (!ANALGESIC_PROFILES[drug] || effect <= 0) return 0;
+  const saturation = drug === "sufentanil" ? 0.72 + 0.28 * effect : 1;
+  const deltaAmplitude =
+    drug === "fentanyl" ? 13 : drug === "sufentanil" ? 11 : 8;
+  const thetaAmplitude = drug === "remifentanil" ? 2.5 : 4.5;
+  return (
+    effect *
+    saturation *
+    (deltaAmplitude * Math.sin(2 * Math.PI * 1.45 * time + 0.5) +
+      thetaAmplitude * Math.sin(2 * Math.PI * 5.6 * time + 1.2))
+  );
+}
+
 function Um(b, j, M) {
-  const d = b.adjunct === "none" ? 0 : sl[b.adjunctLevel] / 100,
+  const medicationEffects = getMedicationEffects(b, M * 1000),
+    d = medicationEffects.adjunct,
     x = re(j.depth / 100 + d * 0.32, 0, 1.3),
-    C = b.opioid === "none" ? 0 : b.opioidLevel / 4,
+    C = medicationEffects.analgesia,
     q =
       b.drug === "ketamine" ? j.depth / 100 : b.adjunct === "ketamine" ? d : 0,
     J =
@@ -224,11 +318,13 @@ function Um(b, j, M) {
       Math.sin(M * 0.31 + 0.8) * 1.8 +
       Math.sin(M * 0.09 + 2.1) * 0.9 +
       St() * 0.4,
+    analgesicProfile = ANALGESIC_PROFILES[b.opioid],
     F = re(
       96 -
         Math.min(x, 1) * 57 -
         Math.max(0, x - 1) * 48 -
-        j.bs * 0.58 +
+        j.bs * 0.58 -
+        (analgesicProfile?.qconCoupling ?? 0) * C * 15 +
         q * 11 +
         J * 2 +
         O,
@@ -236,14 +332,7 @@ function Um(b, j, M) {
       99,
     ),
     Q = re(57 - Math.min(x, 1) * 42 - C * 17 + q * 11 + St() * 1.5, 3, 82),
-    de =
-      b.opioid === "remifentanil"
-        ? 1
-        : b.opioid === "fentanyl"
-          ? 0.82
-          : b.opioid === "sufentanil"
-            ? 0.92
-            : 0,
+    de = analgesicProfile?.qnoxPotency ?? 0,
     rt = re(
       86 -
         Math.min(x, 1) * 29 -
@@ -338,7 +427,12 @@ export {
   Vi as interpolateDrugProfile,
   _m as combineDrugProfiles,
   Nm as getBolusDepth,
+  getMedicationBolusEnvelope,
+  getMedicationBolusProgress,
+  getMedicationEffects,
   oh as applyDrugSpectralSignature,
+  applyAnalgesicSpectralSignature,
+  getAnalgesicRawSignal,
   Um as calculateIndices,
   Rm as classifyClinicalState,
 };

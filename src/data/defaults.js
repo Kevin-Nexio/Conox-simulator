@@ -8,9 +8,15 @@ const ch = {
   texture: 68,
 };
 
-const sl = { 1: 28, 2: 58, 3: 78, 4: 96 };
+const sl = { 0: 0, 1: 28, 2: 58, 3: 78, 4: 96 };
 
-const ff = { 1: "Schwach", 2: "Moderat", 3: "Tief", 4: "Extrem" };
+const ff = {
+  0: "Inaktiv",
+  1: "Low dose",
+  2: "Mid dose",
+  3: "High dose",
+  4: "Overdose",
+};
 
 export { Da, ch, sl, ff };
 export {

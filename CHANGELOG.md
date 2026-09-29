@@ -8,6 +8,15 @@
 - neue Geräte übernehmen den laufenden Zustand; Heartbeat und Abgleich nach Standby
 - funktionierende `+`/`−`-Tasten der DSA-Farbskala (Sättigung Richtung Rot/Blau, ±4 Stufen à 4 dB)
 
+## Version 43 – Medikamentensteuerung
+
+- getrennte Kanäle für primäres Sedativum, sekundäre Sedierung/Adjuvans und Analgesie
+- Wirkstufen `0` bis `4`, wobei `0` tatsächlich inaktiv ist
+- separater Bolus pro Kategorie mit Anstieg, Plateau und Abklingen
+- gekoppelte Effekte auf qCON, qNOX, BSR, RAW EEG und DSA
+- opioidtypische Spektralsignaturen für Remifentanil, Fentanyl und Sufentanil ohne künstliche Burst Suppression
+- automatisierte Modelltests für Stufe 0, Bolus, Analgesie, Spektralsignatur und BSR ergänzt
+
 ## Version 42 – rekonstruierte React/Vite-Entwicklungsstruktur
 
 - echtes `package.json` mit React, ReactDOM, Vite und reproduzierbarem Lockfile
