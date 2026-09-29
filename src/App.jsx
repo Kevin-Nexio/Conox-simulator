@@ -58,6 +58,63 @@ const MEDICATION_BOLUS_DURATIONS_MS = {
   adjunct: 13200,
   analgesia: 10000,
 };
+const CASE_CATEGORY_DEFINITIONS = [
+  {
+    key: "reference",
+    ids: ["awake-reference"],
+  },
+  {
+    key: "reactions",
+    ids: [
+      "alpha-dropout",
+      "arousal-beta",
+      "arousal-nociceptive",
+      "arousal-delta",
+      "artifact-emg",
+      "alpha-loss",
+      "arousal-activation",
+    ],
+  },
+  {
+    key: "targets",
+    ids: ["target-a", "target-b", "target-c", "target-d", "target-e"],
+  },
+  {
+    key: "slowPatterns",
+    ids: ["theta-transition", "delta-deep", "delta-no-alpha", "dex-spindle"],
+  },
+  {
+    key: "warnings",
+    ids: [
+      "discontinuous",
+      "pre-suppression",
+      "strong-suppression",
+      "suppression-recovery",
+    ],
+  },
+  {
+    key: "otherDrugs",
+    ids: [
+      "midazolam-fast",
+      "midazolam-deep",
+      "dex-deep",
+      "ketamine-fast",
+      "ketamine-theta",
+      "sufentanil-low",
+      "sufentanil-high",
+    ],
+  },
+  {
+    key: "combinations",
+    ids: [
+      "prop-sufentanil-target",
+      "prop-sufentanil-deep",
+      "prop-ketamine",
+      "prop-dex",
+      "mid-sufentanil",
+    ],
+  },
+];
 
 function createClientId() {
   return (
@@ -1505,6 +1562,42 @@ export default function App() {
       drug,
       ANALGESIC_PROFILES[drug].label,
     ]),
+    scenarioOptions = React.useMemo(() => {
+      const scenariosById = Object.fromEntries(
+        SCENARIOS.map((scenario) => [scenario.id, scenario]),
+      );
+      const usedIds = new Set();
+      const groupedOptions = CASE_CATEGORY_DEFINITIONS.map((category) => {
+        const options = category.ids
+          .map((id) => scenariosById[id])
+          .filter(Boolean)
+          .map((scenario) => {
+            usedIds.add(scenario.id);
+            return [scenario.id, scenario.name];
+          });
+        return {
+          label: t(`cases.group.${category.key}`),
+          options,
+        };
+      }).filter((category) => category.options.length > 0);
+      const uncategorized = SCENARIOS.filter(
+        (scenario) => !usedIds.has(scenario.id),
+      ).map((scenario) => [scenario.id, scenario.name]);
+      const standaloneOptions = [
+        ...(zt?.group === "journey"
+          ? [[zt.id, t("cases.journey", { name: zt.name })]]
+          : []),
+        ...(!selectedScenarioId ? [["", t("cases.free")]] : []),
+      ];
+
+      return [
+        ...standaloneOptions,
+        ...groupedOptions,
+        ...(uncategorized.length
+          ? [{ label: t("cases.group.other"), options: uncategorized }]
+          : []),
+      ];
+    }, [SCENARIOS, selectedScenarioId, t, zt]),
     medicationEffectLabels = {
       0: t("sim.effect.inactive"),
       1: t("sim.effect.low"),
@@ -2757,16 +2850,7 @@ export default function App() {
                     );
                     nextScenario && ea(nextScenario);
                   }}
-                  options={[
-                    ...(zt?.group === "journey"
-                      ? [[zt.id, t("cases.journey", { name: zt.name })]]
-                      : []),
-                    ...(!selectedScenarioId ? [["", t("cases.free")]] : []),
-                    ...SCENARIOS.map((scenario) => [
-                      scenario.id,
-                      scenario.name,
-                    ]),
-                  ]}
+                  options={scenarioOptions}
                 />
                 <div className="sb-panel-case-actions">
                   <button type="button" onClick={wi}>

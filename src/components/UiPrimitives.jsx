@@ -56,11 +56,21 @@ export function SelectField({
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
       >
-        {options.map(([optionValue, optionLabel]) => (
-          <option key={optionValue} value={optionValue}>
-            {optionLabel}
-          </option>
-        ))}
+        {options.map((option) =>
+          option?.options ? (
+            <optgroup key={option.label} label={option.label}>
+              {option.options.map(([optionValue, optionLabel]) => (
+                <option key={optionValue} value={optionValue}>
+                  {optionLabel}
+                </option>
+              ))}
+            </optgroup>
+          ) : (
+            <option key={option[0]} value={option[0]}>
+              {option[1]}
+            </option>
+          ),
+        )}
       </select>
     </label>
   );
