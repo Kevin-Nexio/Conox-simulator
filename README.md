@@ -1,6 +1,16 @@
 # CONOX 2D EEG Simulator – React/Vite-Quellprojekt
 
-Rekonstruierter Entwicklungsstand des browserbasierten CONOX-2D-Schulungs- und Demonstrationssimulators. Die Anwendung erzeugt synthetische RAW-EEG-, DSA-, qCON-, qNOX-, SQI-, EMG- und BSR-Verläufe.
+Rekonstruierter Entwicklungsstand des browserbasierten CONOX-2D-Schulungs- und Demonstrationssimulators. Die Anwendung erzeugt synthetische RAW-EEG-, DSA-, qCON-, qNOX-, SQI-, EMG- und BSR-Verläufe. Ein getrennter, experimenteller Modus erlaubt die lokale Wiedergabe unterstützter CONOX-CXBIN-Aufzeichnungen.
+
+## Aufgezeichneten Fall öffnen
+
+Im Header `Fall öffnen` wählen und eine `.cxbin`-Datei laden. Der Fall bleibt im Arbeitsspeicher dieses Browsers und wird weder hochgeladen noch an eine Demo-Sitzung übertragen. Die Simulation und ihre Geräteverbindung werden beim Öffnen des Fallmodus beendet. Beim Zurückkehren startet die Simulation neu.
+
+Der Fallmodus bietet Wiedergabe/Pause, Geschwindigkeit, eine Passage mit Beginn und Ende in `Minuten:Sekunden`, Positionierung, EEG-Zeit-/Amplitudenskalen, DSA-Zeitraum und Farbskala sowie zuschaltbare Hilfslinien und SEF-Kurven. Die Wiedergabe stoppt am Ende der gewählten Passage. Auf kleinen Bildschirmen lassen sich die Diagramme horizontal verschieben.
+
+Der DSA wird aus dem aufgezeichneten EEG neu berechnet. **Indexzuordnung, µV-Skalierung und Übereinstimmung mit ConoxView sind noch nicht validiert.** Ungeklärte Indexwerte erscheinen als Lücken. Der Import unterstützt zunächst nur das untersuchte 1024-Byte-Format und Dateien bis 64 MiB. Andere Formatversionen und unvollständige Dateien werden abgewiesen.
+
+Die technischen Annahmen und offenen Prüfungen stehen in [docs/RECORDINGS.md](docs/RECORDINGS.md).
 
 Dieser Ordner enthält **keinen exportierten Single-HTML-Build**. Oberfläche, Daten, Simulationslogik, Styles und Assets liegen als getrennte Quelldateien vor.
 
@@ -136,6 +146,6 @@ Weitere technische Hintergründe stehen in [docs/ARCHITECTURE.md](docs/ARCHITECT
 
 ## Hinweis zur Nutzung
 
-Die Anwendung erzeugt ausschliesslich synthetische Lernsignale. Sie ist kein Medizinprodukt, keine validierte Gerätesoftware und kein Ersatz für klinische Beurteilung oder das originale CONOX-2D-System.
+Der Simulationsmodus erzeugt synthetische Lernsignale. Der getrennte Fallmodus stellt importierte Aufzeichnungen experimentell dar. Die Anwendung ist kein Medizinprodukt, keine validierte Gerätesoftware und kein Ersatz für klinische Beurteilung oder das originale CONOX-2D-System.
 
 Vor einer öffentlichen Veröffentlichung sollten interne Freigaben für Produktname, nachgebildete Bedienoberfläche, Produktunterlagen und Kundennutzung geklärt werden. Siehe [NOTICE.md](NOTICE.md).

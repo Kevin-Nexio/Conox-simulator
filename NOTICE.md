@@ -2,11 +2,17 @@
 
 ## Demonstrationscharakter
 
-- Alle EEG-, DSA- und Indexsignale werden synthetisch erzeugt.
+- Im Simulationsmodus werden EEG-, DSA- und Indexsignale synthetisch erzeugt.
 - qCON- und qNOX-Verläufe bilden didaktische Reaktionen ab und reproduzieren keine proprietären Berechnungsalgorithmen.
 - Die Oberfläche ist eine CONOX-nahe Schulungsdarstellung und nicht die originale Benutzeroberfläche des Medizinprodukts.
 - Die Anwendung ist nicht für Diagnose, Therapie, Dosierung oder Patientenüberwachung bestimmt.
 - Klinische Entscheidungen dürfen nicht auf den dargestellten Signalen oder Indexwerten beruhen.
+
+## Experimentelle Fallwiedergabe
+
+Der getrennte Fallmodus kann unterstützte CXBIN-Dateien lokal öffnen. Die Datei und ihre Inhalte verbleiben im Arbeitsspeicher des Browsers. Die gemeinsame Demo-Verbindung wird vor dem Import beendet. Es werden keine Aufzeichnungen oder daraus abgeleiteten Daten im Projekt, im Browser-Speicher oder auf einem Server gespeichert.
+
+Das Binärformat wurde anhand einer Aufzeichnung untersucht. Die Zuordnung der Indizes und die Umrechnung in µV sind vorläufig. qCON/qNOX-Werte ab 100 und andere ungültige Indexwerte werden als fehlend dargestellt; die Rohwerte bleiben intern für spätere Validierung erhalten. Der berechnete DSA und die SEF-Werte reproduzieren keinen bestätigten Gerätealgorithmus. Ungewöhnliche Ausschläge werden nicht automatisch entfernt. Eine fachliche Prüfung gegen denselben Abschnitt in ConoxView ist erforderlich.
 
 ## Fachliche Einordnung
 

@@ -5,6 +5,7 @@ import {
   SCENARIOS as BASE_SCENARIOS,
 } from "../data/index.js";
 import { DISPLAY_VIEWS as BASE_DISPLAY_VIEWS } from "../components/DisplayViewIcon.jsx";
+import { RECORDING_UI } from "./recordings.js";
 
 export const LOCALES = [
   { code: "de", label: "DE", name: "Deutsch" },
@@ -16,6 +17,7 @@ const DEFAULT_LOCALE = "de";
 
 const ui = {
   de: {
+    ...RECORDING_UI.de,
     "app.subtitle": "RAW EEG · DSA · qCON / qNOX · synthetische Lernsignale",
     "remote.aria": "Remote-Sitzung",
     "remote.role": "Remote-Modus",
@@ -210,6 +212,7 @@ const ui = {
       "Synthetische Signale. Keine Dosierungsempfehlung, kein Ersatz für klinische Untersuchung, RASS/SAS, Analgesiebeurteilung, Hämodynamik, Beatmung oder ärztliche Entscheidung.",
   },
   fr: {
+    ...RECORDING_UI.fr,
     "app.subtitle":
       "EEG brut · DSA · qCON / qNOX · signaux pédagogiques synthétiques",
     "remote.aria": "Session distante",
@@ -408,6 +411,7 @@ const ui = {
       "Signaux synthétiques. Pas de recommandation posologique, pas de substitut à l'examen clinique, RASS/SAS, évaluation de l'analgésie, hémodynamique, ventilation ou décision médicale.",
   },
   en: {
+    ...RECORDING_UI.en,
     "app.subtitle": "RAW EEG · DSA · qCON / qNOX · synthetic training signals",
     "remote.aria": "Remote session",
     "remote.role": "Remote mode",

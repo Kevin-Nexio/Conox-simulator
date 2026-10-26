@@ -1,5 +1,15 @@
 # Änderungsverlauf
 
+## Unveröffentlicht: experimentelle Fallwiedergabe
+
+- lokaler Import des untersuchten CXBIN-Formats mit Prüfung von Blocklänge, Signatur, Fallkennung und Datenzähler
+- getrennter Fallmodus ohne Verbindung zu gemeinsamen Demo-Sitzungen
+- Wiedergabe, Geschwindigkeit, Positionierung und Auswahl einer Passage mit definiertem Ende
+- EEG- und DSA-Skalen, Hilfslinien, Indexverlauf und rekonstruierte SEF50/SEF95
+- echter FFT-basierter DSA aus importiertem EEG; vorläufige Indexzuordnung und µV-Skalierung ausdrücklich gekennzeichnet
+- zuschaltbare, kalibrierte EEG-Hilfslinien und gestrichelte DSA-Bandgrenzen auch im synthetischen Modus
+- DE/FR/EN sowie Tests mit synthetischen Protokollblöcken und bekannten Sinussignalen
+
 ## Unveröffentlicht – feste Demo-Sitzungen
 
 - zufällige Sitzungs-PINs durch zehn feste Sitzungen `Demo 1` bis `Demo 10` ersetzt

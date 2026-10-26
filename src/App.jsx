@@ -38,6 +38,7 @@ import {
   MedicationChannel,
   FactRow,
 } from "./components/UiPrimitives.jsx";
+import RecordingPlayer from "./components/RecordingPlayer.jsx";
 
 // Spectrogram colour scaling (IFU §5.2.7): "+" shifts saturation towards red,
 // "−" towards blue. Each step shifts the dB colour mapping by DSA_SCALE_STEP_DB.
@@ -187,7 +188,7 @@ function isRemoteRevision(value) {
   );
 }
 
-export default function App() {
+function SimulatorApp({ onOpenRecording }) {
   const [locale, setLocale] = React.useState(getInitialLocale);
   const {
     t,
@@ -222,6 +223,7 @@ export default function App() {
     [opioidLevel, setOpioidLevel] = React.useState(0),
     [eegWindowSeconds, setEegWindowSeconds] = React.useState(4),
     [eegAmplitude, setEegAmplitude] = React.useState(120),
+    [signalGridVisible, setSignalGridVisible] = React.useState(true),
     [dsaPeriodMinutes, setDsaPeriodMinutes] = React.useState(30),
     [dsaColorScale, setDsaColorScale] = React.useState(0),
     [liveSync, setLiveSync] = React.useState(!1),
@@ -313,6 +315,7 @@ export default function App() {
     }),
     eegWindowRef = React.useRef(eegWindowSeconds),
     eegAmplitudeRef = React.useRef(eegAmplitude),
+    signalGridRef = React.useRef(signalGridVisible),
     dsaPeriodRef = React.useRef(dsaPeriodMinutes),
     dsaColorOffsetRef = React.useRef(0),
     trendSequenceRef = React.useRef(0),
@@ -361,6 +364,9 @@ export default function App() {
     React.useEffect(() => {
       eegAmplitudeRef.current = eegAmplitude;
     }, [eegAmplitude]),
+    React.useEffect(() => {
+      signalGridRef.current = signalGridVisible;
+    }, [signalGridVisible]),
     React.useEffect(() => {
       dsaPeriodRef.current = dsaPeriodMinutes;
       window.dispatchEvent(new Event("conox-dsa-period-change"));
@@ -1128,9 +1134,30 @@ export default function App() {
             G.fillRect(0, 0, ue, Re),
             (G.strokeStyle = "rgba(62,122,96,.18)"),
             (G.lineWidth = 1));
-          for (let ze = 1; ze < 8; ze += 1) {
-            const ft = (ue / 8) * ze;
-            (G.beginPath(), G.moveTo(ft, 0), G.lineTo(ft, Re), G.stroke());
+          if (signalGridRef.current) {
+            G.save();
+            G.setLineDash([4, 5]);
+            G.strokeStyle = "rgba(160,200,183,.42)";
+            G.fillStyle = "#aec5bc";
+            G.font = "12px sans-serif";
+            for (let second = 1; second < eegWindowRef.current; second++) {
+              const x = (second / eegWindowRef.current) * ue;
+              G.beginPath();
+              G.moveTo(x, 0);
+              G.lineTo(x, Re);
+              G.stroke();
+              G.fillText(`${second} s`, x + 4, 14);
+            }
+            for (const fraction of [-0.5, 0.5]) {
+              const value = eegAmplitudeRef.current * fraction;
+              const y = Y - fraction * Re * 0.43;
+              G.beginPath();
+              G.moveTo(0, y);
+              G.lineTo(ue, y);
+              G.stroke();
+              G.fillText(`${value > 0 ? "+" : ""}${value} µV`, 6, y - 4);
+            }
+            G.restore();
           }
           ((G.strokeStyle = "rgba(129,211,171,.2)"),
             G.beginPath(),
@@ -1850,6 +1877,7 @@ export default function App() {
       bolusEpochs,
       eegWindowSeconds,
       eegAmplitude,
+      signalGridVisible,
       dsaPeriodMinutes,
       dsaColorScale,
       liveSync,
@@ -1878,6 +1906,7 @@ export default function App() {
       bolusEpochs,
       eegWindowSeconds,
       eegAmplitude,
+      signalGridVisible,
       dsaPeriodMinutes,
       dsaColorScale,
       liveSync,
@@ -1959,6 +1988,7 @@ export default function App() {
       }
       setEegWindowSeconds(snapshot.eegWindowSeconds ?? 4);
       setEegAmplitude(snapshot.eegAmplitude ?? 120);
+      setSignalGridVisible(snapshot.signalGridVisible !== false);
       setDsaPeriodMinutes(snapshot.dsaPeriodMinutes ?? 30);
       setDsaColorScale(snapshot.dsaColorScale ?? 0);
       setLiveSync(Boolean(snapshot.liveSync));
@@ -2137,6 +2167,9 @@ export default function App() {
             </small>
           </div>
           <div className="sb-header-tools">
+            <button className="sb-btn" type="button" onClick={onOpenRecording}>
+              {t("recording.open")}
+            </button>
             <div className="sb-language-switch" aria-label="Language">
               {LOCALES.map((item) => (
                 <button
@@ -2380,28 +2413,30 @@ export default function App() {
                         height={260}
                         aria-label={t("dsa.sefLabel")}
                       />
-                      <div className="sb-band-guides" aria-hidden="true">
-                        <i
-                          style={{
-                            top: "33.3%",
-                          }}
-                        />
-                        <i
-                          style={{
-                            top: "71.1%",
-                          }}
-                        />
-                        <i
-                          style={{
-                            top: "82.2%",
-                          }}
-                        />
-                        <i
-                          style={{
-                            top: "91.1%",
-                          }}
-                        />
-                      </div>
+                      {signalGridVisible && (
+                        <div className="sb-band-guides" aria-hidden="true">
+                          <i
+                            style={{
+                              top: "33.3%",
+                            }}
+                          />
+                          <i
+                            style={{
+                              top: "71.1%",
+                            }}
+                          />
+                          <i
+                            style={{
+                              top: "82.2%",
+                            }}
+                          />
+                          <i
+                            style={{
+                              top: "91.1%",
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
                     <div className="sb-db-scale">
                       <div
@@ -3015,6 +3050,18 @@ export default function App() {
                 </div>
                 <small>{t("alarm.note")}</small>
               </div>
+              <div className="sb-detection-control">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={signalGridVisible}
+                    onChange={(event) =>
+                      setSignalGridVisible(event.target.checked)
+                    }
+                  />
+                  <span>{t("grid.label")}</span>
+                </label>
+              </div>
               <h2>{t("detection.heading")}</h2>
               <div className="sb-detection-control">
                 <div>
@@ -3094,5 +3141,15 @@ export default function App() {
         </aside>
       </div>
     </main>
+  );
+}
+
+export default function App() {
+  const [recordingMode, setRecordingMode] = React.useState(false);
+  // Fully unmount the simulator: recordings never join a shared demo room.
+  return recordingMode ? (
+    <RecordingPlayer onClose={() => setRecordingMode(false)} />
+  ) : (
+    <SimulatorApp onOpenRecording={() => setRecordingMode(true)} />
   );
 }

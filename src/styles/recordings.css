@@ -1,0 +1,280 @@
+.recording-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 18px 24px 36px;
+}
+.recording-header-tools,
+.recording-filebar,
+.recording-transport,
+.recording-passage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.recording-header {
+  flex-wrap: wrap;
+}
+.recording-notice {
+  border-left: 3px solid #d4a75e;
+  background: #fff5e5;
+  color: #674716;
+  padding: 12px 16px;
+  margin: 0 0 18px;
+}
+.recording-meta,
+.recording-controls small {
+  color: #506b7a;
+  font-size: 12px;
+}
+.recording-chart p {
+  color: #a8bdc8;
+  font-size: 12px;
+}
+.recording-file-name {
+  overflow-wrap: anywhere;
+}
+.recording-error {
+  color: #9f2925;
+}
+.recording-empty {
+  padding: 60px 24px;
+  text-align: center;
+  border: 1px dashed #466472;
+  margin-top: 24px;
+  color: #506b7a;
+}
+.recording-warnings {
+  color: #7b5a25;
+  font-size: 12px;
+}
+.recording-warnings p {
+  margin: 4px 0;
+}
+.recording-controls,
+.recording-display-controls {
+  border: 1px solid #b6c9d4;
+  background: #f5f9fb;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin: 16px 0;
+  min-width: 0;
+}
+.recording-shell legend {
+  padding: 0 8px;
+  color: #294b5d;
+}
+.recording-shell label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #344e5e;
+}
+.recording-shell select,
+.recording-passage input {
+  background: #fff;
+  border: 1px solid #9fb8c7;
+  border-radius: 4px;
+  padding: 7px 10px;
+  color: #17394c;
+  color-scheme: light;
+  min-height: 36px;
+}
+.recording-passage input {
+  width: 110px;
+}
+.recording-passage input[aria-invalid="true"] {
+  border-color: #ff8989;
+}
+.recording-play {
+  background: #164c40;
+  border-color: #68af9d;
+  min-width: 110px;
+}
+.recording-transport output {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-size: 17px;
+}
+.recording-seek {
+  width: 100%;
+  margin: 18px 0;
+  accent-color: #83d4b8;
+  cursor: pointer;
+}
+.recording-display-controls {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.recording-shell .recording-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+}
+.recording-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: #83d4b8;
+}
+.recording-indices {
+  display: flex;
+  gap: 10px 28px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  background: #071018;
+  padding: 14px 18px;
+  border: 1px solid #3f5866;
+  border-radius: 8px;
+}
+.recording-indices > span {
+  flex-basis: 100%;
+  color: #b6c8d1;
+  font-size: 12px;
+}
+.recording-index {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+}
+.recording-index strong {
+  font-size: 30px;
+  min-width: 45px;
+  font-variant-numeric: tabular-nums;
+}
+.recording-shell .qcon {
+  color: #70ec8f;
+}
+.recording-shell .qnox {
+  color: #ffdb67;
+}
+.recording-shell .bsr {
+  color: #ff8d94;
+}
+.recording-shell .emg {
+  color: #76c9ff;
+}
+.recording-shell .sqi {
+  color: #b9e8e1;
+}
+.recording-chart {
+  margin-top: 18px;
+  border: 1px solid #344e5c;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #030a0d;
+}
+.recording-chart h2 {
+  margin: 0;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #cbdce3;
+  background: #10212b;
+}
+.recording-chart canvas {
+  width: 100%;
+  height: auto;
+}
+.recording-chart p {
+  margin: 8px 16px 12px;
+}
+.recording-dsa-row {
+  display: flex;
+}
+.recording-dsa-row canvas {
+  min-width: 0;
+  flex: 1;
+  width: calc(100% - 64px);
+}
+.recording-color-key {
+  flex: 0 0 64px;
+  padding: 8px 4px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+}
+.recording-color-key i {
+  width: 20px;
+  flex: 1;
+  margin: 5px 0;
+  background: linear-gradient(
+    to top,
+    rgb(2, 3, 65),
+    rgb(0, 72, 210) 12.5%,
+    rgb(0, 158, 255) 18.75%,
+    rgb(0, 210, 205) 25%,
+    rgb(250, 232, 25) 37.5%,
+    rgb(255, 125, 0) 50%,
+    rgb(255, 0, 0)
+  );
+}
+.recording-trend-legend {
+  display: flex;
+  gap: 16px;
+  padding: 6px 16px 0;
+  font-size: 12px;
+}
+.recording-shell button:focus-visible,
+.recording-shell input:focus-visible,
+.recording-shell select:focus-visible {
+  outline: 3px solid #8ce5ca;
+  outline-offset: 3px;
+}
+.recording-shell button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+@media (max-width: 700px) {
+  .recording-content {
+    padding: 12px 10px 24px;
+  }
+  .recording-header {
+    gap: 12px;
+  }
+  .recording-header-tools {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .recording-display-controls {
+    gap: 10px 14px;
+  }
+  .recording-display-controls > label:not(.recording-check) {
+    flex: 1 1 42%;
+  }
+  .recording-transport output {
+    margin-left: 0;
+    width: 100%;
+  }
+  .recording-indices {
+    gap: 8px 18px;
+  }
+  .recording-index strong {
+    font-size: 24px;
+    min-width: 35px;
+  }
+  .recording-index {
+    gap: 8px;
+  }
+  .recording-chart {
+    overflow-x: auto;
+  }
+  .recording-chart > canvas {
+    min-width: 620px;
+  }
+  .recording-dsa-row {
+    min-width: 620px;
+  }
+  .recording-chart h2 {
+    position: sticky;
+    left: 0;
+  }
+  .recording-color-key {
+    flex-basis: 54px;
+  }
+}
