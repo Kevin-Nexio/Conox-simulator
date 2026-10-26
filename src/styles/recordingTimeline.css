@@ -1,0 +1,192 @@
+.recording-timeline {
+  margin: 18px 0 16px;
+  padding: 12px 16px 10px;
+  border: 1px solid #8ba7b7;
+  border-radius: 7px;
+  background: #132c3b;
+  color: #e9f1f5;
+}
+.recording-timeline-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 12px;
+}
+.recording-timeline-heading output {
+  color: #b9f0de;
+  font-variant-numeric: tabular-nums;
+}
+.recording-timeline-surface {
+  position: relative;
+  height: 124px;
+  margin: 8px 16px 0;
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+}
+.recording-timeline-ruler {
+  position: absolute;
+  inset: 30px 0 auto;
+  height: 20px;
+  border-bottom: 1px solid #587486;
+}
+.recording-timeline-tick {
+  position: absolute;
+  transform: translateX(-50%);
+  color: #b4c8d4;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.recording-timeline-tick::after {
+  content: "";
+  position: absolute;
+  width: 1px;
+  height: 5px;
+  background: #6c8799;
+  left: 50%;
+  top: 15px;
+}
+.recording-timeline-track {
+  position: absolute;
+  inset: 51px 0 auto;
+  height: 34px;
+  border: 1px solid #425f70;
+  border-radius: 3px;
+  background: repeating-linear-gradient(
+    135deg,
+    #183343 0,
+    #183343 5px,
+    #1d3c4e 5px,
+    #1d3c4e 10px
+  );
+}
+.recording-timeline-passage {
+  position: absolute;
+  top: -1px;
+  height: calc(100% + 2px);
+  background: #71d4b65e;
+  border-top: 2px solid #7de0c0;
+  border-bottom: 2px solid #7de0c0;
+}
+.recording-timeline-marker,
+.recording-timeline-playhead {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  transform: translateX(-50%);
+  touch-action: none;
+  cursor: ew-resize;
+  border-radius: 5px;
+}
+.recording-timeline-marker {
+  color: #122f35;
+  z-index: 3;
+}
+.recording-timeline-marker-in {
+  top: 0;
+}
+.recording-timeline-marker-out {
+  top: 89px;
+}
+.recording-timeline-marker-flag {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #beffe9;
+  border-radius: 5px;
+  background: #80dfc2;
+  box-shadow: 0 2px 5px #0004;
+}
+.recording-timeline-marker-flag svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.recording-timeline-marker-stem {
+  position: absolute;
+  left: 15px;
+  width: 2px;
+  background: #9af9d9;
+  box-shadow: 0 0 0 1px #132c3b99;
+}
+.recording-timeline-marker-in .recording-timeline-marker-stem {
+  top: 32px;
+  height: 56px;
+}
+.recording-timeline-marker-out .recording-timeline-marker-stem {
+  bottom: 32px;
+  height: 37px;
+}
+.recording-timeline-playhead {
+  top: 44px;
+  z-index: 4;
+  width: 26px;
+  height: 43px;
+}
+.recording-timeline-playhead-head {
+  position: absolute;
+  left: 5px;
+  top: 0;
+  width: 16px;
+  height: 12px;
+  background: #fff;
+  clip-path: polygon(0 0, 100% 0, 100% 38%, 50% 100%, 0 38%);
+  filter: drop-shadow(0 1px 1px #0008);
+}
+.recording-timeline-playhead-stem {
+  position: absolute;
+  top: 10px;
+  bottom: 0;
+  left: 12px;
+  width: 2px;
+  background: #fff;
+  box-shadow: 0 0 0 1px #132c3baa;
+}
+.recording-timeline-marker:focus-visible,
+.recording-timeline-playhead:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 4px;
+}
+.recording-timeline-surface[data-dragging] {
+  cursor: ew-resize;
+}
+.recording-timeline-surface[data-dragging="start"]
+  .recording-timeline-marker-in,
+.recording-timeline-surface[data-dragging="end"]
+  .recording-timeline-marker-out {
+  filter: brightness(1.15);
+}
+.recording-controls .recording-timeline-help {
+  display: block;
+  color: #bed1dc;
+  line-height: 1.5;
+  margin-top: 6px;
+}
+.recording-timeline[data-disabled="true"] {
+  opacity: 0.55;
+}
+.recording-timeline[data-disabled="true"] .recording-timeline-surface,
+.recording-timeline[data-disabled="true"] .recording-timeline-marker,
+.recording-timeline[data-disabled="true"] .recording-timeline-playhead {
+  cursor: default;
+}
+@media (max-width: 480px) {
+  .recording-timeline {
+    padding-inline: 10px;
+  }
+  .recording-timeline-surface {
+    margin-inline: 12px;
+  }
+  .recording-timeline-tick:nth-child(2),
+  .recording-timeline-tick:nth-child(4) {
+    visibility: hidden;
+  }
+}

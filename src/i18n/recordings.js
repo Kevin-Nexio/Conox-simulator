@@ -1,5 +1,8 @@
+import { RECORDING_TOOLS } from "./recordingTools.js";
+
 export const RECORDING_UI = {
   de: {
+    ...RECORDING_TOOLS.de,
     "recording.open": "Fall öffnen",
     "recording.title": "Aufgezeichneter Fall",
     "recording.back": "Zur Simulation",
@@ -64,6 +67,7 @@ export const RECORDING_UI = {
     "grid.label": "Hilfslinien EEG / DSA",
   },
   fr: {
+    ...RECORDING_TOOLS.fr,
     "recording.open": "Ouvrir un cas",
     "recording.title": "Cas enregistré",
     "recording.back": "Retour à la simulation",
@@ -128,6 +132,7 @@ export const RECORDING_UI = {
     "grid.label": "Repères EEG / DSA",
   },
   en: {
+    ...RECORDING_TOOLS.en,
     "recording.open": "Open a case",
     "recording.title": "Recorded case",
     "recording.back": "Back to simulation",

@@ -10,7 +10,7 @@
 
 ## Experimentelle Fallwiedergabe
 
-Der getrennte Fallmodus kann unterstützte CXBIN-Dateien lokal öffnen. Die Datei und ihre Inhalte verbleiben im Arbeitsspeicher des Browsers. Die gemeinsame Demo-Verbindung wird vor dem Import beendet. Es werden keine Aufzeichnungen oder daraus abgeleiteten Daten im Projekt, im Browser-Speicher oder auf einem Server gespeichert.
+Der getrennte Fallmodus kann unterstützte CXBIN-Dateien lokal öffnen. Die Datei und ihre Inhalte verbleiben im Arbeitsspeicher des Browsers. Die gemeinsame Demo-Verbindung wird vor dem Import beendet. Es werden keine Aufzeichnungen oder daraus abgeleiteten Daten automatisch im Projekt, im Browser-Speicher oder auf einem Server gespeichert. Vom Benutzer ausgelöste PNG-, PDF- und Videoexporte werden lokal erzeugt und heruntergeladen. Die exportierten Ansichten enthalten keine Fallkennung oder Gerätezeit, aber die dargestellten Messdaten und den Hinweis auf die vorläufige Darstellung.
 
 Das Binärformat wurde anhand einer Aufzeichnung untersucht. Die Zuordnung der Indizes und die Umrechnung in µV sind vorläufig. qCON/qNOX-Werte ab 100 und andere ungültige Indexwerte werden als fehlend dargestellt; die Rohwerte bleiben intern für spätere Validierung erhalten. Der berechnete DSA und die SEF-Werte reproduzieren keinen bestätigten Gerätealgorithmus. Ungewöhnliche Ausschläge werden nicht automatisch entfernt. Eine fachliche Prüfung gegen denselben Abschnitt in ConoxView ist erforderlich.
 

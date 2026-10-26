@@ -1,5 +1,14 @@
 # Änderungsverlauf
 
+## 2026-10-26: Fallansichten und Export
+
+- CONOX-Ansicht mit und ohne Rahmen zusätzlich zur Darstellung mit vier Bereichen, jeweils mit Vollbild
+- verschiebbare Beginn-/Endmarker und unabhängiger Abspielcursor auf der Zeitleiste
+- lokale PNG-/PDF-Exporte der aktuellen Position in der gewählten Ansicht
+- Videoexport der gewählten Passage als MP4 oder WebM mit gewählter Geschwindigkeit, Fortschritt und Abbruch
+- gleicher Canvas für Vorschau und Export, vorläufige Werte auch in Dateien gekennzeichnet
+- Tests für Markergrenzen, Darstellung, PDF-Struktur, Videoablauf und Ressourcenfreigabe
+
 ## Unveröffentlicht: experimentelle Fallwiedergabe
 
 - lokaler Import des untersuchten CXBIN-Formats mit Prüfung von Blocklänge, Signatur, Fallkennung und Datenzähler

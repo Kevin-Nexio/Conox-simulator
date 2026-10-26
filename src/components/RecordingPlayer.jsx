@@ -4,15 +4,26 @@ import { RECORDING_UI } from "../i18n/recordings.js";
 import {
   advancePlayback,
   formatPosition,
-  getViewRange,
   parsePosition,
 } from "../recordings/playback.js";
+import { createDsaImage } from "../recordings/rendering.js";
 import {
-  createDsaImage,
-  drawDsa,
-  drawEeg,
-  drawTrends,
-} from "../recordings/rendering.js";
+  clampTimelinePosition,
+  normalizeSelection,
+} from "../recordings/timeline.js";
+import {
+  loadPresentationAssets,
+  renderPresentation,
+} from "../recordings/presentation.js";
+import {
+  canvasToPng,
+  canvasToPdf,
+  exportVideo,
+  getSupportedVideoFormats,
+  saveExport,
+} from "../recordings/export.js";
+import RecordingTimeline from "./RecordingTimeline.jsx";
+import RecordingPresentation from "./RecordingPresentation.jsx";
 import "../styles/recordings.css";
 
 const MAX_FILE_BYTES = 64 * 1024 * 1024;
@@ -39,13 +50,36 @@ export default function RecordingPlayer({ onClose }) {
   const [guides, setGuides] = React.useState(true);
   const [sef50, setSef50] = React.useState(false);
   const [sef95, setSef95] = React.useState(false);
+  const [layout, setLayout] = React.useState("blocks");
+  const [assets, setAssets] = React.useState(null);
+  const [exporting, setExporting] = React.useState(null);
+  const [exportProgress, setExportProgress] = React.useState(0);
+  const [exportError, setExportError] = React.useState(null);
+  const videoFormats = React.useMemo(() => getSupportedVideoFormats(), []);
+  const [videoType, setVideoType] = React.useState(
+    () => videoFormats[0]?.mimeType || "",
+  );
   const workerRef = React.useRef(null);
   const requestRef = React.useRef(0);
   const positionRef = React.useRef(0);
   const fileInputRef = React.useRef(null);
-  const eegRef = React.useRef(null);
-  const dsaRef = React.useRef(null);
-  const trendRef = React.useRef(null);
+  const exportAbortRef = React.useRef(null);
+  const exportRequestRef = React.useRef(0);
+  const locked = busy || Boolean(exporting);
+
+  React.useEffect(() => {
+    let active = true;
+    loadPresentationAssets(import.meta.env.BASE_URL)
+      .then((loaded) => {
+        if (active) setAssets(loaded);
+      })
+      .catch(() => {
+        if (active) setAssets({});
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   React.useEffect(() => {
     localStorage.setItem("conox.locale", locale);
@@ -55,6 +89,8 @@ export default function RecordingPlayer({ onClose }) {
     () => () => {
       requestRef.current++;
       workerRef.current?.terminate();
+      exportRequestRef.current++;
+      exportAbortRef.current?.abort();
     },
     [],
   );
@@ -66,10 +102,11 @@ export default function RecordingPlayer({ onClose }) {
     setBusy(false);
   };
   const seek = (value) => {
-    const next = Math.max(
-      selection.start,
-      Math.min(selection.end, Number(value)),
+    const next = clampTimelinePosition(
+      value,
+      data?.recording.durationSeconds || 0,
     );
+    setPlaying(false);
     positionRef.current = next;
     setPosition(next);
   };
@@ -81,11 +118,6 @@ export default function RecordingPlayer({ onClose }) {
     });
     setSelectionError(false);
     setPlaying(false);
-    positionRef.current = Math.max(
-      next.start,
-      Math.min(next.end, positionRef.current),
-    );
-    setPosition(positionRef.current);
   };
   const commitPassage = () => {
     const start = parsePosition(selectionText.start);
@@ -94,6 +126,7 @@ export default function RecordingPlayer({ onClose }) {
       start === null ||
       end === null ||
       start >= end ||
+      end - start < Math.min(0.25, data.recording.durationSeconds) ||
       end > data.recording.durationSeconds
     ) {
       setSelectionError(true);
@@ -106,6 +139,7 @@ export default function RecordingPlayer({ onClose }) {
     cancelLoad();
     setPlaying(false);
     setError(null);
+    setExportError(null);
     if (file.size > MAX_FILE_BYTES) {
       setError("TOO_LARGE");
       return;
@@ -183,57 +217,90 @@ export default function RecordingPlayer({ onClose }) {
     () => (data ? createDsaImage(data.spectrum, colorOffset) : null),
     [data, colorOffset],
   );
-  React.useEffect(() => {
-    if (!data || !eegRef.current || !dsaRef.current || !trendRef.current)
-      return;
-    const { recording, filtered, spectrum } = data;
-    const eegRange = getViewRange(
-      position,
-      recording.durationSeconds,
+  const settings = React.useMemo(
+    () => ({
       eegWindow,
-    );
-    const overviewRange = getViewRange(
-      position,
-      recording.durationSeconds,
-      dsaWindow || recording.durationSeconds,
-    );
-    drawEeg(
-      eegRef.current,
-      filtered,
-      recording.sampleRate,
-      position,
-      eegRange,
       amplitude,
-      guides,
-    );
-    drawDsa(
-      dsaRef.current,
-      dsaImage,
-      spectrum,
-      position,
-      overviewRange,
+      dsaWindow,
+      colorOffset,
       guides,
       sef50,
       sef95,
-    );
-    drawTrends(trendRef.current, recording, position, overviewRange, guides);
-  }, [
-    data,
-    dsaImage,
-    position,
-    eegWindow,
-    amplitude,
-    dsaWindow,
-    guides,
-    sef50,
-    sef95,
-  ]);
+    }),
+    [eegWindow, amplitude, dsaWindow, colorOffset, guides, sef50, sef95],
+  );
+
+  const startExport = async (kind) => {
+    if (!data || locked || assets === null) return;
+    if (kind === "video" && selectionError) return;
+    setPlaying(false);
+    setExportError(null);
+    setExportProgress(0);
+    setExporting(kind);
+    const request = ++exportRequestRef.current;
+    const controller = new AbortController();
+    exportAbortRef.current = controller;
+    const exportPosition = positionRef.current;
+    const canvas = document.createElement("canvas");
+    const renderFrame = (at) =>
+      renderPresentation(canvas, {
+        data,
+        dsaImage,
+        position: at,
+        settings,
+        layout,
+        t,
+        assets,
+      });
+    try {
+      renderFrame(exportPosition);
+      let blob;
+      let extension = kind === "pdf" ? "pdf" : "png";
+      if (kind === "video") {
+        extension = videoFormats.find(
+          (format) => format.mimeType === videoType,
+        )?.extension;
+        if (!extension) throw { code: "UNSUPPORTED_VIDEO" };
+        blob = await exportVideo({
+          canvas,
+          renderFrame,
+          start: selection.start,
+          end: selection.end,
+          speed,
+          mimeType: videoType,
+          onProgress: setExportProgress,
+          signal: controller.signal,
+        });
+      } else
+        blob =
+          kind === "pdf"
+            ? await canvasToPdf(canvas)
+            : await canvasToPng(canvas);
+      if (controller.signal.aborted || request !== exportRequestRef.current)
+        return;
+      const at =
+        kind === "video"
+          ? `${formatPosition(selection.start, true)}-${formatPosition(selection.end, true)}`
+          : formatPosition(exportPosition, true);
+      saveExport(
+        blob,
+        `CONOX-${layout}-${at.replaceAll(":", "m").replaceAll(".", "-")}.${extension}`,
+      );
+    } catch (failure) {
+      if (
+        request === exportRequestRef.current &&
+        failure.code !== "EXPORT_ABORTED"
+      )
+        setExportError(failure.code || "EXPORT_FAILED");
+    } finally {
+      if (request === exportRequestRef.current) {
+        setExporting(null);
+        exportAbortRef.current = null;
+      }
+    }
+  };
 
   const recording = data?.recording;
-  const indices =
-    recording?.frames[
-      Math.min(recording.frames.length - 1, Math.floor(position * 4))
-    ]?.indices;
   const errorText =
     error &&
     (RECORDING_UI[locale][`recording.error.${error}`] || t("recording.error"));
@@ -251,6 +318,7 @@ export default function RecordingPlayer({ onClose }) {
                 key={item.code}
                 type="button"
                 className={locale === item.code ? "active" : ""}
+                disabled={Boolean(exporting)}
                 aria-pressed={locale === item.code}
                 onClick={() => setLocale(item.code)}
               >
@@ -274,7 +342,7 @@ export default function RecordingPlayer({ onClose }) {
           <button
             type="button"
             className="sb-btn"
-            disabled={busy}
+            disabled={locked}
             onClick={() => fileInputRef.current.click()}
           >
             {t(recording ? "recording.replace" : "recording.choose")}
@@ -328,15 +396,20 @@ export default function RecordingPlayer({ onClose }) {
                   </p>
                 ))}
             </div>
-            <fieldset className="recording-controls" disabled={busy}>
+            <fieldset className="recording-controls" disabled={locked}>
               <legend>{t("recording.selection")}</legend>
               <div className="recording-transport">
                 <button
                   type="button"
                   className="sb-btn recording-play"
+                  disabled={selectionError}
                   aria-pressed={playing}
                   onClick={() => {
-                    if (!playing && positionRef.current >= selection.end)
+                    if (
+                      !playing &&
+                      (positionRef.current >= selection.end ||
+                        positionRef.current < selection.start)
+                    )
                       seek(selection.start);
                     setPlaying((value) => !value);
                   }}
@@ -372,15 +445,18 @@ export default function RecordingPlayer({ onClose }) {
                   {formatPosition(recording.durationSeconds)}
                 </output>
               </div>
-              <input
-                className="recording-seek"
-                type="range"
-                min={selection.start}
-                max={selection.end}
-                step="0.05"
-                value={position}
-                aria-label={t("recording.position")}
-                onChange={(event) => seek(event.target.value)}
+              <RecordingTimeline
+                duration={recording.durationSeconds}
+                position={position}
+                selection={selection}
+                onSeek={seek}
+                onSelectionChange={(value) =>
+                  setPassage(
+                    normalizeSelection(value, recording.durationSeconds),
+                  )
+                }
+                disabled={locked}
+                t={t}
               />
               <div className="recording-passage">
                 {[
@@ -409,22 +485,6 @@ export default function RecordingPlayer({ onClose }) {
                 <button
                   type="button"
                   className="sb-btn"
-                  disabled={position >= selection.end}
-                  onClick={() => setPassage({ ...selection, start: position })}
-                >
-                  {t("recording.markStart")}
-                </button>
-                <button
-                  type="button"
-                  className="sb-btn"
-                  disabled={position <= selection.start}
-                  onClick={() => setPassage({ ...selection, end: position })}
-                >
-                  {t("recording.markEnd")}
-                </button>
-                <button
-                  type="button"
-                  className="sb-btn"
                   onClick={() =>
                     setPassage({ start: 0, end: recording.durationSeconds })
                   }
@@ -439,8 +499,22 @@ export default function RecordingPlayer({ onClose }) {
                 </p>
               )}
             </fieldset>
-            <fieldset className="recording-display-controls" disabled={busy}>
+            <fieldset className="recording-display-controls" disabled={locked}>
               <legend>{t("display.heading")}</legend>
+              <label>
+                {t("recording.layout")}
+                <select
+                  aria-label={t("recording.layout")}
+                  value={layout}
+                  onChange={(event) => setLayout(event.target.value)}
+                >
+                  {["blocks", "conox-frame", "conox-screen"].map((value) => (
+                    <option key={value} value={value}>
+                      {t(`recording.layout.${value}`)}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <label>
                 {t("recording.eegWindow")}
                 <select
@@ -526,76 +600,106 @@ export default function RecordingPlayer({ onClose }) {
                 SEF95
               </label>
             </fieldset>
-            <section
-              className="recording-indices"
-              aria-label={t("recording.indices")}
+            <fieldset
+              className="recording-export-controls"
+              disabled={locked || assets === null}
             >
-              <span>{t("recording.indices")}</span>
-              {[
-                ["qCON", "qcon"],
-                ["qNOX", "qnox"],
-                ["BSR", "bsr"],
-                ["SQI", "sqi"],
-                ["EMG", "emg"],
-              ].map(([label, key]) => (
-                <div key={key} className={`recording-index ${key}`}>
-                  <b>{label}</b>
-                  <strong
-                    title={
-                      indices?.[key] === null
-                        ? t("recording.unavailable")
-                        : undefined
-                    }
-                  >
-                    {indices?.[key] ?? "--"}
-                  </strong>
-                </div>
-              ))}
-            </section>
-            <section className="recording-chart">
-              <h2>{t("recording.eeg")}</h2>
-              <canvas
-                ref={eegRef}
-                width={1200}
-                height={240}
-                aria-label={t("recording.eeg")}
-              />
-            </section>
-            <section className="recording-chart">
-              <h2>{t("recording.dsa")}</h2>
-              <div className="recording-dsa-row">
-                <canvas
-                  ref={dsaRef}
-                  width={1200}
-                  height={280}
-                  aria-label={t("recording.dsa")}
-                />
-                <div
-                  className="recording-color-key"
-                  aria-label={t("recording.color")}
+              <legend>{t("recording.export")}</legend>
+              <div className="recording-export-actions">
+                <button
+                  type="button"
+                  className="sb-btn"
+                  onClick={() => startExport("image")}
                 >
-                  <span>{50 - colorOffset}</span>
-                  <i />
-                  <span>{-30 - colorOffset} dB</span>
-                </div>
+                  {t("recording.exportImage")}
+                </button>
+                <button
+                  type="button"
+                  className="sb-btn"
+                  onClick={() => startExport("pdf")}
+                >
+                  {t("recording.exportPdf")}
+                </button>
+                {videoFormats.length > 0 && (
+                  <label>
+                    {t("recording.videoFormat")}
+                    <select
+                      aria-label={t("recording.videoFormat")}
+                      value={videoType}
+                      onChange={(event) => setVideoType(event.target.value)}
+                    >
+                      {videoFormats.map((format) => (
+                        <option key={format.mimeType} value={format.mimeType}>
+                          {format.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                <button
+                  type="button"
+                  className="sb-btn"
+                  disabled={!videoFormats.length || selectionError}
+                  onClick={() => startExport("video")}
+                >
+                  {t("recording.exportVideo")}
+                </button>
               </div>
-              <p>{t("recording.dsaMethod")}</p>
-            </section>
-            <section className="recording-chart">
-              <h2>{t("recording.trends")}</h2>
-              <div className="recording-trend-legend">
-                <span className="qcon">qCON</span>
-                <span className="qnox">qNOX</span>
-                <span className="bsr">BSR</span>
-                <span className="emg">EMG</span>
+              <p>{t("recording.exportViewNote")}</p>
+              <small>
+                {videoFormats.length
+                  ? t("recording.videoNote", {
+                      duration: formatPosition(
+                        (selection.end - selection.start) / speed,
+                      ),
+                    })
+                  : t("recording.exportUnsupported")}
+              </small>
+            </fieldset>
+            {exporting && (
+              <div className="recording-export-progress" role="status">
+                <span>
+                  {t(
+                    exporting === "video"
+                      ? "recording.exportingVideo"
+                      : "recording.exportingImage",
+                    { count: Math.round(exportProgress * 100) },
+                  )}
+                </span>
+                {exporting === "video" && (
+                  <>
+                    <progress
+                      max={1}
+                      value={exportProgress}
+                      aria-label={t("recording.exportProgress")}
+                    />
+                    <button
+                      type="button"
+                      className="sb-btn"
+                      onClick={() => exportAbortRef.current?.abort()}
+                    >
+                      {t("recording.cancel")}
+                    </button>
+                  </>
+                )}
               </div>
-              <canvas
-                ref={trendRef}
-                width={1200}
-                height={190}
-                aria-label={t("recording.trends")}
-              />
-            </section>
+            )}
+            {exportError && (
+              <p className="recording-error" role="alert">
+                {t(
+                  `recording.exportError.${["EXPORT_FAILED", "EXPORT_HIDDEN", "UNSUPPORTED_VIDEO"].includes(exportError) ? exportError : "EXPORT_FAILED"}`,
+                )}
+              </p>
+            )}
+            <RecordingPresentation
+              data={data}
+              dsaImage={dsaImage}
+              position={position}
+              settings={settings}
+              layout={layout}
+              t={t}
+              assets={assets}
+            />
           </>
         )}
       </div>

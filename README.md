@@ -8,6 +8,10 @@ Im Header `Fall öffnen` wählen und eine `.cxbin`-Datei laden. Der Fall bleibt 
 
 Der Fallmodus bietet Wiedergabe/Pause, Geschwindigkeit, eine Passage mit Beginn und Ende in `Minuten:Sekunden`, Positionierung, EEG-Zeit-/Amplitudenskalen, DSA-Zeitraum und Farbskala sowie zuschaltbare Hilfslinien und SEF-Kurven. Die Wiedergabe stoppt am Ende der gewählten Passage. Auf kleinen Bildschirmen lassen sich die Diagramme horizontal verschieben.
 
+Beginn und Ende werden mit verschiebbaren Markern auf der gesamten Zeitleiste gewählt. Der weisse Abspielcursor ist unabhängig davon positionierbar. Die Zeitfelder bleiben für genaue Eingaben verfügbar. Die Ansicht lässt sich zwischen vier Bereichen, CONOX mit Rahmen und CONOX ohne Rahmen umschalten und als Vollbild anzeigen.
+
+PNG und PDF speichern die aktuelle Position mit den gewählten Skalen und der gewählten Ansicht. Der Videoexport enthält die markierte Passage mit der gewählten Geschwindigkeit. Je nach Browser stehen MP4 und/oder WebM zur Auswahl. Der Videoexport erfolgt in Echtzeit, mit Fortschritt und Abbruchmöglichkeit; der Tab muss sichtbar bleiben. Es wird kein Ton aufgezeichnet. Alle Exporte werden lokal erzeugt und heruntergeladen. Auch die Dateien enthalten den Hinweis auf die vorläufige Darstellung.
+
 Der DSA wird aus dem aufgezeichneten EEG neu berechnet. **Indexzuordnung, µV-Skalierung und Übereinstimmung mit ConoxView sind noch nicht validiert.** Ungeklärte Indexwerte erscheinen als Lücken. Der Import unterstützt zunächst nur das untersuchte 1024-Byte-Format und Dateien bis 64 MiB. Andere Formatversionen und unvollständige Dateien werden abgewiesen.
 
 Die technischen Annahmen und offenen Prüfungen stehen in [docs/RECORDINGS.md](docs/RECORDINGS.md).
