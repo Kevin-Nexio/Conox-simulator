@@ -23,9 +23,13 @@ import {
 } from "../recordings/export.js";
 import RecordingTimeline from "./RecordingTimeline.jsx";
 import RecordingPresentation from "./RecordingPresentation.jsx";
+import {
+  MAX_CASE_FILE_BYTES,
+  createDefaultCaseState,
+  encodeCaseFile,
+  caseDownloadName,
+} from "../recordings/caseFile.js";
 import "../styles/recordings.css";
-
-const MAX_FILE_BYTES = 64 * 1024 * 1024;
 
 export default function RecordingPlayer({ onClose }) {
   const [locale, setLocale] = React.useState(getInitialLocale);
@@ -51,6 +55,11 @@ export default function RecordingPlayer({ onClose }) {
   const [sef95, setSef95] = React.useState(false);
   const [layout, setLayout] = React.useState("simulator-frame");
   const [monitorView, setMonitorView] = React.useState("eeg-dsa");
+  const [eventMarkers, setEventMarkers] = React.useState([]);
+  const [timelineOptions, setTimelineOptions] = React.useState({
+    showIndices: true,
+    hiddenIndices: [],
+  });
   const [assets, setAssets] = React.useState(null);
   const [exporting, setExporting] = React.useState(null);
   const [exportProgress, setExportProgress] = React.useState(0);
@@ -63,6 +72,8 @@ export default function RecordingPlayer({ onClose }) {
   const requestRef = React.useRef(0);
   const positionRef = React.useRef(0);
   const fileInputRef = React.useRef(null);
+  const sourceBlobRef = React.useRef(null);
+  const sourceNameRef = React.useRef("");
   const exportAbortRef = React.useRef(null);
   const exportRequestRef = React.useRef(0);
   const locked = busy || Boolean(exporting);
@@ -164,7 +175,7 @@ export default function RecordingPlayer({ onClose }) {
     setPlaying(false);
     setError(null);
     setExportError(null);
-    if (file.size > MAX_FILE_BYTES) {
+    if (file.size > MAX_CASE_FILE_BYTES) {
       setError("TOO_LARGE");
       return;
     }
@@ -173,6 +184,11 @@ export default function RecordingPlayer({ onClose }) {
     try {
       const buffer = await file.arrayBuffer();
       if (request !== requestRef.current) return;
+      // Snapshot bytes before transferring the buffer. Saving must not depend on
+      // the original file still existing or remaining unchanged on disk.
+      const sourceSnapshot = new Blob([buffer], {
+        type: "application/octet-stream",
+      });
       const worker = new Worker(
         new URL("../recordings/recording.worker.js", import.meta.url),
         { type: "module" },
@@ -194,10 +210,38 @@ export default function RecordingPlayer({ onClose }) {
         }
         worker.terminate();
         workerRef.current = null;
+        const restored =
+          result.session ||
+          createDefaultCaseState(result.recording.durationSeconds, locale);
+        sourceBlobRef.current = sourceSnapshot.slice(
+          0,
+          result.sourceByteLength,
+        );
+        sourceNameRef.current = result.sourceName;
         setData(result);
-        positionRef.current = 0;
-        setPosition(0);
-        setPassage({ start: 0, end: result.recording.durationSeconds });
+        setLocale(restored.locale);
+        positionRef.current = restored.position;
+        setPosition(restored.position);
+        setSpeed(restored.speed);
+        setPassage(restored.selection);
+        setLayout(restored.layout);
+        setEegWindow(restored.settings.eegWindow);
+        setAmplitude(restored.settings.amplitude);
+        setDsaWindow(restored.settings.dsaWindow);
+        setColorOffset(restored.settings.colorOffset);
+        setGuides(restored.settings.guides);
+        setSef50(restored.settings.sef50);
+        setSef95(restored.settings.sef95);
+        setMonitorView(restored.settings.monitorView);
+        setEventMarkers(restored.markers);
+        setTimelineOptions(restored.timeline);
+        setVideoType(
+          (
+            videoFormats.find(
+              (format) => format.extension === restored.videoFormat,
+            ) || videoFormats[0]
+          )?.mimeType || "",
+        );
         setBusy(false);
       };
       worker.postMessage({ buffer, fileName: file.name }, [buffer]);
@@ -337,6 +381,50 @@ export default function RecordingPlayer({ onClose }) {
     }
   };
 
+  const saveCase = async (originalOnly = false) => {
+    if (
+      !data ||
+      !sourceBlobRef.current ||
+      locked ||
+      (!originalOnly && selectionError)
+    )
+      return;
+    setPlaying(false);
+    setExportError(null);
+    setExporting("case");
+    const request = ++exportRequestRef.current;
+    const source = sourceBlobRef.current;
+    const name = sourceNameRef.current;
+    try {
+      const blob = originalOnly
+        ? source
+        : await encodeCaseFile(
+            await source.arrayBuffer(),
+            {
+              locale,
+              position: positionRef.current,
+              speed,
+              selection,
+              layout,
+              settings,
+              markers: eventMarkers,
+              timeline: timelineOptions,
+              videoFormat:
+                videoFormats.find((format) => format.mimeType === videoType)
+                  ?.extension || null,
+            },
+            { duration: data.recording.durationSeconds, sourceName: name },
+          );
+      if (request !== exportRequestRef.current) return;
+      saveExport(blob, originalOnly ? name : caseDownloadName(name));
+    } catch {
+      if (request === exportRequestRef.current)
+        setExportError("CASE_EXPORT_FAILED");
+    } finally {
+      if (request === exportRequestRef.current) setExporting(null);
+    }
+  };
+
   const recording = data?.recording;
   const errorText =
     error &&
@@ -409,6 +497,15 @@ export default function RecordingPlayer({ onClose }) {
           )}
           {recording && (
             <>
+              <button
+                type="button"
+                className="sb-btn recording-save-case"
+                disabled={locked || selectionError}
+                title={t("recording.caseSaveHelp")}
+                onClick={() => saveCase()}
+              >
+                {t("recording.caseSave")}
+              </button>
               <span
                 className="recording-provisional"
                 title={t("recording.experimentalShort")}
@@ -429,6 +526,16 @@ export default function RecordingPlayer({ onClose }) {
                   <p className="recording-notice">
                     {t("recording.experimental")}
                   </p>
+                  <p>{t("recording.caseSaveHelp")}</p>
+                  <p>{t("recording.caseCompatibility")}</p>
+                  <button
+                    type="button"
+                    className="sb-btn"
+                    disabled={locked}
+                    onClick={() => saveCase(true)}
+                  >
+                    {t("recording.caseOriginal")}
+                  </button>
                   <div className="recording-warnings" role="status">
                     {recording.warnings
                       .filter(
@@ -535,6 +642,11 @@ export default function RecordingPlayer({ onClose }) {
               </div>
               <RecordingTimeline
                 duration={recording.durationSeconds}
+                frames={recording.frames}
+                markers={eventMarkers}
+                onMarkersChange={setEventMarkers}
+                timelineOptions={timelineOptions}
+                onTimelineOptionsChange={setTimelineOptions}
                 position={position}
                 selection={selection}
                 onSeek={seek}
@@ -652,7 +764,7 @@ export default function RecordingPlayer({ onClose }) {
             {exportError && (
               <p className="recording-error" role="alert">
                 {t(
-                  `recording.exportError.${["EXPORT_FAILED", "EXPORT_HIDDEN", "UNSUPPORTED_VIDEO"].includes(exportError) ? exportError : "EXPORT_FAILED"}`,
+                  `recording.exportError.${["EXPORT_FAILED", "EXPORT_HIDDEN", "UNSUPPORTED_VIDEO", "CASE_EXPORT_FAILED"].includes(exportError) ? exportError : "EXPORT_FAILED"}`,
                 )}
               </p>
             )}

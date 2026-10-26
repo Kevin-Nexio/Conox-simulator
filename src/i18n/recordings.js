@@ -38,7 +38,7 @@ export const RECORDING_UI = {
     "recording.whole": "Gesamter Fall",
     "recording.minutes": "{{count}} Minuten",
     "recording.color": "DSA-Farbskala",
-    "recording.grid": "Hilfslinien EEG / DSA",
+    "recording.grid": "Gitternetz EEG / DSA",
     "recording.eeg": "EEG · 0,5 bis 45 Hz · µV vorläufig",
     "recording.dsa": "DSA aus aufgezeichnetem EEG",
     "recording.dsaMethod":
@@ -103,7 +103,7 @@ export const RECORDING_UI = {
     "recording.whole": "Cas entier",
     "recording.minutes": "{{count}} minutes",
     "recording.color": "Échelle des couleurs DSA",
-    "recording.grid": "Repères EEG / DSA",
+    "recording.grid": "Quadrillage EEG / DSA",
     "recording.eeg": "EEG · 0,5 à 45 Hz · µV provisoires",
     "recording.dsa": "DSA calculé depuis l’EEG enregistré",
     "recording.dsaMethod":
@@ -168,7 +168,7 @@ export const RECORDING_UI = {
     "recording.whole": "Whole case",
     "recording.minutes": "{{count}} minutes",
     "recording.color": "DSA colour scale",
-    "recording.grid": "EEG / DSA guides",
+    "recording.grid": "EEG / DSA grid",
     "recording.eeg": "EEG · 0.5 to 45 Hz · provisional µV",
     "recording.dsa": "DSA from recorded EEG",
     "recording.dsaMethod":

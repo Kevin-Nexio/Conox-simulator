@@ -425,42 +425,6 @@
   margin: 8px 0;
   padding: 8px 12px 6px;
 }
-.recording-shell .recording-timeline-surface {
-  height: 92px;
-  margin-top: 4px;
-}
-.recording-shell .recording-timeline-marker-flag {
-  width: 28px;
-  height: 28px;
-}
-.recording-shell .recording-timeline-marker-flag svg {
-  width: 22px;
-  height: 22px;
-}
-.recording-shell .recording-timeline-marker-out {
-  top: 62px;
-}
-.recording-shell .recording-timeline-marker-in .recording-timeline-marker-stem {
-  top: 28px;
-  height: 34px;
-}
-.recording-shell
-  .recording-timeline-marker-out
-  .recording-timeline-marker-stem {
-  bottom: 32px;
-  height: 14px;
-}
-.recording-shell .recording-timeline-ruler {
-  top: 20px;
-}
-.recording-shell .recording-timeline-track {
-  top: 40px;
-  height: 20px;
-}
-.recording-shell .recording-timeline-playhead {
-  top: 33px;
-  height: 29px;
-}
 .recording-shell .recording-timeline-help {
   position: absolute;
   width: 1px;

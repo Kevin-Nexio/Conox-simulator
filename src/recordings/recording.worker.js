@@ -1,12 +1,10 @@
-import { parseCxbin } from "./cxbin.js";
-import { getFilteredEeg, buildSpectrogram } from "./spectrum.js";
+import { loadRecordingCase } from "./loadCase.js";
 
-self.onmessage = ({ data }) => {
+self.onmessage = async ({ data }) => {
   try {
-    const recording = parseCxbin(data.buffer, { fileName: data.fileName });
-    const filtered = getFilteredEeg(recording);
-    const spectrum = buildSpectrogram(recording, filtered);
-    self.postMessage({ recording, filtered, spectrum }, [
+    const result = await loadRecordingCase(data.buffer, data.fileName);
+    const { recording, filtered, spectrum } = result;
+    self.postMessage(result, [
       recording.samples.buffer,
       filtered.buffer,
       spectrum.frequencies.buffer,

@@ -4,7 +4,7 @@ Der Fallmodus ist unabhängig vom synthetischen Simulator. `App` montiert entwed
 
 ## Lokale Verarbeitung
 
-`RecordingPlayer` liest eine vom Benutzer gewählte Datei mit der File API. Ein dedizierter Worker dekodiert, filtert und berechnet das Spektrogramm. Datenpuffer werden zwischen Worker und Oberfläche übertragen. Abbrechen, Dateiersatz und Verlassen des Modus beenden den Worker und verwerfen verspätete Ergebnisse. Nur die Sprachwahl wird im localStorage gespeichert. Dateien sind auf 64 MiB begrenzt. Die ursprüngliche Aufzeichnung und abgeleitete Patientendaten gehören nicht in Repository, Tests oder öffentliche Builds.
+`RecordingPlayer` liest eine vom Benutzer gewählte Datei mit der File API. Ein dedizierter Worker dekodiert, filtert und berechnet das Spektrogramm. Datenpuffer werden zwischen Worker und Oberfläche übertragen. Abbrechen, Dateiersatz und Verlassen des Modus beenden den Worker und verwerfen verspätete Ergebnisse. Nur die Sprachwahl wird im localStorage gespeichert. Originaldaten sind auf 64 MiB begrenzt; eine eigene Simulator-Erweiterung darf zusätzlich bis 1 MiB Metadaten und einen 80-Byte-Footer enthalten. [Gespeicherte Simulatorfälle](CASE-FILES.md) halten Originalbytes, Ereignismarken und Anzeige-/Passageeinstellungen in einer einzigen Datei zusammen. Die Kompatibilität dieser Erweiterung mit ConoxView ist nicht geprüft. Fehlerhafte Importe ersetzen den geöffneten Fall nicht. Die ursprüngliche Aufzeichnung und abgeleitete Patientendaten gehören nicht in Repository, Tests oder öffentliche Builds.
 
 ## Unterstützte Struktur und Annahmen
 

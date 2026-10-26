@@ -1,11 +1,47 @@
 export const RECORDING_TOOLS = {
   de: {
+    "recording.caseSave": "Fall speichern (.cxbin)",
+    "recording.caseSaveHelp":
+      "Den ganzen Fall mit Ereignismarken, Ansicht, Skalen, Passage und Abspielposition in einer Datei speichern. Beim erneuten Öffnen werden diese Einstellungen wiederhergestellt.",
+    "recording.caseCompatibility":
+      "Erweiterter CXBIN für diesen Simulator. Die Kompatibilität mit ConoxView ist nicht geprüft. Die ursprünglichen CXBIN-Daten bleiben vollständig enthalten.",
+    "recording.caseOriginal": "Original-CXBIN herunterladen",
+    "recording.error.CASE_DATA_INVALID":
+      "Die Simulator-Erweiterung ist unvollständig oder ungültig. Bitte die vollständige gespeicherte Datei verwenden.",
+    "recording.error.CASE_INTEGRITY_FAILED":
+      "Die gespeicherte Datei wurde verändert oder beschädigt. Daten und Einstellungen konnten nicht zusammen geprüft werden.",
+    "recording.error.CASE_STATE_INVALID":
+      "Die gespeicherten Marken oder Einstellungen passen nicht zu diesem Fall. Der bereits geöffnete Fall bleibt erhalten.",
+    "recording.error.CASE_VERSION_UNSUPPORTED":
+      "Dieser Fall wurde mit einer neueren oder nicht unterstützten Speicherversion erstellt.",
+    "recording.exportError.CASE_EXPORT_FAILED":
+      "Der Fall konnte nicht gespeichert werden. Bitte erneut versuchen.",
+    "recording.eventAdd": "Ereignismarke an der Abspielposition hinzufügen",
+    "recording.eventShort": "Marke",
+    "recording.eventMarkers": "Ereignismarken",
+    "recording.eventName": "Name der Marke",
+    "recording.eventTime": "Position (Minuten:Sekunden)",
+    "recording.eventSave": "Speichern",
+    "recording.eventClose": "Schliessen",
+    "recording.eventEdit": "Bearbeiten",
+    "recording.eventDelete": "Löschen",
+    "recording.eventGo": "Zu dieser Marke springen",
+    "recording.eventInvalid":
+      "Einen Namen und eine gültige Position zwischen 0:00.00 und {{duration}} eingeben.",
+    "recording.eventSessionOnly":
+      "Mit «Fall speichern (.cxbin)» bleiben die Marken und Einstellungen auch nach dem Schliessen erhalten. Die Originaldatei bleibt unverändert.",
+    "recording.eventMarkerHelp":
+      "Klicken zum Springen, ziehen zum Verschieben, doppelklicken zum Bearbeiten. Die Pfeiltasten verschieben die Marke ebenfalls.",
     "recording.timeline": "Schnitt-Zeitleiste",
+    "recording.timelineIndices": "Indexkurven in der Zeitleiste",
+    "recording.timelineIndicesShort": "Kurven",
+    "recording.timelineIndicesHelp":
+      "Indexkurven ein- oder ausblenden. Eine Kurve anklicken, um zur Stelle zu springen. Die Legende schaltet einzelne Indizes um. Skala: 0 bis 100.",
     "recording.inMarker": "Beginn der Passage",
     "recording.outMarker": "Ende der Passage",
     "recording.playhead": "Abspielposition",
     "recording.timelineHelp":
-      "Beginn und Ende an den farbigen Markern ziehen. Der weisse Cursor bestimmt die Abspielposition. Auch mit den Pfeiltasten bedienbar.",
+      "Beginn und Ende an den grünen Griffen ziehen. Der Abspielcursor bestimmt die Position. Auch mit den Pfeiltasten bedienbar.",
     "recording.layout": "Ansicht für Anzeige und Export",
     "recording.layout.blocks": "Vier Bereiche",
     "recording.layout.simulator-frame": "Simulator mit Rahmen",
@@ -16,7 +52,7 @@ export const RECORDING_TOOLS = {
     "recording.viewShort": "Ansicht",
     "recording.amplitudeShort": "Amplitude",
     "recording.colorShort": "Farben",
-    "recording.gridShort": "Hilfslinien",
+    "recording.gridShort": "Gitternetz",
     "recording.speedShort": "Tempo",
     "recording.videoShort": "Video",
     "recording.helpShort": "Hilfe",
@@ -46,12 +82,48 @@ export const RECORDING_TOOLS = {
       "Dieses Videoformat wird vom Browser nicht unterstützt. Ein anderes Format oder einen anderen Browser wählen.",
   },
   fr: {
+    "recording.caseSave": "Enregistrer le cas (.cxbin)",
+    "recording.caseSaveHelp":
+      "Conserve le cas entier avec les repères, la vue, les échelles, le passage et la position de lecture dans un seul fichier. Ces réglages sont restaurés à la réouverture.",
+    "recording.caseCompatibility":
+      "CXBIN enrichi pour ce simulateur. Sa compatibilité avec ConoxView n’est pas vérifiée. Les données CXBIN d’origine sont conservées intégralement.",
+    "recording.caseOriginal": "Télécharger le CXBIN original",
+    "recording.error.CASE_DATA_INVALID":
+      "L’annexe du simulateur est incomplète ou invalide. Utiliser le fichier enregistré complet.",
+    "recording.error.CASE_INTEGRITY_FAILED":
+      "Le fichier enregistré a été modifié ou endommagé. Les données et réglages n’ont pas pu être vérifiés ensemble.",
+    "recording.error.CASE_STATE_INVALID":
+      "Les repères ou réglages enregistrés ne correspondent pas à ce cas. Le cas déjà ouvert reste disponible.",
+    "recording.error.CASE_VERSION_UNSUPPORTED":
+      "Ce cas a été enregistré avec une version plus récente ou non prise en charge du format de sauvegarde.",
+    "recording.exportError.CASE_EXPORT_FAILED":
+      "Impossible d’enregistrer le cas. Réessayer.",
+    "recording.eventAdd": "Ajouter un repère à la position de lecture",
+    "recording.eventShort": "Repère",
+    "recording.eventMarkers": "Repères d’événement",
+    "recording.eventName": "Nom du repère",
+    "recording.eventTime": "Position (minutes:secondes)",
+    "recording.eventSave": "Enregistrer",
+    "recording.eventClose": "Fermer",
+    "recording.eventEdit": "Modifier",
+    "recording.eventDelete": "Supprimer",
+    "recording.eventGo": "Aller à ce repère",
+    "recording.eventInvalid":
+      "Indiquer un nom et une position valide entre 0:00.00 et {{duration}}.",
+    "recording.eventSessionOnly":
+      "Utiliser « Enregistrer le cas (.cxbin) » pour conserver les repères et réglages après fermeture. Le fichier d’origine reste inchangé.",
+    "recording.eventMarkerHelp":
+      "Cliquer pour rejoindre ce moment, glisser pour déplacer, double-cliquer pour modifier. Les flèches déplacent aussi le repère.",
     "recording.timeline": "Timeline de montage",
+    "recording.timelineIndices": "Courbes des indices dans la timeline",
+    "recording.timelineIndicesShort": "Courbes",
+    "recording.timelineIndicesHelp":
+      "Afficher ou masquer les indices. Cliquer sur une courbe pour rejoindre ce moment. La légende active ou masque chaque indice. Échelle : 0 à 100.",
     "recording.inMarker": "Début du passage",
     "recording.outMarker": "Fin du passage",
     "recording.playhead": "Tête de lecture",
     "recording.timelineHelp":
-      "Glisser les marqueurs colorés pour choisir le début et la fin. Le curseur blanc règle la lecture. Les flèches du clavier fonctionnent aussi.",
+      "Glisser les poignées vertes pour choisir le début et la fin. Le curseur règle la position de lecture. Les flèches du clavier fonctionnent aussi.",
     "recording.layout": "Vue affichée et exportée",
     "recording.layout.blocks": "Quatre blocs",
     "recording.layout.simulator-frame": "Simulateur avec cadre",
@@ -62,7 +134,7 @@ export const RECORDING_TOOLS = {
     "recording.viewShort": "Vue",
     "recording.amplitudeShort": "Amplitude",
     "recording.colorShort": "Couleurs",
-    "recording.gridShort": "Repères",
+    "recording.gridShort": "Quadrillage",
     "recording.speedShort": "Vitesse",
     "recording.videoShort": "Vidéo",
     "recording.helpShort": "Aide",
@@ -92,12 +164,48 @@ export const RECORDING_TOOLS = {
       "Ce format vidéo n’est pas pris en charge. Choisir un autre format ou un autre navigateur.",
   },
   en: {
+    "recording.caseSave": "Save case (.cxbin)",
+    "recording.caseSaveHelp":
+      "Keep the entire case with event markers, view, scales, passage and playhead in one file. These settings are restored when reopening it.",
+    "recording.caseCompatibility":
+      "Extended CXBIN for this simulator. Compatibility with ConoxView has not been verified. All original CXBIN data is preserved.",
+    "recording.caseOriginal": "Download original CXBIN",
+    "recording.error.CASE_DATA_INVALID":
+      "The simulator extension is incomplete or invalid. Use the complete saved file.",
+    "recording.error.CASE_INTEGRITY_FAILED":
+      "The saved file has changed or is damaged. Data and settings could not be verified together.",
+    "recording.error.CASE_STATE_INVALID":
+      "The saved markers or settings do not match this case. The case already open remains available.",
+    "recording.error.CASE_VERSION_UNSUPPORTED":
+      "This case uses a newer or unsupported save format version.",
+    "recording.exportError.CASE_EXPORT_FAILED":
+      "The case could not be saved. Try again.",
+    "recording.eventAdd": "Add an event marker at the playhead",
+    "recording.eventShort": "Marker",
+    "recording.eventMarkers": "Event markers",
+    "recording.eventName": "Marker name",
+    "recording.eventTime": "Position (minutes:seconds)",
+    "recording.eventSave": "Save",
+    "recording.eventClose": "Close",
+    "recording.eventEdit": "Edit",
+    "recording.eventDelete": "Delete",
+    "recording.eventGo": "Go to this marker",
+    "recording.eventInvalid":
+      "Enter a name and a valid position between 0:00.00 and {{duration}}.",
+    "recording.eventSessionOnly":
+      "Use “Save case (.cxbin)” to keep markers and settings after closing. The original file stays unchanged.",
+    "recording.eventMarkerHelp":
+      "Click to seek, drag to move, double-click to edit. Arrow keys also move the marker.",
     "recording.timeline": "Editing timeline",
+    "recording.timelineIndices": "Index curves in the timeline",
+    "recording.timelineIndicesShort": "Curves",
+    "recording.timelineIndicesHelp":
+      "Show or hide index curves. Click a curve to seek to that moment. The legend toggles individual indices. Scale: 0 to 100.",
     "recording.inMarker": "Passage start",
     "recording.outMarker": "Passage end",
     "recording.playhead": "Playhead",
     "recording.timelineHelp":
-      "Drag the coloured markers to set the start and end. The white cursor sets the playhead. Arrow keys also work.",
+      "Drag the green handles to set the start and end. The playhead sets the playback position. Arrow keys also work.",
     "recording.layout": "Display and export view",
     "recording.layout.blocks": "Four blocks",
     "recording.layout.simulator-frame": "Simulator with frame",
@@ -108,7 +216,7 @@ export const RECORDING_TOOLS = {
     "recording.viewShort": "View",
     "recording.amplitudeShort": "Amplitude",
     "recording.colorShort": "Colours",
-    "recording.gridShort": "Guides",
+    "recording.gridShort": "Grid",
     "recording.speedShort": "Speed",
     "recording.videoShort": "Video",
     "recording.helpShort": "Help",

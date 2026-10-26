@@ -8,7 +8,7 @@ Im Header `Fall öffnen` wählen und eine `.cxbin`-Datei laden. Der Fall bleibt 
 
 Der Fallmodus bietet Wiedergabe/Pause, Geschwindigkeit, eine Passage mit Beginn und Ende in `Minuten:Sekunden`, Positionierung, EEG-Zeit-/Amplitudenskalen, DSA-Zeitraum und Farbskala sowie zuschaltbare Hilfslinien und SEF-Kurven. Die Wiedergabe stoppt am Ende der gewählten Passage. Auf kleinen Bildschirmen lassen sich die Diagramme horizontal verschieben.
 
-Beginn und Ende werden mit verschiebbaren Markern auf der gesamten Zeitleiste gewählt. Der weisse Abspielcursor ist unabhängig davon positionierbar. Die Zeitfelder bleiben für genaue Eingaben verfügbar. Passage und Export stehen in einer gemeinsamen kompakten Werkzeugleiste; Die Anzeigeeinstellungen stehen dauerhaft im Vorschaukopf links neben Vollbild; Dateidetails und Hilfe lassen sich aufklappen. Auf Desktop-Bildschirmen passen Zeitleiste und Vorschau zusammen in die Fensterhöhe.
+Beginn und Ende werden mit verschiebbaren Griffen auf der gesamten Zeitleiste gewählt. Der Abspielcursor ist unabhängig davon positionierbar. Die Zeitfelder bleiben für genaue Eingaben verfügbar. Passage und Export stehen in einer gemeinsamen kompakten Werkzeugleiste; die Anzeigeeinstellungen stehen dauerhaft im Vorschaukopf links neben Vollbild; Dateidetails und Hilfe lassen sich aufklappen. Auf Desktop-Bildschirmen passen Zeitleiste und Vorschau zusammen in die Fensterhöhe.
 
 Drei direkt sichtbare Tasten wählen zwischen vier Bereichen und den originalen Simulatoransichten mit und ohne Rahmen. Standard ist die Simulatoransicht mit Rahmen; der äussere weisse Hintergrund entfällt. Sie verwenden dieselben Monitor-Komponenten wie die Simulation, zeigen jedoch ausschliesslich aufgezeichnete Daten. Die Monitor-Tasten schalten die Diagramme um; SEF und Farbskala bleiben bedienbar. Jede Ansicht lässt sich als Vollbild anzeigen. Das EEG läuft wie im Simulator als kreisförmiger Links-nach-rechts-Sweep mit Löschlücke vor dem Cursor. Bereits geschriebene Daten bleiben rechts vom Cursor bis zum Überschreiben sichtbar; zukünftige EEG-Samples werden nicht vorweggenommen. Vorschau, Sprünge und Exporte rekonstruieren denselben Sweep.
 
@@ -16,11 +16,19 @@ PNG und PDF speichern die aktuelle Position mit den gewählten Skalen und der ge
 
 Die Vier-Bereiche-Ansicht zeichnet Beschriftungen und Kurven als SVG-Vektoren, damit sie beim Vergrössern scharf bleiben. Ihr PDF enthält auswählbaren Text und Vektorlinien; nur die DSA-Farbkarte ist ein eingebettetes Bild. PNG und Video sind formatbedingt Rasterdateien. Die originalen Simulatoransichten werden für Exporte aus ihren tatsächlich gerenderten Komponenten übernommen; dies benötigt SVG-HTML-Unterstützung im Browser. Diese Exporte wurden in Chrome geprüft. Unterstützt ein Browser die Aufnahme nicht, bleibt eine Fehlermeldung sichtbar.
 
-Der DSA wird aus dem aufgezeichneten EEG neu berechnet. **Indexzuordnung, µV-Skalierung und Übereinstimmung mit ConoxView sind noch nicht validiert.** Ungeklärte Indexwerte erscheinen als Lücken. Der Import unterstützt zunächst nur das untersuchte 1024-Byte-Format und Dateien bis 64 MiB. Andere Formatversionen und unvollständige Dateien werden abgewiesen.
+Der DSA wird aus dem aufgezeichneten EEG neu berechnet. **Indexzuordnung, µV-Skalierung und Übereinstimmung mit ConoxView sind noch nicht validiert.** Ungeklärte Indexwerte erscheinen als Lücken. Der Import unterstützt das untersuchte 1024-Byte-Format bis 64 MiB Originaldaten sowie die eigene Simulator-Erweiterung bis 1 MiB zusätzlicher Metadaten. Andere Formatversionen und unvollständige Dateien werden abgewiesen.
 
 Die technischen Annahmen und offenen Prüfungen stehen in [docs/RECORDINGS.md](docs/RECORDINGS.md).
 
 Dieser Ordner enthält **keinen exportierten Single-HTML-Build**. Oberfläche, Daten, Simulationslogik, Styles und Assets liegen als getrennte Quelldateien vor.
+
+## Zeitleiste und gespeicherte Fälle
+
+Die Fallansicht blendet Indexkurven direkt in die Schnitt-Zeitleiste ein, ohne deren Höhe zu erhöhen. Die Legende schaltet einzelne Kurven um. Ein Klick im Diagramm positioniert den Abspielcursor. Kleine gerade grüne Griffe an beiden Auswahlrändern begrenzen die Passage. Ein einzelnes 10 × 8 Pixel grosses Dreieck mit dünner Linie kennzeichnet den Abspielcursor. Sichtbare Griffe und unsichtbare Greifbereiche sind getrennt; die Oberfläche verwendet keine runden Griffrahmen. «Gitternetz» bezeichnet ausschliesslich die Diagramm-Hilfslinien.
+
+Mit «+ Marke» lässt sich die aktuelle Position als benanntes Ereignis markieren. Ereignismarken sind orange nummeriert und unabhängig von den grünen Passagegrenzen. Klicken springt zur Marke, Ziehen oder die Pfeiltasten verschieben sie. Doppelklick öffnet Name und genaue Zeit; die gleiche Fensteransicht enthält die Liste mit Bearbeiten, Anspringen und Löschen. Nicht gespeicherte Änderungen bleiben nur im Arbeitsspeicher.
+
+«Fall speichern (.cxbin)» lädt eine einzige Datei mit dem ganzen Originalfall und dem Bearbeitungsstand herunter. Beim erneuten Öffnen werden Marken, Passage, Abspielposition, Geschwindigkeit, Ansicht, EEG-/DSA-Skalen, Gitternetz, SEF und Kurvenauswahl wiederhergestellt. Die Originalbytes bleiben vollständig erhalten; die Simulatorinformationen stehen in einer versionierten, integritätsgeprüften Erweiterung am Dateiende. Der gewählte Ausschnitt kürzt die aufgezeichneten Daten nicht. Eine erneute Speicherung ersetzt die Erweiterung. Die Kompatibilität dieser erweiterten Dateien mit ConoxView ist nicht geprüft. Unter «Datei und Hinweise» kann der unveränderte Original-CXBIN wieder heruntergeladen werden. Die ursprüngliche Datei auf dem Gerät wird nie überschrieben. Format und Prüfungen stehen in [docs/CASE-FILES.md](docs/CASE-FILES.md).
 
 ## Lokal starten
 
@@ -47,7 +55,7 @@ Die GitHub-Pages-Version wird über die Branch `gh-pages` veröffentlicht:
 
 <https://kevin-nexio.github.io/Conox-simulator/>
 
-Der Quellcode bleibt auf `main`. Die Branch `gh-pages` enthält nur den aus `dist/` erzeugten statischen Build.
+Die Branch `gh-pages` enthält den aus `dist/` erzeugten statischen Build. Der Quellcode wird getrennt auf den Entwicklungsbranches verwaltet.
 
 ## iPad/iPhone Demo
 

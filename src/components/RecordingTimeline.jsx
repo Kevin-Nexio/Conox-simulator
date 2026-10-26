@@ -6,11 +6,23 @@ import {
   normalizeSelection,
 } from "../recordings/timeline.js";
 import "../styles/recordingTimeline.css";
+import RecordingTimelineTrends, {
+  TIMELINE_INDICES,
+} from "./RecordingTimelineTrends.jsx";
+import RecordingEventEditor from "./RecordingEventEditor.jsx";
+import { saveEventMarker } from "../recordings/eventMarkers.js";
+
+const NO_FRAMES = [];
 
 export default function RecordingTimeline({
   duration,
   position,
   selection,
+  frames = NO_FRAMES,
+  markers: eventMarkers,
+  onMarkersChange: setEventMarkers,
+  timelineOptions,
+  onTimelineOptionsChange,
   onSeek,
   onSelectionChange,
   disabled = false,
@@ -20,7 +32,11 @@ export default function RecordingTimeline({
   const surfaceRef = React.useRef(null);
   const playheadRef = React.useRef(null);
   const dragRef = React.useRef(null);
+  const nextEventId = React.useRef(0);
   const [dragging, setDragging] = React.useState(null);
+  const { showIndices, hiddenIndices } = timelineOptions;
+  const [eventEditor, setEventEditor] = React.useState(null);
+  const curvesVisible = showIndices && frames.length > 0;
   const maximum = clampTimelinePosition(duration, duration);
   const passage = normalizeSelection(selection, duration);
   const playhead = clampTimelinePosition(position, duration);
@@ -34,11 +50,31 @@ export default function RecordingTimeline({
       setDragging(null);
     }
   }, [inactive]);
+  // Marker data is restored by the player; only the open editor belongs here.
+  React.useEffect(() => {
+    setEventEditor(null);
+  }, [frames]);
+
+  const editEvent = (marker) => {
+    if (inactive) return;
+    onSeek(marker?.time ?? playhead);
+    setEventEditor(marker || { id: null, label: "", time: playhead });
+  };
 
   const change = (target, value) => {
     if (inactive) return;
     if (target === "position") {
       onSeek(clampTimelinePosition(value, duration));
+    } else if (target.startsWith("event:")) {
+      const eventId = target.slice(6);
+      const time = clampTimelinePosition(value, duration);
+      setEventMarkers((current) => {
+        const marker = current.find((item) => item.id === eventId);
+        return marker
+          ? saveEventMarker(current, { ...marker, time }, duration) || current
+          : current;
+      });
+      onSeek(time);
     } else {
       onSelectionChange(
         moveSelectionBoundary(passage, target, value, duration),
@@ -64,7 +100,10 @@ export default function RecordingTimeline({
         ? playhead
         : target === "start"
           ? passage.start
-          : passage.end;
+          : target === "end"
+            ? passage.end
+            : eventMarkers.find((marker) => `event:${marker.id}` === target)
+                ?.time || 0;
     dragRef.current = {
       pointerId: event.pointerId,
       target,
@@ -133,15 +172,107 @@ export default function RecordingTimeline({
       className="recording-timeline"
       aria-labelledby={`${id}-label`}
       data-disabled={inactive}
+      data-indices={curvesVisible}
     >
       <div className="recording-timeline-heading">
         <span id={`${id}-label`}>{t("recording.timeline")}</span>
+        <div className="recording-timeline-index-controls">
+          <button
+            type="button"
+            className="recording-timeline-add-event"
+            aria-label={t("recording.eventAdd")}
+            title={t("recording.eventAdd")}
+            disabled={inactive}
+            onClick={() => editEvent()}
+          >
+            + {t("recording.eventShort")}
+            {eventMarkers.length > 0 && ` (${eventMarkers.length})`}
+          </button>
+          <button
+            type="button"
+            className="recording-timeline-indices-toggle"
+            aria-pressed={showIndices}
+            aria-label={t("recording.timelineIndices")}
+            title={t("recording.timelineIndicesHelp")}
+            disabled={inactive || !frames.length}
+            onClick={() =>
+              onTimelineOptionsChange((current) => ({
+                ...current,
+                showIndices: !current.showIndices,
+              }))
+            }
+          >
+            <svg viewBox="0 0 20 16" aria-hidden="true">
+              <path d="M1 13 5 6 9 10 13 2 19 8" />
+            </svg>
+            {t("recording.timelineIndicesShort")}
+          </button>
+          {curvesVisible && (
+            <div
+              className="recording-timeline-index-legend"
+              role="group"
+              aria-label={t("recording.timelineIndices")}
+            >
+              {TIMELINE_INDICES.map(([key, label, color]) => (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={!hiddenIndices.includes(key)}
+                  disabled={inactive}
+                  style={{ "--index-color": color }}
+                  onClick={() =>
+                    onTimelineOptionsChange((current) => ({
+                      ...current,
+                      hiddenIndices: current.hiddenIndices.includes(key)
+                        ? current.hiddenIndices.filter((index) => index !== key)
+                        : [...current.hiddenIndices, key],
+                    }))
+                  }
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <output>
           {formatPosition(passage.start, true)}
           <span aria-hidden="true"> → </span>
           {formatPosition(passage.end, true)}
         </output>
       </div>
+      {eventEditor && (
+        <RecordingEventEditor
+          initial={eventEditor}
+          markers={eventMarkers}
+          duration={maximum}
+          t={t}
+          onClose={() => setEventEditor(null)}
+          onSeek={onSeek}
+          onDelete={(eventId) =>
+            setEventMarkers((current) =>
+              current.filter((marker) => marker.id !== eventId),
+            )
+          }
+          onSave={(draft) => {
+            let eventId = draft.id;
+            if (!eventId) {
+              do {
+                eventId = `event-${++nextEventId.current}`;
+              } while (eventMarkers.some((marker) => marker.id === eventId));
+            }
+            const event = {
+              ...draft,
+              id: eventId,
+            };
+            const next = saveEventMarker(eventMarkers, event, maximum);
+            if (!next) return false;
+            setEventMarkers(next);
+            onSeek(event.time);
+            return true;
+          }}
+        />
+      )}
       <div
         className="recording-timeline-surface"
         ref={surfaceRef}
@@ -184,7 +315,47 @@ export default function RecordingTimeline({
               width: `${percent(passage.end - passage.start)}%`,
             }}
           />
+          {curvesVisible && (
+            <RecordingTimelineTrends
+              frames={frames}
+              duration={maximum}
+              hidden={hiddenIndices}
+            />
+          )}
         </div>
+        {eventMarkers.map((marker, index) => (
+          <button
+            key={marker.id}
+            type="button"
+            className="recording-timeline-event"
+            data-timeline-control={`event:${marker.id}`}
+            disabled={inactive}
+            aria-label={`${t("recording.eventShort")} ${index + 1} : ${marker.label}, ${formatPosition(marker.time, true)}`}
+            title={`${marker.label} · ${formatPosition(marker.time, true)}. ${t("recording.eventMarkerHelp")}`}
+            style={{ left: `${percent(marker.time)}%` }}
+            onClick={() => onSeek(marker.time)}
+            onDoubleClick={() => editEvent(marker)}
+            onPointerDown={(event) => beginDrag(event, `event:${marker.id}`)}
+            onPointerMove={moveDrag}
+            onPointerUp={finishDrag}
+            onPointerCancel={finishDrag}
+            onLostPointerCapture={finishDrag}
+            onKeyDown={(event) => {
+              if (event.key === "F2") {
+                event.preventDefault();
+                editEvent(marker);
+              } else {
+                handleKey(event, `event:${marker.id}`, marker.time, 0, maximum);
+              }
+            }}
+          >
+            <span
+              className="recording-timeline-event-stem"
+              aria-hidden="true"
+            />
+            <span aria-hidden="true">{index + 1}</span>
+          </button>
+        ))}
         <div
           className="recording-timeline-marker recording-timeline-marker-in"
           style={{ left: `${percent(passage.start)}%` }}
@@ -196,11 +367,7 @@ export default function RecordingTimeline({
             Math.max(0, passage.end - minimumSpan),
           )}
         >
-          <span className="recording-timeline-marker-flag" aria-hidden="true">
-            <svg viewBox="0 0 24 24">
-              <path d="M15 5H8v14h7M8 12h9" />
-            </svg>
-          </span>
+          <span className="recording-timeline-marker-flag" aria-hidden="true" />
           <span className="recording-timeline-marker-stem" aria-hidden="true" />
         </div>
         <div
@@ -214,11 +381,7 @@ export default function RecordingTimeline({
             maximum,
           )}
         >
-          <span className="recording-timeline-marker-flag" aria-hidden="true">
-            <svg viewBox="0 0 24 24">
-              <path d="M9 5h7v14H9M16 12H7" />
-            </svg>
-          </span>
+          <span className="recording-timeline-marker-flag" aria-hidden="true" />
           <span className="recording-timeline-marker-stem" aria-hidden="true" />
         </div>
         <div
