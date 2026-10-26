@@ -38,6 +38,7 @@ import {
   FactRow,
 } from "./components/UiPrimitives.jsx";
 import RecordingPlayer from "./components/RecordingPlayer.jsx";
+import { isEegSweepGap } from "./simulation/eegSweep.js";
 import {
   ConoxMonitor,
   ConoxMetrics,
@@ -1133,8 +1134,7 @@ function SimulatorApp({ onOpenRecording }) {
           const ue = A.width,
             Re = A.height,
             Y = Re / 2,
-            Qe = ue / Math.max(1, sweepLength),
-            gapSamples = Math.ceil(sweepLength * 0.025);
+            Qe = ue / Math.max(1, sweepLength);
           let connected = false;
           ((G.fillStyle = "#010504"),
             G.fillRect(0, 0, ue, Re),
@@ -1177,8 +1177,7 @@ function SimulatorApp({ onOpenRecording }) {
             G.beginPath(),
             Ve.forEach((ze, ft) => {
               // Break the path at the erase gap and at the screen boundary.
-              const ahead = (ft - sweepCursor + sweepLength) % sweepLength;
-              if (ze === null || ahead < gapSamples) {
+              if (ze === null || isEegSweepGap(ft, sweepCursor, sweepLength)) {
                 connected = false;
                 return;
               }

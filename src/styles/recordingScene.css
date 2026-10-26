@@ -23,7 +23,10 @@
   height: 100%;
 }
 .recording-simulator-view {
-  background: #fff;
+  background: #08131b;
+}
+.recording-simulator-view > .sb-monitor-wrap:not(.conox-monitor-borderless) {
+  border-color: #60686c;
 }
 .recording-simulator-view .sb-raw-content > svg,
 .recording-simulator-view .sb-dsa-canvas > svg,

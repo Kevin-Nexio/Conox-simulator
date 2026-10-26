@@ -1,4 +1,5 @@
 import { getViewRange } from "./playback.js";
+import { getEegSweep } from "../simulation/eegSweep.js";
 
 const finite = Number.isFinite;
 const number = (value) => String(Math.round(value * 1000) / 1000);
@@ -129,6 +130,37 @@ export function createEegPath({
     flush();
   }
   return parts.join(" ");
+}
+
+/** Reconstruct the same sweep for preview, seeking and independently rendered exports. */
+export function createEegSweepPath({
+  samples,
+  sampleRate,
+  position,
+  duration,
+  windowSeconds = 4,
+  width,
+  height,
+  left = 0,
+  top = 0,
+  amplitude = 120,
+}) {
+  const sweep = getEegSweep({ position, duration, windowSeconds, sampleRate });
+  const path = sweep.segments
+    .map((segment) =>
+      createEegPath({
+        samples,
+        sampleRate,
+        amplitude,
+        height,
+        top,
+        range: segment.range,
+        left: left + segment.startFraction * width,
+        width: (segment.endFraction - segment.startFraction) * width,
+      }),
+    )
+    .join(" ");
+  return { ...sweep, path };
 }
 
 /** Missing values, invalid times and missing time intervals start a new subpath. */

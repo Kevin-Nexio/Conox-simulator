@@ -3,10 +3,7 @@ import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
 import RecordingBlockView from "./RecordingBlockView.jsx";
 import RecordingSimulatorView from "./RecordingSimulatorView.jsx";
-import {
-  getPresentationSize,
-  renderPresentation,
-} from "../recordings/presentation.js";
+import { getPresentationSize } from "../recordings/presentation.js";
 import { snapshotElementToCanvas } from "../recordings/domExport.js";
 
 /** Render the same native scene independently, leaving the UI playhead untouched. */
@@ -16,31 +13,23 @@ export function createRecordingExportScene(options) {
   const canvas = document.createElement("canvas");
   canvas.width = size.width;
   canvas.height = size.height;
-  const native = layout === "blocks" || layout.startsWith("simulator-");
-  const host = native ? document.createElement("div") : null;
-  let root;
-  if (host) {
-    host.className = "sb-shell recording-shell recording-export-scene";
-    host.style.width = `${size.width}px`;
-    host.style.height = `${size.height}px`;
-    host.setAttribute("aria-hidden", "true");
-    host.inert = true;
-    document.body.append(host);
-    root = createRoot(host);
-  }
+  const host = document.createElement("div");
+  host.className = "sb-shell recording-shell recording-export-scene";
+  host.style.width = `${size.width}px`;
+  host.style.height = `${size.height}px`;
+  host.setAttribute("aria-hidden", "true");
+  host.inert = true;
+  document.body.append(host);
+  const root = createRoot(host);
   let disposed = false;
   const styleCache = new WeakMap();
   return {
     canvas,
     get element() {
-      return host?.firstElementChild;
+      return host.firstElementChild;
     },
     async renderFrame(position) {
       if (disposed || signal?.aborted) throw { code: "EXPORT_ABORTED" };
-      if (!root) {
-        renderPresentation(canvas, { ...options, position });
-        return;
-      }
       const Component =
         layout === "blocks" ? RecordingBlockView : RecordingSimulatorView;
       flushSync(() =>
@@ -59,8 +48,8 @@ export function createRecordingExportScene(options) {
     },
     dispose() {
       disposed = true;
-      if (root) flushSync(() => root.unmount());
-      host?.remove();
+      flushSync(() => root.unmount());
+      host.remove();
     },
   };
 }

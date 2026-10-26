@@ -49,7 +49,7 @@ export default function RecordingPlayer({ onClose }) {
   const [guides, setGuides] = React.useState(true);
   const [sef50, setSef50] = React.useState(false);
   const [sef95, setSef95] = React.useState(false);
-  const [layout, setLayout] = React.useState("blocks");
+  const [layout, setLayout] = React.useState("simulator-frame");
   const [monitorView, setMonitorView] = React.useState("eeg-dsa");
   const [assets, setAssets] = React.useState(null);
   const [exporting, setExporting] = React.useState(null);
@@ -225,7 +225,7 @@ export default function RecordingPlayer({ onClose }) {
       positionRef.current = next.position;
       setPosition(next.position);
       if (next.ended) setPlaying(false);
-    }, 50);
+    }, 40);
     // Do not jump through a teaching passage when the browser goes into the background.
     const pauseWhenHidden = () => {
       if (document.hidden) setPlaying(false);
@@ -494,26 +494,6 @@ export default function RecordingPlayer({ onClose }) {
                     {formatPosition(recording.durationSeconds)}
                   </output>
                 </div>
-                <label className="recording-inline-field recording-layout-field">
-                  {t("recording.viewShort")}
-                  <select
-                    aria-label={t("recording.layout")}
-                    value={layout}
-                    onChange={(event) => setLayout(event.target.value)}
-                  >
-                    {[
-                      "blocks",
-                      "conox-frame",
-                      "conox-screen",
-                      "simulator-frame",
-                      "simulator-screen",
-                    ].map((value) => (
-                      <option key={value} value={value}>
-                        {t(`recording.layout.${value}`)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
                 <fieldset
                   className="recording-export-actions"
                   disabled={assets === null}
@@ -618,105 +598,6 @@ export default function RecordingPlayer({ onClose }) {
                     </select>
                   </label>
                 )}
-                <details className="recording-display-details">
-                  <summary>{t("display.heading")}</summary>
-                  <fieldset
-                    className="recording-display-controls"
-                    disabled={locked}
-                    aria-label={t("display.heading")}
-                  >
-                    <label>
-                      {t("recording.eegWindow")}
-                      <select
-                        value={eegWindow}
-                        aria-label={t("recording.eegWindow")}
-                        onChange={(event) =>
-                          setEegWindow(Number(event.target.value))
-                        }
-                      >
-                        {[2, 4, 8].map((value) => (
-                          <option key={value} value={value}>
-                            {value} s
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      {t("recording.amplitude")}
-                      <select
-                        value={amplitude}
-                        aria-label={t("recording.amplitude")}
-                        onChange={(event) =>
-                          setAmplitude(Number(event.target.value))
-                        }
-                      >
-                        {[25, 50, 120, 475].map((value) => (
-                          <option key={value} value={value}>
-                            ±{value} µV*
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      {t("recording.dsaWindow")}
-                      <select
-                        value={dsaWindow}
-                        aria-label={t("recording.dsaWindow")}
-                        onChange={(event) =>
-                          setDsaWindow(Number(event.target.value))
-                        }
-                      >
-                        <option value={0}>{t("recording.whole")}</option>
-                        {[60, 300, 1800].map((value) => (
-                          <option key={value} value={value}>
-                            {t("recording.minutes", { count: value / 60 })}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      {t("recording.color")}
-                      <select
-                        value={colorOffset}
-                        aria-label={t("recording.color")}
-                        onChange={(event) =>
-                          setColorOffset(Number(event.target.value))
-                        }
-                      >
-                        {[-16, -12, -8, -4, 0, 4, 8, 12, 16].map((value) => (
-                          <option key={value} value={value}>
-                            {value > 0 ? "+" : ""}
-                            {value} dB
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="recording-check">
-                      <input
-                        type="checkbox"
-                        checked={guides}
-                        onChange={(event) => setGuides(event.target.checked)}
-                      />
-                      {t("recording.grid")}
-                    </label>
-                    <label className="recording-check">
-                      <input
-                        type="checkbox"
-                        checked={sef50}
-                        onChange={(event) => setSef50(event.target.checked)}
-                      />
-                      SEF50
-                    </label>
-                    <label className="recording-check">
-                      <input
-                        type="checkbox"
-                        checked={sef95}
-                        onChange={(event) => setSef95(event.target.checked)}
-                      />
-                      SEF95
-                    </label>
-                  </fieldset>
-                </details>
                 <details className="recording-help-details">
                   <summary>{t("recording.helpShort")}</summary>
                   <div className="recording-help-body">
@@ -782,13 +663,13 @@ export default function RecordingPlayer({ onClose }) {
               settings={settings}
               layout={layout}
               t={t}
-              assets={assets}
               displayViews={displayViews}
               playing={playing}
               onTogglePlaying={togglePlaying}
               onSeek={seek}
               locked={locked}
               onSettingsChange={changeSettings}
+              onLayoutChange={setLayout}
             />
           </>
         )}

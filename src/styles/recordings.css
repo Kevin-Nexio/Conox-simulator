@@ -163,11 +163,85 @@
 }
 .recording-presentation-heading {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 8px 12px;
   background: #eaf2f7;
+}
+.recording-view-choices {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.recording-view-label {
+  margin-right: 4px;
+  color: #244b63;
+  font-size: 12px;
+  font-weight: 700;
+}
+.recording-view-choice {
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid #0063bf;
+  border-radius: 4px;
+  background: #fff;
+  color: #00549f;
+  font-size: 12px;
+  font-weight: 650;
+}
+.recording-view-choice:hover {
+  background: #d9eafb;
+}
+.recording-view-choice[aria-pressed="true"] {
+  background: #0063bf;
+  color: #fff;
+}
+.recording-presentation-settings {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+}
+.recording-presentation-settings > .recording-display-controls {
+  flex: 1;
+  gap: 8px 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.recording-presentation-settings .recording-display-controls > label {
+  min-width: 80px;
+  font-size: 11px;
+}
+.recording-presentation-settings select {
+  min-height: 32px;
+  padding: 5px 8px;
+  font-size: 12px;
+}
+.recording-display-toggles {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-self: end;
+}
+.recording-presentation-settings .recording-check {
+  min-height: 32px;
+  white-space: nowrap;
+}
+.recording-presentation-settings > button {
+  flex-shrink: 0;
+  min-height: 32px;
+  margin-left: auto;
+  padding: 6px 10px;
+  font-size: 12px;
 }
 .recording-presentation-heading h2 {
   margin: 0;
@@ -344,9 +418,6 @@
   gap: 6px;
   white-space: nowrap;
 }
-.recording-layout-field select {
-  max-width: 230px;
-}
 .recording-toolbar-secondary {
   gap: 8px 18px;
 }
@@ -421,13 +492,11 @@
   margin-left: auto;
 }
 .recording-file-details,
-.recording-display-details,
 .recording-help-details {
   position: relative;
 }
 .recording-file-details-body,
-.recording-help-body,
-.recording-display-details > .recording-display-controls {
+.recording-help-body {
   position: absolute;
   top: 100%;
   right: 0;
@@ -453,9 +522,6 @@
 }
 .recording-help-body {
   color: #506b7a;
-}
-.recording-display-details > .recording-display-controls {
-  gap: 12px 18px;
 }
 .recording-shell.has-recording > .recording-header {
   min-height: 64px;
@@ -504,7 +570,6 @@
   }
   .recording-presentation-heading {
     flex: 0 0 auto;
-    padding: 6px 12px;
   }
   .recording-stage:not(.is-fullscreen) {
     display: flex;
@@ -523,30 +588,29 @@
   }
 }
 @media (max-width: 700px) {
+  .recording-presentation-settings {
+    flex-wrap: wrap;
+  }
+  .recording-presentation-settings > .recording-display-controls {
+    flex-basis: 100%;
+  }
   .recording-toolbar-row,
   .recording-toolbar-secondary {
     gap: 10px;
   }
-  .recording-toolbar-row > .recording-transport,
-  .recording-layout-field {
+  .recording-toolbar-row > .recording-transport {
     width: 100%;
-  }
-  .recording-layout-field select {
-    flex: 1;
-    max-width: none;
   }
   .recording-file-details {
     margin-left: 0;
   }
   .recording-file-details[open],
-  .recording-display-details[open],
   .recording-help-details[open] {
     flex-basis: 100%;
     width: 100%;
   }
   .recording-file-details-body,
-  .recording-help-body,
-  .recording-display-details > .recording-display-controls {
+  .recording-help-body {
     position: static;
     width: 100%;
     max-height: none;

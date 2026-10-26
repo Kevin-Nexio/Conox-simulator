@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   createEegPath,
+  createEegSweepPath,
   createSeriesPath,
   getDsaImageBounds,
   getRecordedIndices,
@@ -9,6 +10,32 @@ import {
 } from "../src/recordings/vectorPlots.js";
 
 const geometry = { range: { start: 0, end: 1 }, width: 4, height: 100 };
+
+test("vector sweeps place current and previous samples on opposite sides without a future segment", () => {
+  const options = {
+    samples: Float32Array.from({ length: 80 }, (_, i) => (i >= 50 ? 10000 : i)),
+    sampleRate: 10,
+    duration: 8,
+    windowSeconds: 4,
+    position: 5,
+    width: 40,
+    height: 100,
+    amplitude: 100,
+  };
+  const result = createEegSweepPath(options);
+  assert.equal(result.cursorFraction, 0.25);
+  assert.match(result.path, /^M0,30 /);
+  assert.match(result.path, /M11,44\.5 /);
+  assert.match(result.path, /L9,25\.5 /);
+  assert.equal((result.path.match(/M/g) || []).length, 2);
+  const points = [...result.path.matchAll(/[ML]([\d.]+),(-?[\d.]+)/g)].map(
+    (m) => [Number(m[1]), Number(m[2])],
+  );
+  assert.ok(points.every(([x, y]) => x !== 10 && y >= 25.5 && y <= 50));
+  assert.equal(createEegSweepPath({ ...options, position: 0 }).path, "");
+  createEegSweepPath({ ...options, position: 7 });
+  assert.deepEqual(createEegSweepPath(options), result);
+});
 
 test("EEG retains peaks in the same pixel and resumes after missing samples", () => {
   const path = createEegPath({

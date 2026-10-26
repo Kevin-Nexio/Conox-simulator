@@ -1,7 +1,7 @@
 import * as React from "react";
 import { formatPosition } from "../recordings/playback.js";
 import {
-  createEegPath,
+  createEegSweepPath,
   createSeriesPath,
   getDsaImageBounds,
   getRecordingRange,
@@ -33,11 +33,14 @@ export default function RecordingPlot({
     [dsaImage, kind],
   );
   const duration = data?.recording?.durationSeconds || 0;
-  const range = getRecordingRange(
-    data?.recording,
-    position,
-    kind === "eeg" ? settings.eegWindow || 4 : settings.dsaWindow,
-  );
+  const eegWindow =
+    Number.isFinite(settings.eegWindow) && settings.eegWindow > 0
+      ? settings.eegWindow
+      : 4;
+  const range =
+    kind === "eeg"
+      ? { start: 0, end: eegWindow }
+      : getRecordingRange(data?.recording, position, settings.dsaWindow);
   const left = axes ? 58 : 0;
   const top = axes ? 22 : 0;
   const plotWidth = Math.max(1, width - left - (axes ? 12 : 0));
@@ -60,16 +63,19 @@ export default function RecordingPlot({
       plotWidth;
   const geometry = { range, width: plotWidth, height: plotHeight, left, top };
   const imageBounds = getDsaImageBounds(data?.spectrum, range, geometry);
-  const eegPath = React.useMemo(
+  const sweep = React.useMemo(
     () =>
       kind === "eeg"
-        ? createEegPath({
+        ? createEegSweepPath({
             ...geometry,
             samples: data?.filtered,
             sampleRate: data?.recording?.sampleRate,
             amplitude,
+            position,
+            duration,
+            windowSeconds: eegWindow,
           })
-        : "",
+        : null,
     [
       kind,
       data?.filtered,
@@ -81,12 +87,16 @@ export default function RecordingPlot({
       left,
       top,
       amplitude,
+      position,
+      duration,
+      eegWindow,
     ],
   );
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       className={`recording-plot recording-plot-${kind}`}
+      data-sweep-cursor={sweep?.cursorFraction}
       x={x}
       y={y}
       width={width}
@@ -132,11 +142,17 @@ export default function RecordingPlot({
             ),
         )}
         {settings.guides &&
-          Array.from({ length: 5 }, (_, index) => (
+          (kind === "eeg"
+            ? Array.from(
+                { length: Math.max(0, Math.ceil(eegWindow) - 1) },
+                (_, index) => (index + 1) / eegWindow,
+              )
+            : [0, 0.25, 0.5, 0.75, 1]
+          ).map((fraction, index) => (
             <line
               key={index}
-              x1={left + (plotWidth * index) / 4}
-              x2={left + (plotWidth * index) / 4}
+              x1={left + plotWidth * fraction}
+              x2={left + plotWidth * fraction}
               y1={top}
               y2={bottom}
               stroke="#91a9b34d"
@@ -144,7 +160,12 @@ export default function RecordingPlot({
             />
           ))}
         {kind === "eeg" && (
-          <path d={eegPath} fill="none" stroke="#edfff6" strokeWidth="1.25" />
+          <path
+            d={sweep.path}
+            fill="none"
+            stroke="#edfff6"
+            strokeWidth="1.25"
+          />
         )}
         {kind === "trends" &&
           Object.entries(TREND_COLORS).map(([metric, color]) => (
@@ -183,16 +204,26 @@ export default function RecordingPlot({
                 />
               ),
           )}
-        {duration > 0 && position >= range.start && position <= range.end && (
-          <line
-            x1={xFor(position)}
-            x2={xFor(position)}
-            y1={top}
-            y2={bottom}
-            stroke="#f7f9fabb"
-            strokeWidth="1.5"
-          />
-        )}
+        {duration > 0 &&
+          (kind === "eeg" ||
+            (position >= range.start && position <= range.end)) && (
+            <line
+              x1={
+                kind === "eeg"
+                  ? left + sweep.cursorFraction * plotWidth
+                  : xFor(position)
+              }
+              x2={
+                kind === "eeg"
+                  ? left + sweep.cursorFraction * plotWidth
+                  : xFor(position)
+              }
+              y1={top}
+              y2={bottom}
+              stroke={kind === "eeg" ? "#81d3aba6" : "#f7f9fabb"}
+              strokeWidth="1.5"
+            />
+          )}
       </g>
       {axes && (
         <g fill="#c4d4dd">
@@ -215,9 +246,11 @@ export default function RecordingPlot({
                 index === 0 ? "start" : index === 4 ? "end" : "middle"
               }
             >
-              {formatPosition(
-                range.start + ((range.end - range.start) * index) / 4,
-              )}
+              {kind === "eeg"
+                ? `${(eegWindow * index) / 4} s`
+                : formatPosition(
+                    range.start + ((range.end - range.start) * index) / 4,
+                  )}
             </text>
           ))}
         </g>

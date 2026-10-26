@@ -1,10 +1,8 @@
 import * as React from "react";
-import {
-  getPresentationSize,
-  renderPresentation,
-} from "../recordings/presentation.js";
+import { getPresentationSize } from "../recordings/presentation.js";
 import RecordingBlockView from "./RecordingBlockView.jsx";
 import RecordingSimulatorView from "./RecordingSimulatorView.jsx";
+import RecordingDisplayControls from "./RecordingDisplayControls.jsx";
 import "../styles/recordingScene.css";
 import { getRecordedIndices } from "../recordings/vectorPlots.js";
 
@@ -15,22 +13,20 @@ export default function RecordingPresentation({
   settings,
   layout,
   t,
-  assets,
   displayViews,
   playing,
   onTogglePlaying,
   onSeek,
   locked,
   onSettingsChange,
+  onLayoutChange,
 }) {
-  const canvasRef = React.useRef(null);
   const hostRef = React.useRef(null);
   const enterRef = React.useRef(null);
   const descriptionId = React.useId();
   const [fullscreen, setFullscreen] = React.useState(false);
   const [scale, setScale] = React.useState(1);
   const size = getPresentationSize(layout);
-  const native = layout === "blocks" || layout.startsWith("simulator-");
   React.useLayoutEffect(() => {
     const host = hostRef.current;
     const resize = () =>
@@ -79,18 +75,6 @@ export default function RecordingPresentation({
       enterRef.current?.focus();
     };
   }, [fullscreen]);
-  React.useEffect(() => {
-    if (native) return;
-    renderPresentation(canvasRef.current, {
-      data,
-      dsaImage,
-      position,
-      settings,
-      layout,
-      t,
-      assets: assets || {},
-    });
-  }, [data, dsaImage, position, settings, layout, t, assets, native]);
   const leaveFullscreen = () => {
     setFullscreen(false);
     if (document.fullscreenElement === hostRef.current)
@@ -117,15 +101,48 @@ export default function RecordingPresentation({
   return (
     <section className="recording-presentation">
       <div className="recording-presentation-heading">
-        <h2>{t(`recording.layout.${layout}`)}</h2>
-        <button
-          type="button"
-          className="sb-btn"
-          ref={enterRef}
-          onClick={enterFullscreen}
+        <h2 className="recording-accessible-readout">
+          {t(`recording.layout.${layout}`)}
+        </h2>
+        <fieldset
+          className="recording-view-choices"
+          disabled={locked}
+          aria-label={t("recording.layout")}
         >
-          {t("recording.fullscreen")}
-        </button>
+          <legend className="recording-accessible-readout">
+            {t("recording.layout")}
+          </legend>
+          <span className="recording-view-label" aria-hidden="true">
+            {t("recording.viewShort")}
+          </span>
+          {["blocks", "simulator-frame", "simulator-screen"].map((value) => (
+            <button
+              type="button"
+              key={value}
+              className="recording-view-choice"
+              aria-pressed={layout === value}
+              onClick={() => onLayoutChange(value)}
+            >
+              {t(`recording.layout.${value}`)}
+            </button>
+          ))}
+        </fieldset>
+        <div className="recording-presentation-settings">
+          <RecordingDisplayControls
+            settings={settings}
+            onChange={onSettingsChange}
+            locked={locked}
+            t={t}
+          />
+          <button
+            type="button"
+            className="sb-btn"
+            ref={enterRef}
+            onClick={enterFullscreen}
+          >
+            {t("recording.fullscreen")}
+          </button>
+        </div>
       </div>
       <div
         ref={hostRef}
@@ -144,51 +161,41 @@ export default function RecordingPresentation({
             {t("recording.exitFullscreen")}
           </button>
         )}
-        {native ? (
-          <div
-            className="recording-view-surface"
-            style={{
-              width: size.width,
-              height: size.height,
-              transform: `translate(-50%, -50%) scale(${scale})`,
-            }}
-          >
-            {layout === "blocks" ? (
-              <RecordingBlockView
-                data={data}
-                dsaImage={dsaImage}
-                position={position}
-                settings={settings}
-                t={t}
-              />
-            ) : (
-              <RecordingSimulatorView
-                {...{
-                  data,
-                  dsaImage,
-                  position,
-                  settings,
-                  layout,
-                  t,
-                  displayViews,
-                  playing,
-                  onTogglePlaying,
-                  onSeek,
-                  locked,
-                  onSettingsChange,
-                }}
-              />
-            )}
-          </div>
-        ) : (
-          <canvas
-            ref={canvasRef}
-            width={size.width}
-            height={size.height}
-            aria-label={t(`recording.layout.${layout}`)}
-            aria-describedby={descriptionId}
-          />
-        )}
+        <div
+          className="recording-view-surface"
+          style={{
+            width: size.width,
+            height: size.height,
+            transform: `translate(-50%, -50%) scale(${scale})`,
+          }}
+        >
+          {layout === "blocks" ? (
+            <RecordingBlockView
+              data={data}
+              dsaImage={dsaImage}
+              position={position}
+              settings={settings}
+              t={t}
+            />
+          ) : (
+            <RecordingSimulatorView
+              {...{
+                data,
+                dsaImage,
+                position,
+                settings,
+                layout,
+                t,
+                displayViews,
+                playing,
+                onTogglePlaying,
+                onSeek,
+                locked,
+                onSettingsChange,
+              }}
+            />
+          )}
+        </div>
         <p id={descriptionId} className="recording-accessible-readout">
           {t("recording.experimentalShort")}.{" "}
           {[
