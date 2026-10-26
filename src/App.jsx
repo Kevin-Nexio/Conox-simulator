@@ -32,13 +32,19 @@ import {
 import { renderDisplayViewIcon as DisplayViewIconFor } from "./components/DisplayViewIcon.jsx";
 import {
   TrendChart,
-  Metric,
   SelectField,
   DoseControl,
   MedicationChannel,
   FactRow,
 } from "./components/UiPrimitives.jsx";
 import RecordingPlayer from "./components/RecordingPlayer.jsx";
+import {
+  ConoxMonitor,
+  ConoxMetrics,
+  ConoxEegPanel,
+  ConoxDsaPanel,
+  ConoxQconPanel,
+} from "./components/ConoxMonitor.jsx";
 
 // Spectrogram colour scaling (IFU §5.2.7): "+" shifts saturation towards red,
 // "−" towards blue. Each step shifts the dB colour mapping by DSA_SCALE_STEP_DB.
@@ -2236,445 +2242,394 @@ function SimulatorApp({ onOpenRecording }) {
       )}
       <div className="sb-grid">
         <section className="sb-monitor-column">
-          <div className="sb-monitor-wrap">
-            <a
-              className="sb-device-brand"
-              href="https://www.fresenius-kabi.com/de-ch"
-              target="_blank"
-              rel="noreferrer"
-              aria-label={t("brand.open")}
+          <ConoxMonitor
+            brandLabel={t("brand.open")}
+            frameControls={
+              <>
+                <button
+                  type="button"
+                  className={`sb-live-switch ${liveSync ? "on" : "off"}`}
+                  aria-pressed={liveSync}
+                  aria-label={liveSync ? t("live.on") : t("live.off")}
+                  onClick={toggleLiveSync}
+                >
+                  <span className="sb-live-dot" aria-hidden="true" />
+                  <strong>{"LIVE"}</strong>
+                  <small>
+                    {liveSync ? t("live.status.on") : t("live.status.off")}
+                  </small>
+                </button>
+                <button
+                  type="button"
+                  className={`sb-qcon-alarm-key ${qconAlarmEnabled ? "on" : "off"} ${qconAlarmTriggered ? "alert" : ""}`}
+                  aria-pressed={qconAlarmEnabled}
+                  aria-label={
+                    qconAlarmEnabled ? t("alarm.disable") : t("alarm.enable")
+                  }
+                  title={
+                    qconAlarmEnabled
+                      ? t("alarm.activeTitle", {
+                          min: qconAlarmMin,
+                          max: qconAlarmMax,
+                        })
+                      : t("alarm.enable")
+                  }
+                  onClick={toggleQconAlarm}
+                >
+                  <svg
+                    className="sb-frame-alarm-bell"
+                    viewBox="0 0 32 32"
+                    aria-hidden="true"
+                  >
+                    <path d="M7 23h18c-2.2-2.7-3.3-6.2-3.3-10.1 0-4.1-2.5-7-5.7-7s-5.7 2.9-5.7 7C10.3 16.8 9.2 20.3 7 23Z" />
+                    <path d="M13.2 25.4c.5 1.4 1.5 2.2 2.8 2.2s2.3-.8 2.8-2.2" />
+                    <path d="M14.2 5.8V4.2h3.6v1.6" />
+                  </svg>
+                </button>
+              </>
+            }
+          >
+            <ConoxMetrics indices={currentIndices} />
+            <ConoxEegPanel
+              displayView={displayView}
+              caption={
+                <>
+                  <b>{"EEG"}</b>
+                  <span>{t("eeg.frontal")}</span>
+                  <em>
+                    {eegWindowSeconds}
+                    {" s"}
+                  </em>
+                </>
+              }
+              scale={
+                <>
+                  <span>{"+"}</span>
+                  <b>{eegAmplitude}</b>
+                  <small>{"µV"}</small>
+                  <span>{"−"}</span>
+                </>
+              }
+              hints={
+                eegHintsEnabled && (
+                  <div className="sb-eeg-detection" aria-live="polite">
+                    <span>{Ou}</span>
+                    <b>{Et}</b>
+                  </div>
+                )
+              }
             >
-              <img
-                src="./images/fresenius-kabi-logo.png"
-                alt="Fresenius Kabi"
+              <canvas
+                ref={rawEegCanvasRef}
+                width={1e3}
+                height={170}
+                aria-label={t("eeg.rawLabel")}
               />
-            </a>
-            <span className="sb-device-led" aria-hidden="true" />
-            <button
-              type="button"
-              className={`sb-live-switch ${liveSync ? "on" : "off"}`}
-              aria-pressed={liveSync}
-              aria-label={liveSync ? t("live.on") : t("live.off")}
-              onClick={toggleLiveSync}
-            >
-              <span className="sb-live-dot" aria-hidden="true" />
-              <strong>{"LIVE"}</strong>
-              <small>
-                {liveSync ? t("live.status.on") : t("live.status.off")}
-              </small>
-            </button>
-            <button
-              type="button"
-              className={`sb-qcon-alarm-key ${qconAlarmEnabled ? "on" : "off"} ${qconAlarmTriggered ? "alert" : ""}`}
-              aria-pressed={qconAlarmEnabled}
-              aria-label={
-                qconAlarmEnabled ? t("alarm.disable") : t("alarm.enable")
+            </ConoxEegPanel>
+            <ConoxDsaPanel
+              displayView={displayView}
+              caption={
+                <>
+                  <b>{"DSA"}</b>
+                  <span ref={eegStatusRef}>{t("eeg.status.active")}</span>
+                  <em>{t("dsa.transition")}</em>
+                  <div className="sb-dsa-caption-actions">
+                    <button
+                      type="button"
+                      className={`sb-sef-toggle ${sef50Visible ? "active" : ""}`}
+                      aria-pressed={sef50Visible}
+                      onClick={() => setSef50Visible((A) => !A)}
+                      title={t("dsa.sef50Title")}
+                    >
+                      {"SEF50"}
+                      <i aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      className={`sb-sef-toggle sef95 ${sef95Visible ? "active" : ""}`}
+                      aria-pressed={sef95Visible}
+                      onClick={() => setSef95Visible((A) => !A)}
+                      title={t("dsa.sef95Title")}
+                    >
+                      {"SEF95"}
+                      <i aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      className="sb-view-direct"
+                      onClick={
+                        displayView === "dsa-only"
+                          ? returnToEeg
+                          : showSpectrogramOnly
+                      }
+                      title={
+                        displayView === "dsa-only"
+                          ? t("dsa.showEeg")
+                          : t("dsa.onlyTitle")
+                      }
+                    >
+                      {displayView === "dsa-only" ? "EEG" : t("dsa.only")}
+                    </button>
+                  </div>
+                </>
               }
-              title={
-                qconAlarmEnabled
-                  ? t("alarm.activeTitle", {
-                      min: qconAlarmMin,
-                      max: qconAlarmMax,
-                    })
-                  : t("alarm.enable")
+              frequencyAxis={
+                <>
+                  {[45, 40, 35, 30, 25, 20, 15, 10, 5, 0].map((A) => (
+                    <span key={A}>{A}</span>
+                  ))}
+                  <b>{"Hz"}</b>
+                </>
               }
-              onClick={toggleQconAlarm}
+              colorScale={
+                <>
+                  <div
+                    className="sb-db-gradient"
+                    role="img"
+                    aria-label={t("dsa.scale")}
+                  />
+                  <div
+                    className="sb-db-labels"
+                    role="group"
+                    aria-label={t("dsa.scaleLevel", {
+                      level:
+                        dsaColorScale > 0
+                          ? `+${dsaColorScale}`
+                          : String(dsaColorScale),
+                    })}
+                  >
+                    <button
+                      type="button"
+                      title={t("dsa.scaleUp")}
+                      aria-label={t("dsa.scaleUp")}
+                      disabled={dsaColorScale >= DSA_SCALE_MAX}
+                      onClick={() =>
+                        setDsaColorScale((level) =>
+                          Math.min(DSA_SCALE_MAX, level + 1),
+                        )
+                      }
+                    >
+                      {"+"}
+                    </button>
+                    {dsaColorScale !== 0 && (
+                      <i
+                        className="sb-db-level"
+                        style={{
+                          top: `${50 - (dsaColorScale / DSA_SCALE_MAX) * 32}%`,
+                        }}
+                        aria-hidden="true"
+                      />
+                    )}
+                    <button
+                      type="button"
+                      title={t("dsa.scaleDown")}
+                      aria-label={t("dsa.scaleDown")}
+                      disabled={dsaColorScale <= DSA_SCALE_MIN}
+                      onClick={() =>
+                        setDsaColorScale((level) =>
+                          Math.max(DSA_SCALE_MIN, level - 1),
+                        )
+                      }
+                    >
+                      {"−"}
+                    </button>
+                  </div>
+                </>
+              }
+              timeline={Array.from(
+                {
+                  length: 5,
+                },
+                (A, R) => (
+                  <span key={R}>{formatTimelineLabel(R)}</span>
+                ),
+              )}
             >
-              <svg
-                className="sb-frame-alarm-bell"
-                viewBox="0 0 32 32"
-                aria-hidden="true"
-              >
-                <path d="M7 23h18c-2.2-2.7-3.3-6.2-3.3-10.1 0-4.1-2.5-7-5.7-7s-5.7 2.9-5.7 7C10.3 16.8 9.2 20.3 7 23Z" />
-                <path d="M13.2 25.4c.5 1.4 1.5 2.2 2.8 2.2s2.3-.8 2.8-2.2" />
-                <path d="M14.2 5.8V4.2h3.6v1.6" />
-              </svg>
-            </button>
-            <div className="sb-monitor-scroll">
-              <div className="sb-monitor">
-                <div className="sb-metrics">
-                  <Metric label="SQI" value={currentIndices.sqi} tone="green" />
-                  <Metric label="EMG" value={currentIndices.emg} tone="blue" />
-                  <Metric label="BSR" value={currentIndices.bsr} tone="red" />
-                  <Metric
-                    label="qNOX"
-                    value={currentIndices.qnox}
-                    tone="yellow"
+              <canvas
+                ref={dsaCanvasRef}
+                width={900}
+                height={260}
+                aria-label={t("dsa.label")}
+              />
+              <canvas
+                ref={dsaOverlayRef}
+                className="sb-sef-overlay"
+                width={900}
+                height={260}
+                aria-label={t("dsa.sefLabel")}
+              />
+              {signalGridVisible && (
+                <div className="sb-band-guides" aria-hidden="true">
+                  <i
+                    style={{
+                      top: "33.3%",
+                    }}
+                  />
+                  <i
+                    style={{
+                      top: "71.1%",
+                    }}
+                  />
+                  <i
+                    style={{
+                      top: "82.2%",
+                    }}
+                  />
+                  <i
+                    style={{
+                      top: "91.1%",
+                    }}
                   />
                 </div>
-                <section
-                  className={`sb-rawbox ${["eeg-index", "eeg-dsa", "all", "eeg-only"].includes(displayView) ? "active" : ""} ${displayView === "all" ? "layout-all-top" : displayView === "eeg-only" ? "layout-full" : "layout-top"}`}
-                  aria-label="Raw EEG"
-                  aria-hidden={
-                    !["eeg-index", "eeg-dsa", "all", "eeg-only"].includes(
-                      displayView,
-                    )
-                  }
+              )}
+            </ConoxDsaPanel>
+            <ConoxQconPanel
+              value={currentIndices.qcon}
+              valueClassName={
+                qconAlarmTriggered
+                  ? qconAlarmFlash
+                    ? "alarm-orange"
+                    : "alarm-white"
+                  : ""
+              }
+              status={
+                qconAlarmTriggered
+                  ? currentIndices.qcon < qconAlarmMin
+                    ? t("alarm.below", { min: qconAlarmMin })
+                    : t("alarm.above", { max: qconAlarmMax })
+                  : qconAlarmEnabled
+                    ? t("alarm.active", {
+                        min: qconAlarmMin,
+                        max: qconAlarmMax,
+                      })
+                    : liveSync
+                      ? t("alarm.sync")
+                      : t("alarm.delayed")
+              }
+            />
+            <div
+              className="sb-view-switch"
+              aria-label={t("display.viewAria", {
+                label: DISPLAY_VIEWS[displayView].label,
+              })}
+            >
+              {displayChoices.map((A, R) => (
+                <button
+                  key={`${R}-${A}`}
+                  type="button"
+                  className="sb-view-option"
+                  onClick={() => selectDisplayChoice(R)}
+                  title={DISPLAY_VIEWS[A].description}
+                  aria-label={DISPLAY_VIEWS[A].label}
                 >
-                  <div className="sb-signal-caption">
-                    <b>{"EEG"}</b>
-                    <span>{t("eeg.frontal")}</span>
-                    <em>
-                      {eegWindowSeconds}
-                      {" s"}
-                    </em>
-                  </div>
-                  <div className="sb-raw-content">
-                    <div className="sb-raw-scale">
-                      <span>{"+"}</span>
-                      <b>{eegAmplitude}</b>
-                      <small>{"µV"}</small>
-                      <span>{"−"}</span>
-                    </div>
-                    <canvas
-                      ref={rawEegCanvasRef}
-                      width={1e3}
-                      height={170}
-                      aria-label={t("eeg.rawLabel")}
-                    />
-                  </div>
-                  {eegHintsEnabled && (
-                    <div className="sb-eeg-detection" aria-live="polite">
-                      <span>{Ou}</span>
-                      <b>{Et}</b>
-                    </div>
-                  )}
-                </section>
-                <section
-                  className={`sb-dsabox ${["dsa-index", "eeg-dsa", "all", "dsa-only"].includes(displayView) ? "active" : ""} ${displayView === "all" ? "layout-all-middle" : displayView === "dsa-only" ? "layout-full" : displayView === "eeg-dsa" ? "layout-bottom" : "layout-top"}`}
-                  aria-label="DSA"
-                  aria-hidden={
-                    !["dsa-index", "eeg-dsa", "all", "dsa-only"].includes(
-                      displayView,
-                    )
-                  }
-                >
-                  <div className="sb-signal-caption">
-                    <b>{"DSA"}</b>
-                    <span ref={eegStatusRef}>{t("eeg.status.active")}</span>
-                    <em>{t("dsa.transition")}</em>
-                    <div className="sb-dsa-caption-actions">
-                      <button
-                        type="button"
-                        className={`sb-sef-toggle ${sef50Visible ? "active" : ""}`}
-                        aria-pressed={sef50Visible}
-                        onClick={() => setSef50Visible((A) => !A)}
-                        title={t("dsa.sef50Title")}
-                      >
-                        {"SEF50"}
-                        <i aria-hidden="true" />
-                      </button>
-                      <button
-                        type="button"
-                        className={`sb-sef-toggle sef95 ${sef95Visible ? "active" : ""}`}
-                        aria-pressed={sef95Visible}
-                        onClick={() => setSef95Visible((A) => !A)}
-                        title={t("dsa.sef95Title")}
-                      >
-                        {"SEF95"}
-                        <i aria-hidden="true" />
-                      </button>
-                      <button
-                        type="button"
-                        className="sb-view-direct"
-                        onClick={
-                          displayView === "dsa-only"
-                            ? returnToEeg
-                            : showSpectrogramOnly
-                        }
-                        title={
-                          displayView === "dsa-only"
-                            ? t("dsa.showEeg")
-                            : t("dsa.onlyTitle")
-                        }
-                      >
-                        {displayView === "dsa-only" ? "EEG" : t("dsa.only")}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="sb-dsa-content">
-                    <div className="sb-frequency-axis">
-                      {[45, 40, 35, 30, 25, 20, 15, 10, 5, 0].map((A) => (
-                        <span key={A}>{A}</span>
-                      ))}
-                      <b>{"Hz"}</b>
-                    </div>
-                    <div className="sb-dsa-canvas">
-                      <canvas
-                        ref={dsaCanvasRef}
-                        width={900}
-                        height={260}
-                        aria-label={t("dsa.label")}
-                      />
-                      <canvas
-                        ref={dsaOverlayRef}
-                        className="sb-sef-overlay"
-                        width={900}
-                        height={260}
-                        aria-label={t("dsa.sefLabel")}
-                      />
-                      {signalGridVisible && (
-                        <div className="sb-band-guides" aria-hidden="true">
-                          <i
-                            style={{
-                              top: "33.3%",
-                            }}
-                          />
-                          <i
-                            style={{
-                              top: "71.1%",
-                            }}
-                          />
-                          <i
-                            style={{
-                              top: "82.2%",
-                            }}
-                          />
-                          <i
-                            style={{
-                              top: "91.1%",
-                            }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                    <div className="sb-db-scale">
-                      <div
-                        className="sb-db-gradient"
-                        role="img"
-                        aria-label={t("dsa.scale")}
-                      />
-                      <div
-                        className="sb-db-labels"
-                        role="group"
-                        aria-label={t("dsa.scaleLevel", {
-                          level:
-                            dsaColorScale > 0
-                              ? `+${dsaColorScale}`
-                              : String(dsaColorScale),
-                        })}
-                      >
-                        <button
-                          type="button"
-                          title={t("dsa.scaleUp")}
-                          aria-label={t("dsa.scaleUp")}
-                          disabled={dsaColorScale >= DSA_SCALE_MAX}
-                          onClick={() =>
-                            setDsaColorScale((level) =>
-                              Math.min(DSA_SCALE_MAX, level + 1),
-                            )
-                          }
-                        >
-                          {"+"}
-                        </button>
-                        {dsaColorScale !== 0 && (
-                          <i
-                            className="sb-db-level"
-                            style={{
-                              top: `${50 - (dsaColorScale / DSA_SCALE_MAX) * 32}%`,
-                            }}
-                            aria-hidden="true"
-                          />
-                        )}
-                        <button
-                          type="button"
-                          title={t("dsa.scaleDown")}
-                          aria-label={t("dsa.scaleDown")}
-                          disabled={dsaColorScale <= DSA_SCALE_MIN}
-                          onClick={() =>
-                            setDsaColorScale((level) =>
-                              Math.max(DSA_SCALE_MIN, level - 1),
-                            )
-                          }
-                        >
-                          {"−"}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="sb-timeline">
-                    {Array.from(
-                      {
-                        length: 5,
-                      },
-                      (A, R) => (
-                        <span key={R}>{formatTimelineLabel(R)}</span>
-                      ),
-                    )}
-                  </div>
-                </section>
-                <section className="sb-qcon">
-                  <div>
-                    <svg
-                      className="sb-qcon-bell"
-                      viewBox="0 0 32 32"
-                      aria-hidden="true"
-                    >
-                      <path d="M7 23h18c-2.2-2.7-3.3-6.2-3.3-10.1 0-4.1-2.5-7-5.7-7s-5.7 2.9-5.7 7C10.3 16.8 9.2 20.3 7 23Z" />
-                      <path d="M13.2 25.4c.5 1.4 1.5 2.2 2.8 2.2s2.3-.8 2.8-2.2" />
-                      <path d="M14.2 5.8V4.2h3.6v1.6" />
-                    </svg>
-                    {" qCON"}
-                  </div>
-                  <strong
-                    className={
-                      qconAlarmTriggered
-                        ? qconAlarmFlash
-                          ? "alarm-orange"
-                          : "alarm-white"
-                        : ""
-                    }
-                    aria-live="polite"
-                  >
-                    {currentIndices.qcon}
-                  </strong>
-                  <small>
-                    {qconAlarmTriggered
-                      ? currentIndices.qcon < qconAlarmMin
-                        ? t("alarm.below", { min: qconAlarmMin })
-                        : t("alarm.above", { max: qconAlarmMax })
-                      : qconAlarmEnabled
-                        ? t("alarm.active", {
-                            min: qconAlarmMin,
-                            max: qconAlarmMax,
-                          })
-                        : liveSync
-                          ? t("alarm.sync")
-                          : t("alarm.delayed")}
-                  </small>
-                </section>
-                <div
-                  className="sb-view-switch"
-                  aria-label={t("display.viewAria", {
-                    label: DISPLAY_VIEWS[displayView].label,
-                  })}
-                >
-                  {displayChoices.map((A, R) => (
-                    <button
-                      key={`${R}-${A}`}
-                      type="button"
-                      className="sb-view-option"
-                      onClick={() => selectDisplayChoice(R)}
-                      title={DISPLAY_VIEWS[A].description}
-                      aria-label={DISPLAY_VIEWS[A].label}
-                    >
-                      {DisplayViewIconFor(A)}
-                      <small>{DISPLAY_VIEWS[A].label}</small>
-                    </button>
-                  ))}
-                </div>
-                <section
-                  className={`sb-trendbox ${["eeg-index", "dsa-index", "all"].includes(displayView) ? "" : "hidden"} ${displayView === "all" ? "layout-all-bottom" : ""}`}
-                  aria-label={t("display.trendAria")}
-                  aria-hidden={
-                    !["eeg-index", "dsa-index", "all"].includes(displayView)
-                  }
-                >
-                  <div className="sb-trend-scale" aria-hidden="true">
-                    <span>{"100"}</span>
-                    <span>{"75"}</span>
-                    <span>{"50"}</span>
-                    <span>{"25"}</span>
-                    <span>{"0"}</span>
-                  </div>
-                  <TrendChart samples={trendSamples} />
-                  <div className="sb-trend-legend">
-                    <b className="qcon">{"qCON"}</b>
-                    <b className="qnox">{"qNOX"}</b>
-                    <b className="bsr">{"BSR"}</b>
-                    <b className="emg">{"EMG"}</b>
-                  </div>
-                  <div className="sb-trend-time">
-                    {Array.from(
-                      {
-                        length: 5,
-                      },
-                      (A, R) => (
-                        <span key={R}>{formatTimelineLabel(R)}</span>
-                      ),
-                    )}
-                  </div>
-                </section>
-                <section className="sb-assistant sb-case-picker">
-                  <h3>{t("cases.title")}</h3>
-                  <label>
-                    <span>{t("cases.select")}</span>
-                    <select
-                      value={selectedScenarioId ?? ""}
-                      onChange={(A) => {
-                        const R = SCENARIOS.find(
-                          (me) => me.id === A.target.value,
-                        );
-                        R && ea(R);
-                      }}
-                      aria-label={t("cases.aria")}
-                    >
-                      {zt?.group === "journey" && (
-                        <option value={zt.id}>
-                          {t("cases.journey", { name: zt.name })}
-                        </option>
-                      )}
-                      {!selectedScenarioId && (
-                        <option value="">{t("cases.free")}</option>
-                      )}
-                      {SCENARIOS.map((A) => (
-                        <option key={A.id} value={A.id}>
-                          {A.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <button type="button" onClick={wi}>
-                    {t("cases.random")}
-                  </button>
-                  <button
-                    type="button"
-                    className={simulationRunning ? "" : "paused"}
-                    aria-pressed={!simulationRunning}
-                    onClick={() =>
-                      setSimulationRunning(
-                        (A) => ((simulationConfigRef.current.running = !A), !A),
-                      )
-                    }
-                  >
-                    {simulationRunning
-                      ? t("control.pause")
-                      : t("control.resume")}
-                  </button>
-                </section>
-                <div
-                  className={`sb-monitor-footer ${eegHintsEnabled ? "analysis-on" : "analysis-off"}`}
-                  aria-label={t("analysis.aria")}
-                >
-                  {eegHintsEnabled ? (
-                    <>
-                      <span>
-                        <b>{t("analysis.pattern")}</b>
-                        {Et}
-                      </span>
-                      <span>
-                        <b>{t("analysis.dominant")}</b>
-                        {Ou}
-                      </span>
-                      <span>
-                        <b>{t("analysis.assessment")}</b>
-                        {ki}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span />
-                      <span />
-                      <span />
-                    </>
-                  )}
-                </div>
+                  {DisplayViewIconFor(A)}
+                  <small>{DISPLAY_VIEWS[A].label}</small>
+                </button>
+              ))}
+            </div>
+            <section
+              className={`sb-trendbox ${["eeg-index", "dsa-index", "all"].includes(displayView) ? "" : "hidden"} ${displayView === "all" ? "layout-all-bottom" : ""}`}
+              aria-label={t("display.trendAria")}
+              aria-hidden={
+                !["eeg-index", "dsa-index", "all"].includes(displayView)
+              }
+            >
+              <div className="sb-trend-scale" aria-hidden="true">
+                <span>{"100"}</span>
+                <span>{"75"}</span>
+                <span>{"50"}</span>
+                <span>{"25"}</span>
+                <span>{"0"}</span>
               </div>
+              <TrendChart samples={trendSamples} />
+              <div className="sb-trend-legend">
+                <b className="qcon">{"qCON"}</b>
+                <b className="qnox">{"qNOX"}</b>
+                <b className="bsr">{"BSR"}</b>
+                <b className="emg">{"EMG"}</b>
+              </div>
+              <div className="sb-trend-time">
+                {Array.from(
+                  {
+                    length: 5,
+                  },
+                  (A, R) => (
+                    <span key={R}>{formatTimelineLabel(R)}</span>
+                  ),
+                )}
+              </div>
+            </section>
+            <section className="sb-assistant sb-case-picker">
+              <h3>{t("cases.title")}</h3>
+              <label>
+                <span>{t("cases.select")}</span>
+                <select
+                  value={selectedScenarioId ?? ""}
+                  onChange={(A) => {
+                    const R = SCENARIOS.find((me) => me.id === A.target.value);
+                    R && ea(R);
+                  }}
+                  aria-label={t("cases.aria")}
+                >
+                  {zt?.group === "journey" && (
+                    <option value={zt.id}>
+                      {t("cases.journey", { name: zt.name })}
+                    </option>
+                  )}
+                  {!selectedScenarioId && (
+                    <option value="">{t("cases.free")}</option>
+                  )}
+                  {SCENARIOS.map((A) => (
+                    <option key={A.id} value={A.id}>
+                      {A.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button type="button" onClick={wi}>
+                {t("cases.random")}
+              </button>
+              <button
+                type="button"
+                className={simulationRunning ? "" : "paused"}
+                aria-pressed={!simulationRunning}
+                onClick={() =>
+                  setSimulationRunning(
+                    (A) => ((simulationConfigRef.current.running = !A), !A),
+                  )
+                }
+              >
+                {simulationRunning ? t("control.pause") : t("control.resume")}
+              </button>
+            </section>
+            <div
+              className={`sb-monitor-footer ${eegHintsEnabled ? "analysis-on" : "analysis-off"}`}
+              aria-label={t("analysis.aria")}
+            >
+              {eegHintsEnabled ? (
+                <>
+                  <span>
+                    <b>{t("analysis.pattern")}</b>
+                    {Et}
+                  </span>
+                  <span>
+                    <b>{t("analysis.dominant")}</b>
+                    {Ou}
+                  </span>
+                  <span>
+                    <b>{t("analysis.assessment")}</b>
+                    {ki}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span />
+                  <span />
+                  <span />
+                </>
+              )}
             </div>
-            <div className="sb-device-wordmark" aria-label="CONOX">
-              <img src="./images/conox-wordmark.png" alt="CONOX" />
-            </div>
-          </div>
+          </ConoxMonitor>
           <div className="sb-device-actions" aria-label={t("docs.aria")}>
             <a
               href="#"

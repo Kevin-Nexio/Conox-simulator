@@ -1,0 +1,84 @@
+.recording-view-surface {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: center;
+  color: #d8e7ed;
+}
+.recording-stage {
+  position: relative;
+  aspect-ratio: var(--recording-aspect);
+}
+.recording-stage.is-fullscreen {
+  aspect-ratio: auto;
+}
+@media (min-width: 1000px) and (min-height: 650px) {
+  .recording-stage {
+    aspect-ratio: auto;
+  }
+}
+.recording-simulator-view,
+.recording-simulator-view > .sb-monitor-wrap {
+  width: 100%;
+  height: 100%;
+}
+.recording-simulator-view {
+  background: #fff;
+}
+.recording-simulator-view .sb-raw-content > svg,
+.recording-simulator-view .sb-dsa-canvas > svg,
+.recording-simulator-view .sb-trendbox > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+.recording-simulator-view .recording-case-status {
+  cursor: default;
+}
+.recording-simulator-view .recording-monitor-case p {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6cqw;
+  margin: 0;
+  padding: 0.65cqw;
+  color: #aabcc6;
+  font-size: 0.8cqw;
+}
+.recording-simulator-view .recording-monitor-case p strong {
+  color: #edf4f6;
+}
+.recording-simulator-view .recording-monitor-footer {
+  grid-template-columns: 1fr;
+  color: #fff0cb;
+  font-size: 0.92cqw;
+}
+.recording-simulator-view .recording-monitor-footer span {
+  white-space: normal;
+  line-height: 1.35;
+}
+.recording-simulator-view .recording-db-unit {
+  color: #b9c9cf;
+  font-size: 0.65cqw;
+}
+.recording-simulator-view .sb-trend-legend .qcon {
+  color: #70ec8f;
+}
+.recording-simulator-view .sb-trend-legend .qnox {
+  color: #ffdb67;
+}
+.recording-simulator-view .sb-trend-legend .bsr {
+  color: #ff8d94;
+}
+.recording-simulator-view .sb-trend-legend .emg {
+  color: #76c9ff;
+}
+.recording-export-scene {
+  min-height: 0;
+  position: fixed;
+  left: -20000px;
+  top: 0;
+  pointer-events: none;
+  background: #071118;
+}

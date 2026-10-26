@@ -3885,3 +3885,22 @@ footer {
 .sb-shell.role-display.display-borderless .sb-display-exit:focus-visible {
   opacity: 1;
 }
+
+/* The same screen can also be embedded without the device frame. */
+.sb-monitor-wrap.conox-monitor-borderless {
+  height: 100%;
+  aspect-ratio: auto;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.sb-monitor-wrap.conox-monitor-borderless > :not(.sb-monitor-scroll) {
+  display: none;
+}
+.sb-monitor-wrap.conox-monitor-borderless > .sb-monitor-scroll {
+  inset: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}

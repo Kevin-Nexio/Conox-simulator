@@ -6,6 +6,8 @@ const SIZES = {
   blocks: { width: 1600, height: 1200 },
   "conox-frame": { width: 1600, height: 1120 },
   "conox-screen": { width: 1600, height: 900 },
+  "simulator-frame": { width: 1600, height: 1120 },
+  "simulator-screen": { width: 1600, height: 900 },
 };
 const COLORS = {
   qcon: "#70ec8f",

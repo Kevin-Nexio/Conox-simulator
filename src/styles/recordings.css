@@ -1,7 +1,7 @@
 .recording-content {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 18px 24px 36px;
+  padding: 12px 20px 20px;
 }
 .recording-header-tools,
 .recording-filebar,
@@ -10,7 +10,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 .recording-header {
   flex-wrap: wrap;
@@ -57,8 +57,8 @@
   border: 1px solid #b6c9d4;
   background: #f5f9fb;
   border-radius: 8px;
-  padding: 14px 16px;
-  margin: 16px 0;
+  padding: 8px 12px 10px;
+  margin: 0;
   min-width: 0;
 }
 .recording-shell legend {
@@ -83,7 +83,7 @@
   min-height: 36px;
 }
 .recording-passage input {
-  width: 110px;
+  width: 92px;
 }
 .recording-passage input[aria-invalid="true"] {
   border-color: #ff8989;
@@ -91,12 +91,12 @@
 .recording-play {
   background: #164c40;
   border-color: #68af9d;
-  min-width: 110px;
+  min-width: 90px;
 }
 .recording-transport output {
-  margin-left: auto;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  font-size: 17px;
+  font-size: 14px;
 }
 .recording-seek {
   width: 100%;
@@ -123,9 +123,13 @@
 }
 .recording-export-actions {
   display: flex;
-  gap: 12px;
-  align-items: end;
+  gap: 6px;
+  align-items: center;
   flex-wrap: wrap;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
 }
 .recording-export-controls p,
 .recording-export-controls small {
@@ -151,7 +155,7 @@
   accent-color: #168169;
 }
 .recording-presentation {
-  margin-top: 20px;
+  margin-top: 10px;
   border: 1px solid #668391;
   border-radius: 9px;
   overflow: hidden;
@@ -184,7 +188,7 @@
   white-space: nowrap;
   border: 0;
 }
-.recording-stage canvas {
+.recording-stage > canvas {
   display: block;
   width: 100%;
   height: auto;
@@ -199,7 +203,7 @@
   background: #000;
   padding: 0;
 }
-.recording-stage.is-fullscreen canvas {
+.recording-stage.is-fullscreen > canvas {
   min-width: 0;
   width: auto;
   height: auto;
@@ -316,7 +320,8 @@
 }
 .recording-shell button:focus-visible,
 .recording-shell input:focus-visible,
-.recording-shell select:focus-visible {
+.recording-shell select:focus-visible,
+.recording-shell summary:focus-visible {
   outline: 3px solid #8ce5ca;
   outline-offset: 3px;
 }
@@ -324,8 +329,230 @@
   opacity: 0.45;
   cursor: default;
 }
+.recording-toolbar-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+.recording-toolbar-row > .recording-transport {
+  flex: 1 1 auto;
+}
+.recording-shell .recording-inline-field {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.recording-layout-field select {
+  max-width: 230px;
+}
+.recording-toolbar-secondary {
+  gap: 8px 18px;
+}
+.recording-shell .recording-timeline {
+  margin: 8px 0;
+  padding: 8px 12px 6px;
+}
+.recording-shell .recording-timeline-surface {
+  height: 92px;
+  margin-top: 4px;
+}
+.recording-shell .recording-timeline-marker-flag {
+  width: 28px;
+  height: 28px;
+}
+.recording-shell .recording-timeline-marker-flag svg {
+  width: 22px;
+  height: 22px;
+}
+.recording-shell .recording-timeline-marker-out {
+  top: 62px;
+}
+.recording-shell .recording-timeline-marker-in .recording-timeline-marker-stem {
+  top: 28px;
+  height: 34px;
+}
+.recording-shell
+  .recording-timeline-marker-out
+  .recording-timeline-marker-stem {
+  bottom: 32px;
+  height: 14px;
+}
+.recording-shell .recording-timeline-ruler {
+  top: 20px;
+}
+.recording-shell .recording-timeline-track {
+  top: 40px;
+  height: 20px;
+}
+.recording-shell .recording-timeline-playhead {
+  top: 33px;
+  height: 29px;
+}
+.recording-shell .recording-timeline-help {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.recording-filebar {
+  position: relative;
+  gap: 8px 14px;
+  margin-bottom: 8px;
+}
+.recording-provisional {
+  border: 1px solid #e1bd7b;
+  border-radius: 4px;
+  padding: 4px 8px;
+  background: #fff5e5;
+  color: #674716;
+  font-size: 11px;
+  font-weight: 600;
+}
+.recording-shell summary {
+  color: #355b73;
+  font-size: 12px;
+  cursor: pointer;
+  padding-block: 8px;
+}
+.recording-file-details {
+  margin-left: auto;
+}
+.recording-file-details,
+.recording-display-details,
+.recording-help-details {
+  position: relative;
+}
+.recording-file-details-body,
+.recording-help-body,
+.recording-display-details > .recording-display-controls {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 20;
+  width: min(600px, calc(100vw - 44px));
+  max-height: 50vh;
+  overflow: auto;
+  margin: 3px 0 0;
+  padding: 14px 16px;
+  background: #f5f9fb;
+  border: 1px solid #a7bfce;
+  border-radius: 7px;
+  box-shadow: 0 8px 28px #17394c30;
+}
+.recording-file-details-body p,
+.recording-help-body p {
+  margin: 0 0 8px;
+  font-size: 12px;
+}
+.recording-file-details-body p:last-child,
+.recording-help-body p:last-child {
+  margin-bottom: 0;
+}
+.recording-help-body {
+  color: #506b7a;
+}
+.recording-display-details > .recording-display-controls {
+  gap: 12px 18px;
+}
+.recording-shell.has-recording > .recording-header {
+  min-height: 64px;
+}
+.recording-controls > .recording-error {
+  margin: 8px 0 0;
+}
+@media (min-width: 1000px) and (min-height: 650px) {
+  .recording-shell.has-recording {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    min-height: 0;
+  }
+  .recording-shell.has-recording > .recording-header {
+    flex: 0 0 auto;
+  }
+  .recording-shell.has-recording > .recording-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    gap: 8px;
+    width: 100%;
+    min-height: 0;
+    padding-block: 8px 12px;
+    overflow: auto;
+  }
+  .recording-content > .recording-filebar {
+    margin-bottom: 0;
+  }
+  .recording-content > .recording-controls,
+  .recording-content > .recording-filebar,
+  .recording-content > .recording-error,
+  .recording-content > .recording-export-progress {
+    flex-shrink: 0;
+  }
+  .recording-content > .recording-error {
+    margin: 0;
+  }
+  .recording-content > .recording-presentation {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 190px;
+    margin-top: 0;
+  }
+  .recording-presentation-heading {
+    flex: 0 0 auto;
+    padding: 6px 12px;
+  }
+  .recording-stage:not(.is-fullscreen) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .recording-stage:not(.is-fullscreen) > canvas {
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+}
 @media (max-width: 700px) {
-  .recording-stage.layout-blocks:not(.is-fullscreen) canvas {
+  .recording-toolbar-row,
+  .recording-toolbar-secondary {
+    gap: 10px;
+  }
+  .recording-toolbar-row > .recording-transport,
+  .recording-layout-field {
+    width: 100%;
+  }
+  .recording-layout-field select {
+    flex: 1;
+    max-width: none;
+  }
+  .recording-file-details {
+    margin-left: 0;
+  }
+  .recording-file-details[open],
+  .recording-display-details[open],
+  .recording-help-details[open] {
+    flex-basis: 100%;
+    width: 100%;
+  }
+  .recording-file-details-body,
+  .recording-help-body,
+  .recording-display-details > .recording-display-controls {
+    position: static;
+    width: 100%;
+    max-height: none;
+    box-shadow: none;
+  }
+  .recording-stage.layout-blocks:not(.is-fullscreen) > canvas {
     min-width: 640px;
   }
   .recording-content {

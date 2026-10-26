@@ -11,10 +11,9 @@ import {
   clampTimelinePosition,
   normalizeSelection,
 } from "../recordings/timeline.js";
-import {
-  loadPresentationAssets,
-  renderPresentation,
-} from "../recordings/presentation.js";
+import { loadPresentationAssets } from "../recordings/presentation.js";
+import { createRecordingExportScene } from "./RecordingExportScene.jsx";
+import { svgToPdf } from "../recordings/vectorPdf.js";
 import {
   canvasToPng,
   canvasToPdf,
@@ -30,7 +29,7 @@ const MAX_FILE_BYTES = 64 * 1024 * 1024;
 
 export default function RecordingPlayer({ onClose }) {
   const [locale, setLocale] = React.useState(getInitialLocale);
-  const { t } = React.useMemo(() => createI18n(locale), [locale]);
+  const { t, displayViews } = React.useMemo(() => createI18n(locale), [locale]);
   const [data, setData] = React.useState(null);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState(null);
@@ -51,6 +50,7 @@ export default function RecordingPlayer({ onClose }) {
   const [sef50, setSef50] = React.useState(false);
   const [sef95, setSef95] = React.useState(false);
   const [layout, setLayout] = React.useState("blocks");
+  const [monitorView, setMonitorView] = React.useState("eeg-dsa");
   const [assets, setAssets] = React.useState(null);
   const [exporting, setExporting] = React.useState(null);
   const [exportProgress, setExportProgress] = React.useState(0);
@@ -109,6 +109,30 @@ export default function RecordingPlayer({ onClose }) {
     setPlaying(false);
     positionRef.current = next;
     setPosition(next);
+  };
+  const togglePlaying = () => {
+    if (locked || selectionError || !data) return;
+    if (
+      !playing &&
+      (positionRef.current >= selection.end ||
+        positionRef.current < selection.start)
+    )
+      seek(selection.start);
+    setPlaying(!playing);
+  };
+  const changeSettings = (next) => {
+    if (locked) return;
+    const setters = {
+      eegWindow: setEegWindow,
+      amplitude: setAmplitude,
+      dsaWindow: setDsaWindow,
+      colorOffset: setColorOffset,
+      guides: setGuides,
+      sef50: setSef50,
+      sef95: setSef95,
+      monitorView: setMonitorView,
+    };
+    Object.entries(next).forEach(([key, value]) => setters[key]?.(value));
   };
   const setPassage = (next) => {
     setSelection(next);
@@ -226,8 +250,18 @@ export default function RecordingPlayer({ onClose }) {
       guides,
       sef50,
       sef95,
+      monitorView,
     }),
-    [eegWindow, amplitude, dsaWindow, colorOffset, guides, sef50, sef95],
+    [
+      eegWindow,
+      amplitude,
+      dsaWindow,
+      colorOffset,
+      guides,
+      sef50,
+      sef95,
+      monitorView,
+    ],
   );
 
   const startExport = async (kind) => {
@@ -241,19 +275,19 @@ export default function RecordingPlayer({ onClose }) {
     const controller = new AbortController();
     exportAbortRef.current = controller;
     const exportPosition = positionRef.current;
-    const canvas = document.createElement("canvas");
-    const renderFrame = (at) =>
-      renderPresentation(canvas, {
-        data,
-        dsaImage,
-        position: at,
-        settings,
-        layout,
-        t,
-        assets,
-      });
+    const scene = createRecordingExportScene({
+      data,
+      dsaImage,
+      settings,
+      layout,
+      t,
+      assets,
+      displayViews,
+      signal: controller.signal,
+    });
+    const { canvas, renderFrame } = scene;
     try {
-      renderFrame(exportPosition);
+      await renderFrame(exportPosition);
       let blob;
       let extension = kind === "pdf" ? "pdf" : "png";
       if (kind === "video") {
@@ -274,7 +308,9 @@ export default function RecordingPlayer({ onClose }) {
       } else
         blob =
           kind === "pdf"
-            ? await canvasToPdf(canvas)
+            ? layout === "blocks"
+              ? await svgToPdf(scene.element)
+              : await canvasToPdf(canvas)
             : await canvasToPng(canvas);
       if (controller.signal.aborted || request !== exportRequestRef.current)
         return;
@@ -293,6 +329,7 @@ export default function RecordingPlayer({ onClose }) {
       )
         setExportError(failure.code || "EXPORT_FAILED");
     } finally {
+      scene.dispose();
       if (request === exportRequestRef.current) {
         setExporting(null);
         exportAbortRef.current = null;
@@ -305,7 +342,9 @@ export default function RecordingPlayer({ onClose }) {
     error &&
     (RECORDING_UI[locale][`recording.error.${error}`] || t("recording.error"));
   return (
-    <main className="sb-shell recording-shell">
+    <main
+      className={`sb-shell recording-shell${recording ? " has-recording" : ""}`}
+    >
       <header className="sb-header recording-header">
         <div>
           <strong>{t("recording.title")}</strong>
@@ -337,7 +376,9 @@ export default function RecordingPlayer({ onClose }) {
         </div>
       </header>
       <div className="recording-content">
-        <p className="recording-notice">{t("recording.experimental")}</p>
+        {!recording && (
+          <p className="recording-notice">{t("recording.experimental")}</p>
+        )}
         <div className="recording-filebar">
           <button
             type="button"
@@ -366,11 +407,42 @@ export default function RecordingPlayer({ onClose }) {
               </button>
             </>
           )}
-          {!busy && recording && (
-            <span className="recording-file-name">
-              {recording.fileName} · {t("recording.duration")}:{" "}
-              {formatPosition(recording.durationSeconds)}
-            </span>
+          {recording && (
+            <>
+              <span
+                className="recording-provisional"
+                title={t("recording.experimentalShort")}
+              >
+                {t("recording.provisional")}
+              </span>
+              <details className="recording-file-details">
+                <summary>{t("recording.fileDetails")}</summary>
+                <div className="recording-file-details-body">
+                  <p className="recording-file-name">
+                    {recording.fileName} · {t("recording.duration")}:{" "}
+                    {formatPosition(recording.durationSeconds)}
+                  </p>
+                  <p className="recording-meta">
+                    {recording.id} · {t("recording.date")}:{" "}
+                    {recording.startedAt?.replace("T", " ")}
+                  </p>
+                  <p className="recording-notice">
+                    {t("recording.experimental")}
+                  </p>
+                  <div className="recording-warnings" role="status">
+                    {recording.warnings
+                      .filter(
+                        (warning) => warning.code !== "experimentalDecoding",
+                      )
+                      .map((warning) => (
+                        <p key={warning.code}>
+                          {t(`recording.warning.${warning.code}`, warning)}
+                        </p>
+                      ))}
+                  </div>
+                </div>
+              </details>
+            </>
           )}
         </div>
         {error && (
@@ -383,67 +455,103 @@ export default function RecordingPlayer({ onClose }) {
         )}
         {recording && (
           <>
-            <p className="recording-meta">
-              {recording.id} · {t("recording.date")}:{" "}
-              {recording.startedAt?.replace("T", " ")}
-            </p>
-            <div className="recording-warnings" role="status">
-              {recording.warnings
-                .filter((warning) => warning.code !== "experimentalDecoding")
-                .map((warning) => (
-                  <p key={warning.code}>
-                    {t(`recording.warning.${warning.code}`, warning)}
-                  </p>
-                ))}
-            </div>
             <fieldset className="recording-controls" disabled={locked}>
-              <legend>{t("recording.selection")}</legend>
-              <div className="recording-transport">
-                <button
-                  type="button"
-                  className="sb-btn recording-play"
-                  disabled={selectionError}
-                  aria-pressed={playing}
-                  onClick={() => {
-                    if (
-                      !playing &&
-                      (positionRef.current >= selection.end ||
-                        positionRef.current < selection.start)
-                    )
-                      seek(selection.start);
-                    setPlaying((value) => !value);
-                  }}
-                >
-                  {t(playing ? "recording.pause" : "recording.play")}
-                </button>
-                <button
-                  type="button"
-                  className="sb-btn"
-                  onClick={() => {
-                    setPlaying(false);
-                    seek(selection.start);
-                  }}
-                >
-                  {t("recording.restart")}
-                </button>
-                <label>
-                  {t("recording.speed")}
-                  <select
-                    value={speed}
-                    aria-label={t("recording.speed")}
-                    onChange={(event) => setSpeed(Number(event.target.value))}
+              <legend>{t("recording.toolbar")}</legend>
+              <div className="recording-toolbar-row">
+                <div className="recording-transport">
+                  <button
+                    type="button"
+                    className="sb-btn recording-play"
+                    disabled={selectionError}
+                    aria-pressed={playing}
+                    onClick={togglePlaying}
                   >
-                    {[0.25, 0.5, 1, 2, 4].map((value) => (
+                    {t(playing ? "recording.pause" : "recording.play")}
+                  </button>
+                  <button
+                    type="button"
+                    className="sb-btn"
+                    onClick={() => seek(selection.start)}
+                  >
+                    {t("recording.restart")}
+                  </button>
+                  <label className="recording-inline-field">
+                    {t("recording.speedShort")}
+                    <select
+                      value={speed}
+                      aria-label={t("recording.speed")}
+                      onChange={(event) => setSpeed(Number(event.target.value))}
+                    >
+                      {[0.25, 0.5, 1, 2, 4].map((value) => (
+                        <option key={value} value={value}>
+                          {value}×
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <output data-testid="recording-time">
+                    {formatPosition(position, true)} /{" "}
+                    {formatPosition(recording.durationSeconds)}
+                  </output>
+                </div>
+                <label className="recording-inline-field recording-layout-field">
+                  {t("recording.viewShort")}
+                  <select
+                    aria-label={t("recording.layout")}
+                    value={layout}
+                    onChange={(event) => setLayout(event.target.value)}
+                  >
+                    {[
+                      "blocks",
+                      "conox-frame",
+                      "conox-screen",
+                      "simulator-frame",
+                      "simulator-screen",
+                    ].map((value) => (
                       <option key={value} value={value}>
-                        {value}×
+                        {t(`recording.layout.${value}`)}
                       </option>
                     ))}
                   </select>
                 </label>
-                <output data-testid="recording-time">
-                  {formatPosition(position, true)} /{" "}
-                  {formatPosition(recording.durationSeconds)}
-                </output>
+                <fieldset
+                  className="recording-export-actions"
+                  disabled={assets === null}
+                  aria-label={t("recording.export")}
+                >
+                  <button
+                    type="button"
+                    className="sb-btn"
+                    aria-label={t("recording.exportImage")}
+                    title={t("recording.exportImage")}
+                    onClick={() => startExport("image")}
+                  >
+                    PNG
+                  </button>
+                  <button
+                    type="button"
+                    className="sb-btn"
+                    aria-label={t("recording.exportPdf")}
+                    title={t("recording.exportPdf")}
+                    onClick={() => startExport("pdf")}
+                  >
+                    PDF
+                  </button>
+                  <button
+                    type="button"
+                    className="sb-btn"
+                    aria-label={t("recording.exportVideo")}
+                    title={
+                      videoFormats.length
+                        ? t("recording.exportVideo")
+                        : t("recording.exportUnsupported")
+                    }
+                    disabled={!videoFormats.length || selectionError}
+                    onClick={() => startExport("video")}
+                  >
+                    {t("recording.videoShort")}
+                  </button>
+                </fieldset>
               </div>
               <RecordingTimeline
                 duration={recording.durationSeconds}
@@ -458,174 +566,48 @@ export default function RecordingPlayer({ onClose }) {
                 disabled={locked}
                 t={t}
               />
-              <div className="recording-passage">
-                {[
-                  ["start", "recording.start"],
-                  ["end", "recording.end"],
-                ].map(([key, label]) => (
-                  <label key={key}>
-                    {t(label)}
-                    <input
-                      type="text"
-                      value={selectionText[key]}
-                      aria-invalid={selectionError}
-                      onChange={(event) =>
-                        setSelectionText((current) => ({
-                          ...current,
-                          [key]: event.target.value,
-                        }))
-                      }
-                      onBlur={commitPassage}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") commitPassage();
-                      }}
-                    />
-                  </label>
-                ))}
-                <button
-                  type="button"
-                  className="sb-btn"
-                  onClick={() =>
-                    setPassage({ start: 0, end: recording.durationSeconds })
-                  }
-                >
-                  {t("recording.fullCase")}
-                </button>
-              </div>
-              <small>{t("recording.selectionNote")}</small>
-              {selectionError && (
-                <p className="recording-error" role="alert">
-                  {t("recording.invalidSelection")}
-                </p>
-              )}
-            </fieldset>
-            <fieldset className="recording-display-controls" disabled={locked}>
-              <legend>{t("display.heading")}</legend>
-              <label>
-                {t("recording.layout")}
-                <select
-                  aria-label={t("recording.layout")}
-                  value={layout}
-                  onChange={(event) => setLayout(event.target.value)}
-                >
-                  {["blocks", "conox-frame", "conox-screen"].map((value) => (
-                    <option key={value} value={value}>
-                      {t(`recording.layout.${value}`)}
-                    </option>
+              <div className="recording-toolbar-row recording-toolbar-secondary">
+                <div className="recording-passage">
+                  {[
+                    ["start", "recording.start"],
+                    ["end", "recording.end"],
+                  ].map(([key, label]) => (
+                    <label key={key} className="recording-inline-field">
+                      {t(label)}
+                      <input
+                        type="text"
+                        value={selectionText[key]}
+                        aria-invalid={selectionError}
+                        onChange={(event) =>
+                          setSelectionText((current) => ({
+                            ...current,
+                            [key]: event.target.value,
+                          }))
+                        }
+                        onBlur={commitPassage}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") commitPassage();
+                        }}
+                      />
+                    </label>
                   ))}
-                </select>
-              </label>
-              <label>
-                {t("recording.eegWindow")}
-                <select
-                  value={eegWindow}
-                  aria-label={t("recording.eegWindow")}
-                  onChange={(event) => setEegWindow(Number(event.target.value))}
-                >
-                  {[2, 4, 8].map((value) => (
-                    <option key={value} value={value}>
-                      {value} s
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                {t("recording.amplitude")}
-                <select
-                  value={amplitude}
-                  aria-label={t("recording.amplitude")}
-                  onChange={(event) => setAmplitude(Number(event.target.value))}
-                >
-                  {[25, 50, 120, 475].map((value) => (
-                    <option key={value} value={value}>
-                      ±{value} µV*
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                {t("recording.dsaWindow")}
-                <select
-                  value={dsaWindow}
-                  aria-label={t("recording.dsaWindow")}
-                  onChange={(event) => setDsaWindow(Number(event.target.value))}
-                >
-                  <option value={0}>{t("recording.whole")}</option>
-                  {[60, 300, 1800].map((value) => (
-                    <option key={value} value={value}>
-                      {t("recording.minutes", { count: value / 60 })}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                {t("recording.color")}
-                <select
-                  value={colorOffset}
-                  aria-label={t("recording.color")}
-                  onChange={(event) =>
-                    setColorOffset(Number(event.target.value))
-                  }
-                >
-                  {[-16, -12, -8, -4, 0, 4, 8, 12, 16].map((value) => (
-                    <option key={value} value={value}>
-                      {value > 0 ? "+" : ""}
-                      {value} dB
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="recording-check">
-                <input
-                  type="checkbox"
-                  checked={guides}
-                  onChange={(event) => setGuides(event.target.checked)}
-                />
-                {t("recording.grid")}
-              </label>
-              <label className="recording-check">
-                <input
-                  type="checkbox"
-                  checked={sef50}
-                  onChange={(event) => setSef50(event.target.checked)}
-                />
-                SEF50
-              </label>
-              <label className="recording-check">
-                <input
-                  type="checkbox"
-                  checked={sef95}
-                  onChange={(event) => setSef95(event.target.checked)}
-                />
-                SEF95
-              </label>
-            </fieldset>
-            <fieldset
-              className="recording-export-controls"
-              disabled={locked || assets === null}
-            >
-              <legend>{t("recording.export")}</legend>
-              <div className="recording-export-actions">
-                <button
-                  type="button"
-                  className="sb-btn"
-                  onClick={() => startExport("image")}
-                >
-                  {t("recording.exportImage")}
-                </button>
-                <button
-                  type="button"
-                  className="sb-btn"
-                  onClick={() => startExport("pdf")}
-                >
-                  {t("recording.exportPdf")}
-                </button>
+                  <button
+                    type="button"
+                    className="sb-btn"
+                    onClick={() =>
+                      setPassage({ start: 0, end: recording.durationSeconds })
+                    }
+                  >
+                    {t("recording.fullCase")}
+                  </button>
+                </div>
                 {videoFormats.length > 0 && (
-                  <label>
+                  <label className="recording-inline-field recording-video-format">
                     {t("recording.videoFormat")}
                     <select
                       aria-label={t("recording.videoFormat")}
                       value={videoType}
+                      disabled={assets === null}
                       onChange={(event) => setVideoType(event.target.value)}
                     >
                       {videoFormats.map((format) => (
@@ -636,25 +618,127 @@ export default function RecordingPlayer({ onClose }) {
                     </select>
                   </label>
                 )}
-                <button
-                  type="button"
-                  className="sb-btn"
-                  disabled={!videoFormats.length || selectionError}
-                  onClick={() => startExport("video")}
-                >
-                  {t("recording.exportVideo")}
-                </button>
+                <details className="recording-display-details">
+                  <summary>{t("display.heading")}</summary>
+                  <fieldset
+                    className="recording-display-controls"
+                    disabled={locked}
+                    aria-label={t("display.heading")}
+                  >
+                    <label>
+                      {t("recording.eegWindow")}
+                      <select
+                        value={eegWindow}
+                        aria-label={t("recording.eegWindow")}
+                        onChange={(event) =>
+                          setEegWindow(Number(event.target.value))
+                        }
+                      >
+                        {[2, 4, 8].map((value) => (
+                          <option key={value} value={value}>
+                            {value} s
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      {t("recording.amplitude")}
+                      <select
+                        value={amplitude}
+                        aria-label={t("recording.amplitude")}
+                        onChange={(event) =>
+                          setAmplitude(Number(event.target.value))
+                        }
+                      >
+                        {[25, 50, 120, 475].map((value) => (
+                          <option key={value} value={value}>
+                            ±{value} µV*
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      {t("recording.dsaWindow")}
+                      <select
+                        value={dsaWindow}
+                        aria-label={t("recording.dsaWindow")}
+                        onChange={(event) =>
+                          setDsaWindow(Number(event.target.value))
+                        }
+                      >
+                        <option value={0}>{t("recording.whole")}</option>
+                        {[60, 300, 1800].map((value) => (
+                          <option key={value} value={value}>
+                            {t("recording.minutes", { count: value / 60 })}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      {t("recording.color")}
+                      <select
+                        value={colorOffset}
+                        aria-label={t("recording.color")}
+                        onChange={(event) =>
+                          setColorOffset(Number(event.target.value))
+                        }
+                      >
+                        {[-16, -12, -8, -4, 0, 4, 8, 12, 16].map((value) => (
+                          <option key={value} value={value}>
+                            {value > 0 ? "+" : ""}
+                            {value} dB
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="recording-check">
+                      <input
+                        type="checkbox"
+                        checked={guides}
+                        onChange={(event) => setGuides(event.target.checked)}
+                      />
+                      {t("recording.grid")}
+                    </label>
+                    <label className="recording-check">
+                      <input
+                        type="checkbox"
+                        checked={sef50}
+                        onChange={(event) => setSef50(event.target.checked)}
+                      />
+                      SEF50
+                    </label>
+                    <label className="recording-check">
+                      <input
+                        type="checkbox"
+                        checked={sef95}
+                        onChange={(event) => setSef95(event.target.checked)}
+                      />
+                      SEF95
+                    </label>
+                  </fieldset>
+                </details>
+                <details className="recording-help-details">
+                  <summary>{t("recording.helpShort")}</summary>
+                  <div className="recording-help-body">
+                    <p>{t("recording.selectionNote")}</p>
+                    <p>{t("recording.exportViewNote")}</p>
+                    <p>
+                      {videoFormats.length
+                        ? t("recording.videoNote", {
+                            duration: formatPosition(
+                              (selection.end - selection.start) / speed,
+                            ),
+                          })
+                        : t("recording.exportUnsupported")}
+                    </p>
+                  </div>
+                </details>
               </div>
-              <p>{t("recording.exportViewNote")}</p>
-              <small>
-                {videoFormats.length
-                  ? t("recording.videoNote", {
-                      duration: formatPosition(
-                        (selection.end - selection.start) / speed,
-                      ),
-                    })
-                  : t("recording.exportUnsupported")}
-              </small>
+              {selectionError && (
+                <p className="recording-error" role="alert">
+                  {t("recording.invalidSelection")}
+                </p>
+              )}
             </fieldset>
             {exporting && (
               <div className="recording-export-progress" role="status">
@@ -699,6 +783,12 @@ export default function RecordingPlayer({ onClose }) {
               layout={layout}
               t={t}
               assets={assets}
+              displayViews={displayViews}
+              playing={playing}
+              onTogglePlaying={togglePlaying}
+              onSeek={seek}
+              locked={locked}
+              onSettingsChange={changeSettings}
             />
           </>
         )}
