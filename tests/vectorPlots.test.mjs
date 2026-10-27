@@ -6,10 +6,38 @@ import {
   createSeriesPath,
   getDsaImageBounds,
   getRecordedIndices,
+  getRecordedFrame,
   getRecordingRange,
 } from "../src/recordings/vectorPlots.js";
 
 const geometry = { range: { start: 0, end: 1 }, width: 4, height: 100 };
+
+test("frame lookup returns the electrode state at the playhead without holding over a check", () => {
+  const recording = {
+    frames: [
+      { time: 0, indices: { qnox: 71, emg: 1 }, impedances: [1, 2, 3] },
+      {
+        time: 0.25,
+        indices: { qnox: 72, emg: 2 },
+        impedances: [null, null, null],
+      },
+      { time: 0.5, indices: { qnox: 73, emg: 3 }, impedances: [1, null, null] },
+    ],
+  };
+  assert.deepEqual(getRecordedFrame(recording, 0.24).impedances, [1, 2, 3]);
+  assert.deepEqual(getRecordedFrame(recording, 0.25).impedances, [
+    null,
+    null,
+    null,
+  ]);
+  assert.deepEqual(getRecordedFrame(recording, 0.75).impedances, [
+    1,
+    null,
+    null,
+  ]);
+  assert.deepEqual(getRecordedIndices(recording, 0.25), { qnox: 72, emg: 2 });
+  assert.equal(getRecordedFrame({ frames: [] }, 0), undefined);
+});
 
 test("vector sweeps place current and previous samples on opposite sides without a future segment", () => {
   const options = {

@@ -1,4 +1,5 @@
-import { getViewRange } from "./playback.js";
+import { getViewRange, formatPosition } from "./playback.js";
+import { androidDsaTimeRange } from "./referenceProfiles.js";
 import { getEegSweep } from "../simulation/eegSweep.js";
 
 const finite = Number.isFinite;
@@ -17,7 +18,7 @@ function validGeometry(range, width, height) {
   );
 }
 
-export function getRecordedIndices(recording, position = 0) {
+export function getRecordedFrame(recording, position = 0) {
   const frames = recording?.frames || [];
   let low = 0;
   let high = frames.length - 1;
@@ -27,16 +28,34 @@ export function getRecordedIndices(recording, position = 0) {
     if (frames[middle].time <= at) low = middle + 1;
     else high = middle - 1;
   }
-  return frames[Math.max(0, high)]?.indices;
+  return frames[Math.max(0, high)];
 }
 
-export function getRecordingRange(recording, position, windowSeconds = 0) {
+export function getRecordedIndices(recording, position = 0) {
+  return getRecordedFrame(recording, position)?.indices;
+}
+
+export function getRecordingRange(
+  recording,
+  position,
+  windowSeconds = 0,
+  { batchSeconds = 0 } = {},
+) {
   const rawDuration = Number(recording?.durationSeconds);
   const duration = finite(rawDuration) ? Math.max(0, rawDuration) : 0;
   const at = finite(position) ? Math.min(duration, Math.max(0, position)) : 0;
   const window =
     finite(windowSeconds) && windowSeconds > 0 ? windowSeconds : duration;
+  if (recording?.referenceProfile === "android-2.4" && windowSeconds > 0)
+    return androidDsaTimeRange(
+      batchSeconds > 0 ? Math.floor(at / batchSeconds) * batchSeconds : at,
+      window,
+    );
   return getViewRange(at, duration, window);
+}
+
+export function formatPlotPosition(value) {
+  return `${value < 0 ? "−" : ""}${formatPosition(Math.abs(value))}`;
 }
 
 /** Each pixel retains the extrema of every uninterrupted run of samples. */
@@ -228,7 +247,8 @@ export function getDsaImageBounds(
   )
     return null;
   const first = columns[0].time;
-  const hop = columns.length > 1 ? columns[1].time - first : 1;
+  const hop =
+    spectrum.hopSeconds || (columns.length > 1 ? columns[1].time - first : 1);
   if (!finite(first) || !finite(hop) || hop <= 0) return null;
   const scale = width / (range.end - range.start);
   return {

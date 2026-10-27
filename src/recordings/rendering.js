@@ -1,5 +1,8 @@
 import { dsaDbToRgb } from "../simulation/engine.js";
 import { formatPosition } from "./playback.js";
+import { createReferenceDsaPixels } from "./referenceSpectrum.js";
+import { createAndroidDsaPixels } from "./androidSpectrum.js";
+import { isNativeSpectrum } from "./referenceProfiles.js";
 
 const WIDTH = 1200;
 const LEFT = 56;
@@ -134,15 +137,26 @@ export function drawEeg(
   cursor(ctx, position, range, bottom);
 }
 
-export function createDsaImage(spectrum, offset) {
+export function createDsaImage(spectrum, offset, position = Infinity) {
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, spectrum.columns.length);
   canvas.height = spectrum.frequencies.length;
   const ctx = canvas.getContext("2d");
   const pixels = ctx.createImageData(canvas.width, canvas.height);
+  if (isNativeSpectrum(spectrum)) {
+    pixels.data.set(
+      spectrum.source === "conoxview-android-fft"
+        ? createAndroidDsaPixels(spectrum, position)
+        : createReferenceDsaPixels(spectrum, position),
+    );
+    ctx.putImageData(pixels, 0, 0);
+    return canvas;
+  }
   spectrum.columns.forEach((column, x) => {
     for (let bin = 0; bin < canvas.height; bin++) {
-      const [r, g, b] = dsaDbToRgb(column.db[bin], offset);
+      const [r, g, b] = Number.isFinite(column.db[bin])
+        ? dsaDbToRgb(column.db[bin], offset)
+        : [0, 0, 0];
       const index = ((canvas.height - bin - 1) * canvas.width + x) * 4;
       pixels.data.set([r, g, b, 255], index);
     }

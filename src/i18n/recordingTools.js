@@ -6,6 +6,18 @@ export const RECORDING_TOOLS = {
     "recording.caseCompatibility":
       "Erweiterter CXBIN für diesen Simulator. Die Kompatibilität mit ConoxView ist nicht geprüft. Die ursprünglichen CXBIN-Daten bleiben vollständig enthalten.",
     "recording.caseOriginal": "Original-CXBIN herunterladen",
+    "recording.impedance": "Impedanzen",
+    "recording.impedanceHelp":
+      "Aufgezeichnete Impedanzen; Zuordnung der drei Elektroden vorläufig. Nicht erkannte Codes werden als -- angezeigt.",
+    "recording.fullscreenControls": "Wiedergabe im Vollbild",
+    "recording.seekBack": "5 Sekunden zurück",
+    "recording.seekForward": "5 Sekunden vorwärts",
+    "recording.fullscreenSettings": "Einstellungen",
+    "recording.keyboardHelp":
+      "Leertaste: Abspielen/Pause · ←/→: 5 s · Umschalt + ←/→: 30 s",
+    "recording.nextEegWindow": "EEG-Zeitfenster ändern (2, 4 oder 8 s)",
+    "recording.nextAmplitude":
+      "EEG-Amplitude ändern (±25, ±50, ±120 oder ±475 µV)",
     "recording.error.CASE_DATA_INVALID":
       "Die Simulator-Erweiterung ist unvollständig oder ungültig. Bitte die vollständige gespeicherte Datei verwenden.",
     "recording.error.CASE_INTEGRITY_FAILED":
@@ -88,6 +100,18 @@ export const RECORDING_TOOLS = {
     "recording.caseCompatibility":
       "CXBIN enrichi pour ce simulateur. Sa compatibilité avec ConoxView n’est pas vérifiée. Les données CXBIN d’origine sont conservées intégralement.",
     "recording.caseOriginal": "Télécharger le CXBIN original",
+    "recording.impedance": "Impédances",
+    "recording.impedanceHelp":
+      "Impédances enregistrées ; correspondance des trois électrodes provisoire. Les codes non reconnus apparaissent comme --.",
+    "recording.fullscreenControls": "Lecture en plein écran",
+    "recording.seekBack": "Reculer de 5 secondes",
+    "recording.seekForward": "Avancer de 5 secondes",
+    "recording.fullscreenSettings": "Réglages",
+    "recording.keyboardHelp":
+      "Espace : lecture/pause · ←/→ : 5 s · Maj + ←/→ : 30 s",
+    "recording.nextEegWindow": "Changer la fenêtre EEG (2, 4 ou 8 s)",
+    "recording.nextAmplitude":
+      "Changer l’amplitude EEG (±25, ±50, ±120 ou ±475 µV)",
     "recording.error.CASE_DATA_INVALID":
       "L’annexe du simulateur est incomplète ou invalide. Utiliser le fichier enregistré complet.",
     "recording.error.CASE_INTEGRITY_FAILED":
@@ -170,6 +194,18 @@ export const RECORDING_TOOLS = {
     "recording.caseCompatibility":
       "Extended CXBIN for this simulator. Compatibility with ConoxView has not been verified. All original CXBIN data is preserved.",
     "recording.caseOriginal": "Download original CXBIN",
+    "recording.impedance": "Impedances",
+    "recording.impedanceHelp":
+      "Recorded impedances; mapping of the three electrodes is provisional. Unrecognized codes appear as --.",
+    "recording.fullscreenControls": "Full-screen playback",
+    "recording.seekBack": "Back 5 seconds",
+    "recording.seekForward": "Forward 5 seconds",
+    "recording.fullscreenSettings": "Settings",
+    "recording.keyboardHelp":
+      "Space: play/pause · ←/→: 5 s · Shift + ←/→: 30 s",
+    "recording.nextEegWindow": "Change EEG window (2, 4 or 8 s)",
+    "recording.nextAmplitude":
+      "Change EEG amplitude (±25, ±50, ±120 or ±475 µV)",
     "recording.error.CASE_DATA_INVALID":
       "The simulator extension is incomplete or invalid. Use the complete saved file.",
     "recording.error.CASE_INTEGRITY_FAILED":

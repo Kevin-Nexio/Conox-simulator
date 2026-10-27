@@ -721,6 +721,16 @@ canvas {
   width: 100%;
   border-top: 1px dashed rgba(255, 255, 255, 0.48);
 }
+.sb-android-dsa-legend {
+  height: 100%;
+  width: 70px;
+  object-fit: fill;
+}
+.sb-reference-note {
+  color: var(--muted, #758b9e);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
 .sb-db-scale {
   position: relative;
   display: grid;

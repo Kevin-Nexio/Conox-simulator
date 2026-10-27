@@ -9,9 +9,24 @@ import {
 } from "./ConoxMonitor.jsx";
 import { DisplayViewIcon } from "./DisplayViewIcon.jsx";
 import RecordingPlot from "./RecordingPlot.jsx";
-import { getRecordedIndices } from "../recordings/vectorPlots.js";
-import { formatPosition, getViewRange } from "../recordings/playback.js";
+import {
+  getRecordedFrame,
+  getRecordingRange,
+  formatPlotPosition,
+} from "../recordings/vectorPlots.js";
+import RecordingImpedances from "./RecordingImpedances.jsx";
+import {
+  RECORDING_DSA_GRADIENT,
+  getDsaScaleTicks,
+} from "../recordings/dsaScale.js";
+import { formatPosition } from "../recordings/playback.js";
 import "../styles/recordingScene.css";
+import nativeLegend from "../assets/conoxview-dsa-scale.png?inline";
+import androidLegend from "../assets/conoxview-android-dsa-scale.png?inline";
+import {
+  getReferenceProfile,
+  isNativeSpectrum,
+} from "../recordings/referenceProfiles.js";
 
 /** The simulator's actual monitor components, fed by the imported recording. */
 export default function RecordingSimulatorView({
@@ -28,26 +43,42 @@ export default function RecordingSimulatorView({
   onSettingsChange,
   locked = false,
 }) {
-  const indices = getRecordedIndices(data.recording, position);
+  const frame = getRecordedFrame(data.recording, position);
+  const indices = frame?.indices;
+  const nativeSpectrum = isNativeSpectrum(data.spectrum);
+  const profile = getReferenceProfile(data.referenceProfile);
+  const android = profile.id === "android-2.4";
   const displayView = settings.monitorView || "eeg-dsa";
-  const range = getViewRange(
+  const range = getRecordingRange(
+    data.recording,
     position,
-    data.recording.durationSeconds,
-    settings.dsaWindow || data.recording.durationSeconds,
+    settings.dsaWindow,
+    { batchSeconds: android ? 5 : 0 },
+  );
+  const trendRange = getRecordingRange(
+    data.recording,
+    position,
+    settings.dsaWindow,
   );
   const choices =
     displayView === "eeg-dsa"
       ? ["eeg-index", "dsa-index", "all"]
       : ["eeg-dsa", "eeg-only", "dsa-only"];
   const change = (next) => onSettingsChange?.(next);
-  const timeLabels = Array.from({ length: 5 }, (_, i) => (
-    <span key={i}>
-      {formatPosition(range.start + ((range.end - range.start) * i) / 4)}
-    </span>
-  ));
+  const cycle = (key, values) =>
+    change({
+      [key]: values[(values.indexOf(settings[key]) + 1) % values.length],
+    });
+  const labelsForRange = (range) =>
+    Array.from({ length: 5 }, (_, i) => (
+      <span key={i}>
+        {formatPlotPosition(range.start + ((range.end - range.start) * i) / 4)}
+      </span>
+    ));
+  const timeLabels = labelsForRange(range);
   const captionActions = (
     <div className="sb-dsa-caption-actions">
-      {["sef50", "sef95"].map((key) => (
+      {(nativeSpectrum ? [] : ["sef50", "sef95"]).map((key) => (
         <button
           type="button"
           key={key}
@@ -75,7 +106,10 @@ export default function RecordingSimulatorView({
     </div>
   );
   return (
-    <div className="recording-simulator-view">
+    <div
+      className="recording-simulator-view"
+      data-sensor-severity={frame?.monitorState?.severity}
+    >
       <ConoxMonitor
         borderless={layout === "simulator-screen"}
         brandLabel={t("brand.open")}
@@ -95,22 +129,41 @@ export default function RecordingSimulatorView({
           </>
         }
       >
-        <ConoxMetrics indices={indices} />
+        <ConoxMetrics indices={indices} missingValue={android ? "" : "--"} />
         <ConoxEegPanel
           displayView={displayView}
           caption={
             <>
               <b>EEG</b>
-              <span>{t("eeg.frontal")}</span>
-              <em>{settings.eegWindow} s</em>
+              <span>{t("reference.eegChannel")}</span>
+              <button
+                type="button"
+                className="recording-scale-button"
+                title={t("recording.nextEegWindow")}
+                aria-label={t("recording.nextEegWindow")}
+                disabled={locked}
+                onClick={() => cycle("eegWindow", profile.eegWindows)}
+              >
+                {settings.eegWindow} s
+              </button>
             </>
           }
           scale={
             <>
-              <span>+</span>
-              <b>{settings.amplitude}</b>
-              <small>µV*</small>
-              <span>−</span>
+              <span>-</span>
+              <button
+                type="button"
+                className="recording-scale-button"
+                title={t("recording.nextAmplitude")}
+                aria-label={t("recording.nextAmplitude")}
+                disabled={locked}
+                onClick={() => cycle("amplitude", profile.amplitudes)}
+              >
+                {android ? "±" : ""}
+                {settings.amplitude}
+              </button>
+              <small>µV</small>
+              <span>-</span>
             </>
           }
         >
@@ -130,13 +183,24 @@ export default function RecordingSimulatorView({
           caption={
             <>
               <b>DSA</b>
-              <span>EEG</span>
+              <span>{android ? "FFT (dB)" : "EEG"}</span>
               {captionActions}
             </>
           }
           frequencyAxis={
             <>
-              {[45, 40, 35, 30, 25, 20, 15, 10, 5, 0].map((v) => (
+              {[
+                45,
+                40,
+                35,
+                30,
+                25,
+                20,
+                15,
+                10,
+                5,
+                nativeSpectrum && !android ? 1 : 0,
+              ].map((v) => (
                 <span key={v}>{v}</span>
               ))}
               <b>Hz</b>
@@ -144,38 +208,64 @@ export default function RecordingSimulatorView({
           }
           colorScale={
             <>
-              <div
-                className="sb-db-gradient"
-                role="img"
-                aria-label={t("dsa.scale")}
-              />
-              <div className="sb-db-labels">
-                <button
-                  type="button"
-                  aria-label={t("dsa.scaleUp")}
-                  disabled={locked || settings.colorOffset >= 16}
-                  onClick={() =>
-                    change({
-                      colorOffset: Math.min(16, settings.colorOffset + 4),
-                    })
-                  }
-                >
-                  +
-                </button>
-                <span className="recording-db-unit">dB</span>
-                <button
-                  type="button"
-                  aria-label={t("dsa.scaleDown")}
-                  disabled={locked || settings.colorOffset <= -16}
-                  onClick={() =>
-                    change({
-                      colorOffset: Math.max(-16, settings.colorOffset - 4),
-                    })
-                  }
-                >
-                  −
-                </button>
-              </div>
+              {nativeSpectrum ? (
+                <img
+                  className="recording-native-legend"
+                  src={android ? androidLegend : nativeLegend}
+                  alt={t("recording.referenceScale")}
+                />
+              ) : (
+                <>
+                  <div
+                    className="recording-dsa-key"
+                    role="img"
+                    aria-label={t("dsa.scale")}
+                  >
+                    <div
+                      className="recording-dsa-gradient"
+                      style={{ background: RECORDING_DSA_GRADIENT }}
+                    />
+                    {getDsaScaleTicks(settings.colorOffset).map(
+                      ({ value, fraction }) => (
+                        <span
+                          key={fraction}
+                          className="recording-dsa-tick"
+                          style={{ top: `${fraction * 100}%` }}
+                        >
+                          {value}
+                        </span>
+                      ),
+                    )}
+                  </div>
+                  <div className="sb-db-labels recording-dsa-adjust">
+                    <button
+                      type="button"
+                      aria-label={t("dsa.scaleUp")}
+                      disabled={locked || settings.colorOffset >= 16}
+                      onClick={() =>
+                        change({
+                          colorOffset: Math.min(16, settings.colorOffset + 4),
+                        })
+                      }
+                    >
+                      +
+                    </button>
+                    <span className="recording-db-unit">dB</span>
+                    <button
+                      type="button"
+                      aria-label={t("dsa.scaleDown")}
+                      disabled={locked || settings.colorOffset <= -16}
+                      onClick={() =>
+                        change({
+                          colorOffset: Math.max(-16, settings.colorOffset - 4),
+                        })
+                      }
+                    >
+                      −
+                    </button>
+                  </div>
+                </>
+              )}
             </>
           }
           timeline={timeLabels}
@@ -192,8 +282,13 @@ export default function RecordingSimulatorView({
           />
         </ConoxDsaPanel>
         <ConoxQconPanel
+          missingValue={android ? "" : "--"}
           value={indices?.qcon}
-          status={`${t("recording.position")} ${formatPosition(position, true)}`}
+          statusClassName={`recording-sensor-${frame?.monitorState?.severity || "unknown"}`}
+          status={t(
+            `recording.state.${frame?.monitorState?.kind || "unknown"}`,
+            { code: frame?.status },
+          )}
         />
         <div className="sb-view-switch" aria-label={t("recording.layout")}>
           {choices.map((view) => (
@@ -238,17 +333,22 @@ export default function RecordingSimulatorView({
               </b>
             ))}
           </div>
-          <div className="sb-trend-time">{timeLabels}</div>
+          <div className="sb-trend-time">{labelsForRange(trendRange)}</div>
         </section>
         <section className="sb-assistant sb-case-picker recording-monitor-case">
           <h3>{t("recording.title")}</h3>
+          <RecordingImpedances
+            referenceProfile={profile.id}
+            values={frame?.impedances}
+            states={frame?.impedanceStates}
+            t={t}
+          />
           <p>
             {t("recording.position")}{" "}
-            <strong>{formatPosition(position, true)}</strong>
-          </p>
-          <p>
-            {t("recording.duration")}{" "}
-            <strong>{formatPosition(data.recording.durationSeconds)}</strong>
+            <strong>
+              {formatPosition(position, true)} /{" "}
+              {formatPosition(data.recording.durationSeconds)}
+            </strong>
           </p>
           <button type="button" disabled={locked} onClick={() => onSeek?.(0)}>
             {t("recording.restart")}
@@ -263,7 +363,9 @@ export default function RecordingSimulatorView({
           </button>
         </section>
         <div className="sb-monitor-footer recording-monitor-footer">
-          <span>{t("recording.experimentalShort")}</span>
+          <span>
+            {profile.name} · {t("recording.experimentalShort")}
+          </span>
         </div>
       </ConoxMonitor>
     </div>

@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { sealConoxFrame } from "./fixtures/conoxProtocol.mjs";
 import {
   encodeCaseFile,
   decodeCaseFile,
@@ -21,9 +22,8 @@ function fixture(prefix = 0) {
     bytes.set(encoder.encode("fff0050000540"), o);
     view.setUint32(o + 13, frame + 1, false);
     bytes[o + 17] = 128;
-    [18, 19, 20, 21, 25].forEach(
-      (offset, i) => (bytes[o + offset] = [40, 200, 0, 100, 20][i]),
-    );
+    // Literal wire order: qCON, EMG, BSR, SQI, three impedances, qNOX.
+    bytes.set([40, 20, 0, 100, 1, 2, 3, 200], o + 18);
     for (let i = 0; i < 256; i++) {
       const sample =
         0x800000 + Math.round(100 * Math.sin((frame * 256 + i) / 16));
@@ -31,9 +31,13 @@ function fixture(prefix = 0) {
       bytes[o + 27 + 3 * i] = sample >>> 8;
       bytes[o + 28 + 3 * i] = sample;
     }
-    bytes[o + 800] = frame; // Unknown bytes must survive, too.
+    for (let i = 0; i < 32; i++)
+      view.setUint16(o + 794 + 2 * i, 31000 + (i % 9) * 20, false);
+    bytes[o + 800] = frame; // Every retained source byte must survive, too.
+    bytes[o + 881] = frame % 5;
     bytes.set(encoder.encode(frame < prefix ? "R999999" : "R000001"), o + 883);
     bytes.set([3, 4, Math.floor(frame / 4), 2, 1, 26], o + 959);
+    sealConoxFrame(bytes, o);
   }
   return bytes;
 }
@@ -46,6 +50,7 @@ function richState() {
     selection: { start: 2, end: 12 },
     layout: "simulator-screen",
     settings: {
+      eegMotion: "sweep",
       eegWindow: 8,
       amplitude: 50,
       dsaWindow: 60,
@@ -134,7 +139,12 @@ test("complete session round-trips while every original byte and decoded EEG val
   assert.equal(restored.recording.excludedFrameCount, 3);
   assert.deepEqual(restored.recording.samples, plain.recording.samples);
   assert.deepEqual(restored.recording.frames, plain.recording.frames);
+  assert.equal(restored.recording.frames[0].indices.emg, 20);
+  assert.equal(restored.recording.frames[0].indices.qnox, null);
+  assert.equal(restored.recording.frames[0].rawIndices.qnox, 200);
+  assert.deepEqual(restored.recording.frames[0].impedances, [1, 2, 3]);
   assert.deepEqual(restored.filtered, plain.filtered);
+  assert.deepEqual(restored.eeg, plain.eeg);
   assert.deepEqual(restored.spectrum, plain.spectrum);
 });
 
@@ -154,6 +164,61 @@ test("resaving replaces the previous extension rather than stacking trailers", a
   assert.equal(
     (await loadRecordingCase(resaved, "copy.cxbin")).session.markers.length,
     3,
+  );
+});
+
+test("legacy saved cases without a profile retain their iOS scales and interpretation", async () => {
+  const valid = await encode();
+  const { metadata } = await decodeCaseFile(valid);
+  delete metadata.state.referenceProfile;
+  const legacy = await replaceMetadata(
+    valid,
+    encoder.encode(JSON.stringify(metadata)),
+  );
+  const restored = await loadRecordingCase(legacy, "legacy.cxbin", {
+    defaultReferenceProfile: "android-2.4",
+  });
+  assert.equal(restored.referenceProfile, "ios-1.1");
+  assert.equal(restored.session.referenceProfile, "ios-1.1");
+  assert.equal(restored.session.settings.eegWindow, 8);
+  assert.equal(restored.spectrum.source, "conoxview-received");
+});
+
+test("an explicit reference override also normalizes the restored session without losing annotations", async () => {
+  const restored = await loadRecordingCase(await encode(), "saved.cxbin", {
+    referenceProfile: "android-2.4",
+  });
+  assert.equal(restored.referenceProfile, "android-2.4");
+  assert.equal(restored.session.referenceProfile, "android-2.4");
+  assert.equal(restored.session.settings.eegWindow, 9);
+  assert.equal(restored.session.settings.dsaWindow, 1800);
+  assert.equal(restored.session.settings.amplitude, 50);
+  assert.deepEqual(restored.session.markers, richState().markers);
+  assert.equal(restored.session.position, richState().position);
+});
+
+test("Android profile, nine-second EEG, 250 µV, one-hour DSA and 3x round-trip with original bytes", async () => {
+  const state = createDefaultCaseState(16, "fr", "android-2.4");
+  state.speed = 3;
+  state.settings.amplitude = 250;
+  state.settings.dsaWindow = 3600;
+  const saved = await encode(fixture(), state);
+  const restored = await loadRecordingCase(saved, "android.cxbin");
+  assert.deepEqual(restored.session, state);
+  assert.equal(restored.referenceProfile, "android-2.4");
+  assert.equal(restored.spectrum.frequencies.length, 44);
+  assert.deepEqual((await decodeCaseFile(saved)).source, fixture());
+  assert.throws(
+    () => validateCaseState({ ...state, referenceProfile: "unknown" }, 16),
+    hasCode("CASE_STATE_INVALID"),
+  );
+  assert.throws(
+    () =>
+      validateCaseState(
+        { ...state, settings: { ...state.settings, eegWindow: 8 } },
+        16,
+      ),
+    hasCode("CASE_STATE_INVALID"),
   );
 });
 
@@ -260,6 +325,7 @@ test("invalid UI settings, duplicate marker IDs and unusable ranges cannot be re
     { layout: "conox-frame" },
     { settings: { ...state.settings, guides: "false" } },
     { settings: { ...state.settings, amplitude: -50 } },
+    { settings: { ...state.settings, eegMotion: "unknown" } },
     { selection: { start: 5, end: 4 } },
     { selection: { start: 5, end: 5.1 } },
     { timeline: { showIndices: true, hiddenIndices: ["unknown"] } },
@@ -276,6 +342,26 @@ test("invalid UI settings, duplicate marker IDs and unusable ranges cannot be re
   assert.deepEqual(
     validateCaseState(createDefaultCaseState(0.1), 0.1).selection,
     { start: 0, end: 0.1 },
+  );
+});
+
+test("EEG motion round-trips and old saved cases recover the original overwrite sweep", async () => {
+  const state = richState();
+  state.settings.eegMotion = "scroll";
+  const saved = await encode(fixture(), state);
+  assert.equal(
+    (await loadRecordingCase(saved, "scroll.cxbin")).session.settings.eegMotion,
+    "scroll",
+  );
+  const { metadata } = await decodeCaseFile(saved);
+  delete metadata.state.settings.eegMotion;
+  const old = await replaceMetadata(
+    saved,
+    encoder.encode(JSON.stringify(metadata)),
+  );
+  assert.equal(
+    (await loadRecordingCase(old, "old.cxbin")).session.settings.eegMotion,
+    "sweep",
   );
 });
 

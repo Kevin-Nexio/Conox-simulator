@@ -2,6 +2,18 @@
 
 final result: passed
 
+## Jano feedback: local corrections, 27 October 2026
+
+The full check passes 100 tests and the production build. A targeted source review identified two issues, both repaired: pointer clicks had kept focus on a button and prevented subsequent playback shortcuts; PDF right alignment had measured Ω before spelling it as Ohm. The focused tests cover both regressions.
+
+The experimental decoder now reads qNOX at byte 25 and EMG at byte 19. Independent literal-byte tests avoid repeating the parser's mapping table. Three provisional impedance fields at bytes 22–24 show ordinary values from 0 to 10 kΩ; unknown codes remain gaps, with all raw bytes preserved. A read-only check of the original local recording confirms its input hash is unchanged and the resulting ranges are qNOX 36–99 and EMG 0–100. This supports the correction but does not replace synchronized comparison with the original display. Saved-case round-trip tests include the corrected fields and impedances.
+
+In-app browser tests on a synthetic 32-second case verified Space play/pause, 5-second arrow jumps, 30-second Shift-arrow jumps, whole-case clamping, pointer-to-keyboard handoff, and native select behaviour. Fullscreen settings change the EEG window, amplitude, DSA range, color offset and SEF display. Direct monitor controls change EEG seconds and amplitude. German fullscreen labels were exercised without untranslated keys. The four-block, framed and borderless views all show the recorded impedances; seeking to a partial electrode check shows `1: 1 · 2: -- · 3: --`, without holding previous readings.
+
+At 1021 × 1026, document height stays 1026 and the timeline stays 129.3984375 CSS pixels high. Both case-panel buttons remain inside their panel. At 390 × 844, the expanded fullscreen toolbar is about 299 pixels high, leaves about 545 pixels for the monitor, and does not overflow horizontally. Viewport overrides were reset after testing. Existing user case tabs were not reloaded. Local synthetic screenshot evidence: `/tmp/conox-jano-feedback-20261027/fullscreen-final.png`.
+
+The legend now uses the actual recorded DSA palette at the actual dB positions, including offset-adjusted numbers. Pixel/legend consistency is tested across the range. Signal processing and the underlying palette are unchanged; the photos do not establish an exact original-device color calibration. A four-block PDF was generated through the UI without an app error, but its downloaded file was not retrieved in this run. PDF text, right alignment, vector structure and offsets are covered by the automated tests. No new file-level video verification was performed. Changes remain local; this is not a new Pages deployment.
+
 ## Case save and restore: release verification
 
 “Enregistrer le cas (.cxbin)” saves the exact complete original source plus a versioned simulator-state extension in one file. This is explicitly labelled as simulator-specific; native ConoxView compatibility is unverified. The original-only recovery action is available under file details. Marker state and timeline options are now controlled by the player so imports restore them without being cleared by a new frame array.
@@ -53,3 +65,31 @@ Earlier visual repairs remain intact: images decode before monitor snapshots, th
 `npm run check` passes 72 tests, project checks, formatting and the production build. Tests compare the sweep against an independently simulated circular buffer for two-, four- and eight-second windows; cover boundary wrapping, erase-gap wrapping, start/end positions, missing future samples and deterministic seeks; and verify the three supported export sizes and translation parity. Browser errors and visible export errors were empty. A PNG generation completed with no error in the in-app browser; its download file was not retrieved in this run.
 
 The preceding release had verified downloaded PNG, PDF and H.264 video files for all three retained views, including selectable four-block PDF text, one DSA image, fixed export dimensions and advancing video time/waveforms. Those file-level checks were not repeated for every format in this release. The same native scene remains shared by preview and exports. Safari was not tested in this run.
+
+## 2026-10-27: Android 2.4 / iOS reference profiles
+
+Local browser verification used only a synthetic32-second case. Android displayed 3/6/9-second windows and±25/50/120/250/475 µV; iOS retained 2/4/8 seconds. qNOX 100 was blank in Android and 100 in iOS on identical source bytes. Profile changes retained the playhead,3× speed, selected passage and event marker, and normalized incompatible scales. The native dark-blue Android DSA showed the known2 Hz and 10 Hz tones, held invalid windows, and revealed no future columns. The5/30/60-minute presets retained real duration, while Whole case fitted the recording. The60-minute view used2-second cells.
+
+The synthetic monitor used its generated128 Hz EEG as Android FFT input. Pause, profile changes and Live→profile change→Live off were checked; returning from an iOS 120-minute period correctly chose an Android 30-minute period. French, German and English controls were checked. A saved Android case restored6 s,250 µV,60 min,3×, position10 s, passage9..15 s and its event marker. A CRC-damaged replacement was rejected while the open case and marker remained intact.
+
+All three PNG downloads were inspected (1600×1200,1600×1120,1600×900). The Android block PDF was rendered with Poppler and inspected. An actualH.264MP4 exported9..15 s at 3×, lasted2.1888 s including encoder overhead, and its first/last frames were inspected. DSA progressed with exported time and retained blank future regions. The full-screen four-block preview was also inspected.
+
+`npm run check` passed136 tests, structure checks, Prettier and Vite build. The pre-existing bundle-size warning remains. A local private-source check confirmed CRC for 7400 retained frames,236800 identical display samples across profiles,44 Android bands versus45 iOS bands, and unchanged source bytes. No private measurements or identifiers were added to the repository. Native Android execution, physical calibration and device timing remain unverified. Nothing was published.
+
+## 2026-10-27: DSA verification and overwrite EEG restored
+
+An independent harness compiled the unmodified decompiled FFTCalculationThread Java class and compared1346 synthetic windows (DC, tones, mixed/noisy sequences, impulses, transitions and reset): all59224 encoded spectral bytes matched. Scaled power error stayed below8.04e-13. Existing REA method bodies were checked against the extracted constructor, FFTCalculation and realft. four1 came from a complementary extraction using the same JADX build; no new REA Evidence or Android execution is claimed.
+
+Two rendering defects were corrected: Android initially fills its bitmap from the left, and one-second cells remain distinct logical pixels before a single filtered scaling. Replay DSA axes now stay at the last published5-second boundary while the EEG and index playhead continue normally. Synthetic silence and noise tests explain the cyan colour without altering the algorithm or claiming an electrode calibration. The original synthetic iOS-style DSA is explicitly labelled as the original educational model.
+
+EEG overwrite sweep is the default again. Browser verification confirmed its cursor/erase gap, optional scrolling and independent profile selection. Recorded playback used the same synthetic case at32seconds and9seconds per window: sweep cursor5/9, with a successful PNG export inspected visually. The new choice is validated, restored from saved metadata and synchronized to remote demos. Missing settings use the original sweep. French controls and the updated iOS-model label were verified. No console errors were reported.
+
+The local monitor screenshot and the reproducible mathematical/rendering audits are retained outside the repository in conoxview-dsa-verification. No private source data or new dependencies were added. No publication was performed.
+
+## 2026-10-27: Publication split between simulation and recorded cases
+
+The synthetic simulation retains only the historical display, without an iOS/Android selector or platform label. Its EEG uses the historical centred vertical projection and defaults to the original overwrite sweep. The shared 128 Hz sample history supports the optional scrolling mode without changing the generated signal. DSA and indices remain educational models; a common raw-EEG calculation pipeline is future work.
+
+The recorded-case reader retains both ConoxView references and their distinct decoding/rendering paths. Local browser verification loaded the artificial32-second case in Android, switched to iOS at32 seconds with3× playback speed, and confirmed that position and speed remained unchanged. qNOX100 was unavailable under Android and displayed100 under iOS. Returning to the synthetic simulation restored its historical controls without a reference selector.
+
+The synthetic Live check selected a120-minute period and8-second EEG window, enabled the temporary60-second Live period, then disabled it and recovered120 minutes. SEF50 remained operable. Remote settings from older Android peers are normalized to the synthetic scale set and cannot switch rendering engines. Automated coverage includes invalid Android scales, compatible settings and Live return periods.

@@ -40,6 +40,20 @@
 .recording-simulator-view .recording-case-status {
   cursor: default;
 }
+.recording-simulator-view .recording-scale-button {
+  padding: 0.1cqw 0.2cqw;
+  border: 1px solid #6e929e;
+  border-radius: 0.2cqw;
+  background: #11252d;
+  color: #c6eddc;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.recording-simulator-view .recording-scale-button:focus-visible {
+  outline: 2px solid #8fd3ff;
+  outline-offset: 1px;
+}
 .recording-simulator-view .recording-monitor-case p {
   display: flex;
   justify-content: space-between;
@@ -65,17 +79,77 @@
   color: #b9c9cf;
   font-size: 0.65cqw;
 }
+.recording-simulator-view .recording-impedances {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.3cqw;
+  padding: 0.5cqw 0.65cqw;
+  border-bottom: 1px solid #40555f;
+  color: #c4d4dd;
+  font-size: 0.75cqw;
+  font-variant-numeric: tabular-nums;
+}
+.recording-impedances strong {
+  color: #edf4f6;
+  white-space: nowrap;
+}
+.recording-simulator-view .sb-db-scale {
+  grid-template-columns: minmax(0, 1fr) 25%;
+}
+.recording-dsa-key {
+  position: relative;
+  min-width: 0;
+  margin: 0.25cqw 0;
+}
+.recording-dsa-gradient {
+  position: absolute;
+  inset: 0 49% 0 0;
+  border: 1px solid #6a7a84;
+}
+.recording-dsa-tick {
+  position: absolute;
+  right: 0;
+  color: #d8e7ed;
+  font-size: 0.58cqw;
+  font-variant-numeric: tabular-nums;
+  transform: translateY(-50%);
+}
+.recording-dsa-tick:first-of-type {
+  transform: none;
+}
+.recording-dsa-tick:last-of-type {
+  transform: translateY(-100%);
+}
+.recording-simulator-view .recording-dsa-adjust {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 .recording-simulator-view .sb-trend-legend .qcon {
-  color: #70ec8f;
+  color: #ffffff;
 }
 .recording-simulator-view .sb-trend-legend .qnox {
-  color: #ffdb67;
+  color: #ffff00;
 }
 .recording-simulator-view .sb-trend-legend .bsr {
-  color: #ff8d94;
+  color: #ff0000;
 }
 .recording-simulator-view .sb-trend-legend .emg {
-  color: #76c9ff;
+  color: #0080ff;
+}
+.recording-native-legend {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: fill;
+}
+.recording-simulator-view .sb-qcon small.recording-sensor-warning {
+  color: #ffb36b;
+}
+.recording-simulator-view .sb-qcon small.recording-sensor-checking {
+  color: #f5df72;
 }
 .recording-export-scene {
   min-height: 0;

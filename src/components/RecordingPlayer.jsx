@@ -8,6 +8,12 @@ import {
 } from "../recordings/playback.js";
 import { createDsaImage } from "../recordings/rendering.js";
 import {
+  DEFAULT_REFERENCE_PROFILE,
+  REFERENCE_PROFILES,
+  getReferenceSpectrumView,
+  normalizeReferenceSettings,
+} from "../recordings/referenceProfiles.js";
+import {
   clampTimelinePosition,
   normalizeSelection,
 } from "../recordings/timeline.js";
@@ -35,6 +41,9 @@ export default function RecordingPlayer({ onClose }) {
   const [locale, setLocale] = React.useState(getInitialLocale);
   const { t, displayViews } = React.useMemo(() => createI18n(locale), [locale]);
   const [data, setData] = React.useState(null);
+  const [referenceProfile, setReferenceProfile] = React.useState(
+    DEFAULT_REFERENCE_PROFILE,
+  );
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState(null);
   const [position, setPosition] = React.useState(0);
@@ -47,6 +56,7 @@ export default function RecordingPlayer({ onClose }) {
   });
   const [selectionError, setSelectionError] = React.useState(false);
   const [eegWindow, setEegWindow] = React.useState(4);
+  const [eegMotion, setEegMotion] = React.useState("sweep");
   const [amplitude, setAmplitude] = React.useState(120);
   const [dsaWindow, setDsaWindow] = React.useState(0);
   const [colorOffset, setColorOffset] = React.useState(0);
@@ -133,7 +143,30 @@ export default function RecordingPlayer({ onClose }) {
   };
   const changeSettings = (next) => {
     if (locked) return;
+    if (next.referenceProfile && next.referenceProfile !== referenceProfile) {
+      const profile = next.referenceProfile;
+      const restoredState = {
+        referenceProfile: profile,
+        locale,
+        position: positionRef.current,
+        speed,
+        selection,
+        layout,
+        settings: normalizeReferenceSettings(settings, profile),
+        markers: eventMarkers,
+        timeline: timelineOptions,
+        videoFormat:
+          videoFormats.find((format) => format.mimeType === videoType)
+            ?.extension || null,
+      };
+      loadFile(new File([sourceBlobRef.current], sourceNameRef.current), {
+        referenceProfile: profile,
+        restoredState,
+      });
+      return;
+    }
     const setters = {
+      eegMotion: setEegMotion,
       eegWindow: setEegWindow,
       amplitude: setAmplitude,
       dsaWindow: setDsaWindow,
@@ -169,7 +202,7 @@ export default function RecordingPlayer({ onClose }) {
     }
     setPassage({ start, end });
   };
-  const loadFile = async (file) => {
+  const loadFile = async (file, options = {}) => {
     if (!file) return;
     cancelLoad();
     setPlaying(false);
@@ -211,14 +244,20 @@ export default function RecordingPlayer({ onClose }) {
         worker.terminate();
         workerRef.current = null;
         const restored =
+          options.restoredState ||
           result.session ||
-          createDefaultCaseState(result.recording.durationSeconds, locale);
+          createDefaultCaseState(
+            result.recording.durationSeconds,
+            locale,
+            result.referenceProfile,
+          );
         sourceBlobRef.current = sourceSnapshot.slice(
           0,
           result.sourceByteLength,
         );
         sourceNameRef.current = result.sourceName;
         setData(result);
+        setReferenceProfile(result.referenceProfile);
         setLocale(restored.locale);
         positionRef.current = restored.position;
         setPosition(restored.position);
@@ -226,6 +265,7 @@ export default function RecordingPlayer({ onClose }) {
         setPassage(restored.selection);
         setLayout(restored.layout);
         setEegWindow(restored.settings.eegWindow);
+        setEegMotion(restored.settings.eegMotion);
         setAmplitude(restored.settings.amplitude);
         setDsaWindow(restored.settings.dsaWindow);
         setColorOffset(restored.settings.colorOffset);
@@ -244,7 +284,15 @@ export default function RecordingPlayer({ onClose }) {
         );
         setBusy(false);
       };
-      worker.postMessage({ buffer, fileName: file.name }, [buffer]);
+      worker.postMessage(
+        {
+          buffer,
+          fileName: file.name,
+          referenceProfile: options.referenceProfile,
+          defaultReferenceProfile: referenceProfile,
+        },
+        [buffer],
+      );
     } catch {
       if (request === requestRef.current) {
         setBusy(false);
@@ -281,12 +329,27 @@ export default function RecordingPlayer({ onClose }) {
     };
   }, [playing, data, speed, selection]);
 
+  const presentationData = React.useMemo(
+    () =>
+      data
+        ? {
+            ...data,
+            spectrum: getReferenceSpectrumView(data.spectrum, dsaWindow),
+          }
+        : null,
+    [data, dsaWindow],
+  );
   const dsaImage = React.useMemo(
-    () => (data ? createDsaImage(data.spectrum, colorOffset) : null),
-    [data, colorOffset],
+    () =>
+      presentationData
+        ? createDsaImage(presentationData.spectrum, colorOffset, position)
+        : null,
+    [presentationData, colorOffset, Math.floor(position * 4)],
   );
   const settings = React.useMemo(
     () => ({
+      referenceProfile,
+      eegMotion,
       eegWindow,
       amplitude,
       dsaWindow,
@@ -297,6 +360,8 @@ export default function RecordingPlayer({ onClose }) {
       monitorView,
     }),
     [
+      referenceProfile,
+      eegMotion,
       eegWindow,
       amplitude,
       dsaWindow,
@@ -320,7 +385,7 @@ export default function RecordingPlayer({ onClose }) {
     exportAbortRef.current = controller;
     const exportPosition = positionRef.current;
     const scene = createRecordingExportScene({
-      data,
+      data: presentationData,
       dsaImage,
       settings,
       layout,
@@ -401,6 +466,7 @@ export default function RecordingPlayer({ onClose }) {
         : await encodeCaseFile(
             await source.arrayBuffer(),
             {
+              referenceProfile,
               locale,
               position: positionRef.current,
               speed,
@@ -495,6 +561,23 @@ export default function RecordingPlayer({ onClose }) {
               </button>
             </>
           )}
+          {!recording && (
+            <label className="recording-inline-field">
+              {t("reference.profile")}
+              <select
+                value={referenceProfile}
+                disabled={locked}
+                aria-label={t("reference.profile")}
+                onChange={(event) => setReferenceProfile(event.target.value)}
+              >
+                {Object.values(REFERENCE_PROFILES).map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           {recording && (
             <>
               <button
@@ -528,6 +611,13 @@ export default function RecordingPlayer({ onClose }) {
                   </p>
                   <p>{t("recording.caseSaveHelp")}</p>
                   <p>{t("recording.caseCompatibility")}</p>
+                  <p>{t(`recording.impedanceHelp.${referenceProfile}`)}</p>
+                  <p>{t(`recording.referenceSource.${referenceProfile}`)}</p>
+                  <p>
+                    {t("recording.integrity", {
+                      count: recording.integrity.checkedFrames,
+                    })}
+                  </p>
                   <button
                     type="button"
                     className="sb-btn"
@@ -589,7 +679,7 @@ export default function RecordingPlayer({ onClose }) {
                       aria-label={t("recording.speed")}
                       onChange={(event) => setSpeed(Number(event.target.value))}
                     >
-                      {[0.25, 0.5, 1, 2, 4].map((value) => (
+                      {[0.25, 0.5, 1, 2, 3, 4].map((value) => (
                         <option key={value} value={value}>
                           {value}×
                         </option>
@@ -769,7 +859,7 @@ export default function RecordingPlayer({ onClose }) {
               </p>
             )}
             <RecordingPresentation
-              data={data}
+              data={presentationData}
               dsaImage={dsaImage}
               position={position}
               settings={settings}

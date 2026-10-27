@@ -1,17 +1,23 @@
 import * as React from "react";
-import { formatPosition } from "../recordings/playback.js";
+import {
+  createReferenceEegPath,
+  createAndroidEegPath,
+  createReferenceSweepPath,
+} from "../recordings/referenceEeg.js";
+import { isNativeSpectrum } from "../recordings/referenceProfiles.js";
 import {
   createEegSweepPath,
   createSeriesPath,
   getDsaImageBounds,
   getRecordingRange,
+  formatPlotPosition,
 } from "../recordings/vectorPlots.js";
 
 const TREND_COLORS = {
-  qcon: "#70ec8f",
-  qnox: "#ffdb67",
-  bsr: "#ff8d94",
-  emg: "#76c9ff",
+  qcon: "#ffffff",
+  qnox: "#ffff00",
+  bsr: "#ff0000",
+  emg: "#0080ff",
 };
 
 export default function RecordingPlot({
@@ -40,23 +46,37 @@ export default function RecordingPlot({
   const range =
     kind === "eeg"
       ? { start: 0, end: eegWindow }
-      : getRecordingRange(data?.recording, position, settings.dsaWindow);
+      : getRecordingRange(data?.recording, position, settings.dsaWindow, {
+          batchSeconds:
+            kind === "dsa" && data?.referenceProfile === "android-2.4" ? 5 : 0,
+        });
   const left = axes ? 58 : 0;
   const top = axes ? 22 : 0;
   const plotWidth = Math.max(1, width - left - (axes ? 12 : 0));
   const plotHeight = Math.max(1, height - top - (axes ? 30 : 0));
   const bottom = top + plotHeight;
   const amplitude = settings.amplitude > 0 ? settings.amplitude : 120;
+  const referenceEeg = data?.eeg?.source === "conoxview-16be";
+  const referenceDsa = isNativeSpectrum(data?.spectrum);
+  const android = data?.referenceProfile === "android-2.4";
+  const iosDsa = referenceDsa && !android;
   const values =
     kind === "eeg"
-      ? [-amplitude, -amplitude / 2, 0, amplitude / 2, amplitude]
+      ? referenceEeg && !android
+        ? [0, 0.5, 1]
+        : [-amplitude, -amplitude / 2, 0, amplitude / 2, amplitude]
       : kind === "dsa"
-        ? [0, 4, 8, 13, 30, 45]
+        ? [iosDsa ? 1 : 0, 4, 8, 13, 30, 45]
         : [0, 50, 100];
   const yFor = (value) =>
     kind === "eeg"
-      ? top + plotHeight / 2 - ((value / amplitude) * plotHeight) / 2
-      : bottom - (value / (kind === "dsa" ? 45 : 100)) * plotHeight;
+      ? referenceEeg && !android
+        ? top + plotHeight * (0.8 - (value * 2) / 3)
+        : top + plotHeight / 2 - ((value / amplitude) * plotHeight) / 2
+      : bottom -
+        ((value - (kind === "dsa" && iosDsa ? 1 : 0)) /
+          (kind === "dsa" ? (iosDsa ? 44 : 45) : 100)) *
+          plotHeight;
   const xFor = (value) =>
     left +
     ((value - range.start) / Math.max(0.0001, range.end - range.start)) *
@@ -66,19 +86,29 @@ export default function RecordingPlot({
   const sweep = React.useMemo(
     () =>
       kind === "eeg"
-        ? createEegSweepPath({
+        ? (referenceEeg
+            ? settings.eegMotion !== "scroll"
+              ? createReferenceSweepPath
+              : android
+                ? createAndroidEegPath
+                : createReferenceEegPath
+            : createEegSweepPath)({
             ...geometry,
-            samples: data?.filtered,
-            sampleRate: data?.recording?.sampleRate,
+            samples: data?.eeg?.samples || data?.filtered,
+            sampleRate: data?.eeg?.sampleRate || data?.recording?.sampleRate,
             amplitude,
             position,
             duration,
             windowSeconds: eegWindow,
+            profile: data?.referenceProfile,
           })
         : null,
     [
       kind,
       data?.filtered,
+      data?.eeg,
+      referenceEeg,
+      android,
       data?.recording?.sampleRate,
       range.start,
       range.end,
@@ -90,6 +120,7 @@ export default function RecordingPlot({
       position,
       duration,
       eegWindow,
+      settings.eegMotion,
     ],
   );
   return (
@@ -117,19 +148,30 @@ export default function RecordingPlot({
           <rect x={left} y={top} width={plotWidth} height={plotHeight} />
         </clipPath>
       </defs>
-      <rect width={width} height={height} fill="#030a0d" />
+      <rect
+        width={width}
+        height={height}
+        fill={
+          kind === "dsa" && android
+            ? "#00007f"
+            : referenceEeg || referenceDsa
+              ? "#000000"
+              : "#030a0d"
+        }
+      />
       <g clipPath={`url(#${clipId})`}>
         {kind === "dsa" && imageUrl && imageBounds && (
           <image
             href={imageUrl}
             {...imageBounds}
             preserveAspectRatio="none"
-            style={{ imageRendering: "pixelated" }}
+            style={{ imageRendering: android ? "auto" : "pixelated" }}
           />
         )}
         {values.map(
           (value) =>
-            (settings.guides || (kind === "eeg" && value === 0)) && (
+            (settings.guides ||
+              (kind === "eeg" && !referenceEeg && value === 0)) && (
               <line
                 key={value}
                 x1={left}
@@ -163,7 +205,7 @@ export default function RecordingPlot({
           <path
             d={sweep.path}
             fill="none"
-            stroke="#edfff6"
+            stroke="#ffffff"
             strokeWidth="1.25"
           />
         )}
@@ -173,9 +215,12 @@ export default function RecordingPlot({
               key={metric}
               d={createSeriesPath({
                 ...geometry,
-                points: data?.recording?.frames,
-                metric: (frame) => frame.indices?.[metric],
-                maxGap: 0.375,
+                points: data?.recording?.trendFrames || data?.recording?.frames,
+                metric: (frame) =>
+                  !referenceDsa || frame.time <= position
+                    ? frame.indices?.[metric]
+                    : null,
+                maxGap: android ? 1.5 : 0.375,
               })}
               fill="none"
               stroke={color}
@@ -188,7 +233,8 @@ export default function RecordingPlot({
             [settings.sef95, "sef95", "#ffacdf"],
           ].map(
             ([enabled, metric, color]) =>
-              enabled && (
+              enabled &&
+              !referenceDsa && (
                 <path
                   key={metric}
                   d={createSeriesPath({
@@ -205,8 +251,11 @@ export default function RecordingPlot({
               ),
           )}
         {duration > 0 &&
-          (kind === "eeg" ||
-            (position >= range.start && position <= range.end)) && (
+          ((kind === "eeg" &&
+            (!referenceEeg || settings.eegMotion !== "scroll")) ||
+            (kind !== "eeg" &&
+              position >= range.start &&
+              position <= range.end)) && (
             <line
               x1={
                 kind === "eeg"
@@ -229,12 +278,16 @@ export default function RecordingPlot({
         <g fill="#c4d4dd">
           {kind !== "trends" && (
             <text x="6" y="15" fontSize="15">
-              {kind === "eeg" ? "µV*" : "Hz"}
+              {kind === "eeg" ? (referenceEeg ? "µV" : "µV*") : "Hz"}
             </text>
           )}
           {values.map((value) => (
             <text key={value} x="6" y={yFor(value)} dominantBaseline="middle">
-              {value}
+              {kind === "eeg" && referenceEeg && !android
+                ? value === 0.5
+                  ? amplitude
+                  : "-"
+                : value}
             </text>
           ))}
           {Array.from({ length: 5 }, (_, index) => (
@@ -248,7 +301,7 @@ export default function RecordingPlot({
             >
               {kind === "eeg"
                 ? `${(eegWindow * index) / 4} s`
-                : formatPosition(
+                : formatPlotPosition(
                     range.start + ((range.end - range.start) * index) / 4,
                   )}
             </text>

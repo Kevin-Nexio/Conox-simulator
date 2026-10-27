@@ -35,9 +35,16 @@ const WINDOWS = new Map([
   [0x0178, 159],
 ]);
 
+function normalizePdfText(value) {
+  return String(value)
+    .replaceAll("→", "->")
+    .replaceAll("−", "-")
+    .replaceAll("Ω", "Ohm");
+}
+
 /** Literal WinAnsi text keeps FR/DE labels, µ and ² selectable in the PDF. */
 export function encodePdfText(value) {
-  const normalized = String(value).replaceAll("→", "->").replaceAll("−", "-");
+  const normalized = normalizePdfText(value);
   let result = "(";
   for (const character of normalized) {
     const code = character.codePointAt(0);
@@ -158,7 +165,7 @@ function shape(element) {
   throw new ExportError("EXPORT_FAILED");
 }
 
-async function jpegImage(element, document) {
+async function pdfImage(element, document) {
   const source =
     element.getAttribute("href") || element.getAttribute("xlink:href");
   if (!/^data:image\/(png|jpeg);base64,/i.test(source || ""))
@@ -184,15 +191,22 @@ async function jpegImage(element, document) {
   context.fillStyle = "#030a0d";
   context.fillRect(0, 0, canvas.width, canvas.height);
   context.drawImage(image, 0, 0);
-  const blob = await new Promise((resolve) =>
-    canvas.toBlob(resolve, "image/jpeg", 0.98),
-  );
-  if (!blob || blob.type !== "image/jpeg")
-    throw new ExportError("EXPORT_FAILED");
+  const rgba = context.getImageData(0, 0, canvas.width, canvas.height).data;
+  const rgb = new Uint8Array(canvas.width * canvas.height * 3);
+  for (let pixel = 0; pixel < rgb.length / 3; pixel++)
+    rgb.set(rgba.subarray(pixel * 4, pixel * 4 + 3), pixel * 3);
+  const Compressor =
+    document.defaultView?.CompressionStream || globalThis.CompressionStream;
+  const compressed = Compressor
+    ? await new Response(
+        new Blob([rgb]).stream().pipeThrough(new Compressor("deflate")),
+      ).arrayBuffer()
+    : null;
   return {
     width: canvas.width,
     height: canvas.height,
-    bytes: new Uint8Array(await blob.arrayBuffer()),
+    bytes: compressed ? new Uint8Array(compressed) : rgb,
+    filter: compressed ? "/Filter /FlateDecode " : "",
   };
 }
 
@@ -243,7 +257,7 @@ function assemblePdf(content, images, states) {
   ]);
   images.forEach((image, index) =>
     object(imageStart + index, [
-      `<< /Type /XObject /Subtype /Image /Width ${image.width} /Height ${image.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${image.bytes.byteLength} >>\nstream\n`,
+      `<< /Type /XObject /Subtype /Image /Width ${image.width} /Height ${image.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Interpolate false ${image.filter}/Length ${image.bytes.byteLength} >>\nstream\n`,
       image.bytes,
       "\nendstream",
     ]),
@@ -430,7 +444,7 @@ export async function svgToPdf(svgElement) {
     if (name === "svg" || name === "g") {
       for (const child of children(element)) await visit(child, style);
     } else if (name === "image") {
-      const image = await jpegImage(element, document);
+      const image = await pdfImage(element, document);
       const index = images.length;
       images.push(image);
       alpha(style.opacity, style.opacity);
@@ -438,7 +452,7 @@ export async function svgToPdf(svgElement) {
         `${n(attrNumber(element, "width"))} 0 0 ${n(-attrNumber(element, "height"))} ${n(attrNumber(element, "x"))} ${n(attrNumber(element, "y") + attrNumber(element, "height"))} cm\n/Im${index} Do\n`,
       );
     } else if (name === "text") {
-      const text = element.textContent || "";
+      const text = normalizePdfText(element.textContent || "");
       const size = Number(style["font-size"]);
       const bold =
         Number(style["font-weight"]) >= 600 || style["font-weight"] === "bold";

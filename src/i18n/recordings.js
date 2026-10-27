@@ -1,4 +1,5 @@
 import { RECORDING_TOOLS } from "./recordingTools.js";
+import { RECORDING_REFERENCE } from "./recordingReference.js";
 
 export const RECORDING_UI = {
   de: {
@@ -65,6 +66,7 @@ export const RECORDING_UI = {
     "recording.error.TOO_LARGE":
       "Diese Datei ist für diese erste Version zu gross. Bitte einen kürzeren Fall wählen (max. 64 MB).",
     "grid.label": "Hilfslinien EEG / DSA",
+    ...RECORDING_REFERENCE.de,
   },
   fr: {
     ...RECORDING_TOOLS.fr,
@@ -130,6 +132,7 @@ export const RECORDING_UI = {
     "recording.error.TOO_LARGE":
       "Ce fichier est trop grand pour cette première version. Choisir un cas plus court (64 Mo maximum).",
     "grid.label": "Repères EEG / DSA",
+    ...RECORDING_REFERENCE.fr,
   },
   en: {
     ...RECORDING_TOOLS.en,
@@ -195,5 +198,6 @@ export const RECORDING_UI = {
     "recording.error.TOO_LARGE":
       "This file is too large for this first version. Choose a shorter case (64 MB maximum).",
     "grid.label": "EEG / DSA guides",
+    ...RECORDING_REFERENCE.en,
   },
 };

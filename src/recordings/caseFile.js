@@ -1,5 +1,10 @@
 import { clampTimelinePosition } from "./timeline.js";
 import { normalizeEventMarker } from "./eventMarkers.js";
+import {
+  LEGACY_REFERENCE_PROFILE,
+  REFERENCE_PROFILES,
+  getReferenceProfile,
+} from "./referenceProfiles.js";
 
 export const MAX_SOURCE_BYTES = 64 * 1024 * 1024;
 export const MAX_CASE_METADATA_BYTES = 1024 * 1024;
@@ -36,17 +41,24 @@ const bytesOf = (input) => {
 const matches = (bytes, offset, magic) =>
   offset >= 0 && magic.every((byte, index) => bytes[offset + index] === byte);
 
-export function createDefaultCaseState(duration, locale = "fr") {
+export function createDefaultCaseState(
+  duration,
+  locale = "fr",
+  referenceProfile = LEGACY_REFERENCE_PROFILE,
+) {
+  const profile = getReferenceProfile(referenceProfile);
   return {
+    referenceProfile: profile.id,
     locale,
     position: 0,
     speed: 1,
     selection: { start: 0, end: clampTimelinePosition(duration, duration) },
     layout: "simulator-frame",
     settings: {
-      eegWindow: 4,
+      eegMotion: "sweep",
+      eegWindow: profile.defaultEegWindow,
       amplitude: 120,
-      dsaWindow: 0,
+      dsaWindow: profile.defaultDsaWindow,
       colorOffset: 0,
       guides: true,
       sef50: false,
@@ -95,10 +107,16 @@ export function validateCaseState(state, duration) {
   )
     fail();
   const s = state.settings;
+  const referenceProfile = oneOf(
+    state.referenceProfile ?? LEGACY_REFERENCE_PROFILE,
+    Object.keys(REFERENCE_PROFILES),
+  );
+  const profile = getReferenceProfile(referenceProfile);
   return {
+    referenceProfile,
     locale: oneOf(state.locale, ["fr", "de", "en"]),
     position: time(state.position),
-    speed: oneOf(state.speed, [0.25, 0.5, 1, 2, 4]),
+    speed: oneOf(state.speed, [0.25, 0.5, 1, 2, 3, 4]),
     selection: { start, end },
     layout: oneOf(state.layout, [
       "blocks",
@@ -106,9 +124,10 @@ export function validateCaseState(state, duration) {
       "simulator-screen",
     ]),
     settings: {
-      eegWindow: oneOf(s.eegWindow, [2, 4, 8]),
-      amplitude: oneOf(s.amplitude, [25, 50, 120, 475]),
-      dsaWindow: oneOf(s.dsaWindow, [0, 60, 300, 1800]),
+      eegMotion: oneOf(s.eegMotion ?? "sweep", ["sweep", "scroll"]),
+      eegWindow: oneOf(s.eegWindow, profile.eegWindows),
+      amplitude: oneOf(s.amplitude, profile.amplitudes),
+      dsaWindow: oneOf(s.dsaWindow, profile.dsaWindows),
       colorOffset: oneOf(s.colorOffset, [-16, -12, -8, -4, 0, 4, 8, 12, 16]),
       guides: boolean(s.guides),
       sef50: boolean(s.sef50),

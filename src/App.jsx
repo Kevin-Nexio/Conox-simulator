@@ -38,7 +38,23 @@ import {
   FactRow,
 } from "./components/UiPrimitives.jsx";
 import RecordingPlayer from "./components/RecordingPlayer.jsx";
-import { isEegSweepGap } from "./simulation/eegSweep.js";
+import {
+  EEG_SAMPLE_RATE,
+  EEG_DRAW_RATE,
+  EEG_BATCH_SIZE,
+  createEegHistory,
+  appendEegSample,
+  getEegHistoryView,
+  clearEegHistory,
+  consumeEegTicks,
+} from "./simulation/eegHistory.js";
+import { LEGACY_REFERENCE_PROFILE } from "./recordings/referenceProfiles.js";
+import {
+  SIMULATION_DISPLAY,
+  normalizeSimulationDisplay,
+  simulationDsaPeriod,
+} from "./simulation/displaySettings.js";
+import { RECORDING_DSA_GRADIENT } from "./recordings/dsaScale.js";
 import {
   ConoxMonitor,
   ConoxMetrics,
@@ -228,7 +244,10 @@ function SimulatorApp({ onOpenRecording }) {
     [adjunctLevel, setAdjunctLevel] = React.useState(0),
     [opioidDrug, setOpioidDrug] = React.useState("none"),
     [opioidLevel, setOpioidLevel] = React.useState(0),
-    [eegWindowSeconds, setEegWindowSeconds] = React.useState(4),
+    [eegWindowSeconds, setEegWindowSeconds] = React.useState(
+      SIMULATION_DISPLAY.defaultEegWindow,
+    ),
+    [eegMotion, setEegMotion] = React.useState("sweep"),
     [eegAmplitude, setEegAmplitude] = React.useState(120),
     [signalGridVisible, setSignalGridVisible] = React.useState(true),
     [dsaPeriodMinutes, setDsaPeriodMinutes] = React.useState(30),
@@ -321,6 +340,7 @@ function SimulatorApp({ onOpenRecording }) {
       render: DEFAULT_RENDER_SETTINGS,
     }),
     eegWindowRef = React.useRef(eegWindowSeconds),
+    eegMotionRef = React.useRef(eegMotion),
     eegAmplitudeRef = React.useRef(eegAmplitude),
     signalGridRef = React.useRef(signalGridVisible),
     dsaPeriodRef = React.useRef(dsaPeriodMinutes),
@@ -340,6 +360,10 @@ function SimulatorApp({ onOpenRecording }) {
       qconAlarmEnabled &&
       (currentIndices.qcon < qconAlarmMin ||
         currentIndices.qcon > qconAlarmMax);
+  React.useEffect(() => {
+    if (!simulationRunning)
+      window.dispatchEvent(new Event("conox-dsa-period-change"));
+  }, [simulationRunning]);
   React.useEffect(() => {
     window.localStorage.setItem("conox.locale", locale);
     document.documentElement.lang = locale;
@@ -368,6 +392,9 @@ function SimulatorApp({ onOpenRecording }) {
     React.useEffect(() => {
       eegWindowRef.current = eegWindowSeconds;
     }, [eegWindowSeconds]),
+    React.useEffect(() => {
+      eegMotionRef.current = eegMotion;
+    }, [eegMotion]),
     React.useEffect(() => {
       eegAmplitudeRef.current = eegAmplitude;
     }, [eegAmplitude]),
@@ -975,13 +1002,11 @@ function SimulatorApp({ onOpenRecording }) {
         alpha: !1,
       });
       if (!G) return;
-      const ve = 125,
-        Ze = 25,
-        tt = ve / Ze;
-      let sweepLength = ve * eegWindowRef.current,
-        Ve = Array(sweepLength).fill(null),
-        sweepCursor = 0,
-        L = 0;
+      const ve = EEG_SAMPLE_RATE,
+        Ze = EEG_DRAW_RATE;
+      const history = createEegHistory();
+      const clock = { previous: performance.now(), remainder: 0 };
+      let L = 0;
       const ke = () => {
           const ue = simulationConfigRef.current,
             Re = simulationStateRef.current,
@@ -1133,8 +1158,12 @@ function SimulatorApp({ onOpenRecording }) {
         Mt = () => {
           const ue = A.width,
             Re = A.height,
-            Y = Re / 2,
-            Qe = ue / Math.max(1, sweepLength);
+            Y = Re / 2;
+          const view = getEegHistoryView(
+            history,
+            eegWindowRef.current,
+            eegMotionRef.current,
+          );
           let connected = false;
           ((G.fillStyle = "#010504"),
             G.fillRect(0, 0, ue, Re),
@@ -1175,39 +1204,40 @@ function SimulatorApp({ onOpenRecording }) {
             (G.lineCap = "round"),
             (G.lineJoin = "round"),
             G.beginPath(),
-            Ve.forEach((ze, ft) => {
-              // Break the path at the erase gap and at the screen boundary.
-              if (ze === null || isEegSweepGap(ft, sweepCursor, sweepLength)) {
+            view.values.forEach((ze, ft) => {
+              if (!Number.isFinite(ze)) {
                 connected = false;
                 return;
               }
-              const lt = ft * Qe,
+              const lt = (view.startFraction + ft * view.stepFraction) * ue,
                 vt = Y - (ze / eegAmplitudeRef.current) * (Re * 0.43);
               connected ? G.lineTo(lt, vt) : G.moveTo(lt, vt);
               connected = true;
             }),
             G.stroke());
-          const cursorX = sweepCursor * Qe;
-          ((G.strokeStyle = "rgba(129,211,171,.65)"),
-            (G.lineWidth = 1),
-            G.beginPath(),
-            G.moveTo(cursorX, 0),
-            G.lineTo(cursorX, Re),
-            G.stroke(),
-            R.drawImage(me, 0, 0));
+          if (view.cursorFraction !== null) {
+            const cursorX = view.cursorFraction * ue;
+            G.strokeStyle = "rgba(129,211,171,.65)";
+            G.lineWidth = 1;
+            G.beginPath();
+            G.moveTo(cursorX, 0);
+            G.lineTo(cursorX, Re);
+            G.stroke();
+          }
+          R.drawImage(me, 0, 0);
         },
         rl = () => {
-          const nextLength = ve * eegWindowRef.current;
-          if (nextLength !== sweepLength) {
-            sweepLength = nextLength;
-            Ve = Array(sweepLength).fill(null);
-            sweepCursor = 0;
+          const ticks = consumeEegTicks(
+            clock,
+            performance.now(),
+            simulationConfigRef.current.running,
+          );
+          if (clock.discontinuity) {
+            clearEegHistory(history);
           }
-          if (simulationConfigRef.current.running) {
-            for (let ue = 0; ue < tt; ue += 1) {
-              Ve[sweepCursor] = ke();
-              sweepCursor = (sweepCursor + 1) % sweepLength;
-            }
+          for (let index = 0; index < ticks * EEG_BATCH_SIZE; index++) {
+            const sample = ke();
+            appendEegSample(history, sample);
           }
           Mt();
         };
@@ -1725,7 +1755,7 @@ function SimulatorApp({ onOpenRecording }) {
     toggleLiveSync = () => {
       setLiveSync((A) => {
         if (A) {
-          setDsaPeriodMinutes(originalDsaPeriod.current);
+          setDsaPeriodMinutes(simulationDsaPeriod(originalDsaPeriod.current));
         } else {
           dsaPeriodMinutes !== 1 &&
             (originalDsaPeriod.current = dsaPeriodMinutes);
@@ -1881,9 +1911,12 @@ function SimulatorApp({ onOpenRecording }) {
       opioidLevel,
       bolusEpochs,
       eegWindowSeconds,
+      eegMotion,
+      referenceProfile: LEGACY_REFERENCE_PROFILE,
       eegAmplitude,
       signalGridVisible,
       dsaPeriodMinutes,
+      originalDsaPeriodMinutes: originalDsaPeriod.current,
       dsaColorScale,
       liveSync,
       qconAlarmEnabled,
@@ -1910,6 +1943,7 @@ function SimulatorApp({ onOpenRecording }) {
       opioidLevel,
       bolusEpochs,
       eegWindowSeconds,
+      eegMotion,
       eegAmplitude,
       signalGridVisible,
       dsaPeriodMinutes,
@@ -1991,10 +2025,13 @@ function SimulatorApp({ onOpenRecording }) {
         });
         setBolusEpochs(nextEpochs);
       }
-      setEegWindowSeconds(snapshot.eegWindowSeconds ?? 4);
-      setEegAmplitude(snapshot.eegAmplitude ?? 120);
+      const displaySettings = normalizeSimulationDisplay(snapshot);
+      originalDsaPeriod.current = displaySettings.originalDsaPeriodMinutes;
+      setEegWindowSeconds(displaySettings.eegWindowSeconds);
+      setEegMotion(displaySettings.eegMotion);
+      setEegAmplitude(displaySettings.eegAmplitude);
       setSignalGridVisible(snapshot.signalGridVisible !== false);
-      setDsaPeriodMinutes(snapshot.dsaPeriodMinutes ?? 30);
+      setDsaPeriodMinutes(displaySettings.dsaPeriodMinutes);
       setDsaColorScale(snapshot.dsaColorScale ?? 0);
       setLiveSync(Boolean(snapshot.liveSync));
       setQconAlarmEnabled(Boolean(snapshot.qconAlarmEnabled));
@@ -2294,7 +2331,7 @@ function SimulatorApp({ onOpenRecording }) {
               caption={
                 <>
                   <b>{"EEG"}</b>
-                  <span>{t("eeg.frontal")}</span>
+                  <span>{t("reference.eegChannel")}</span>
                   <em>
                     {eegWindowSeconds}
                     {" s"}
@@ -2303,10 +2340,10 @@ function SimulatorApp({ onOpenRecording }) {
               }
               scale={
                 <>
-                  <span>{"+"}</span>
+                  <span>{"-"}</span>
                   <b>{eegAmplitude}</b>
                   <small>{"µV"}</small>
-                  <span>{"−"}</span>
+                  <span>{"-"}</span>
                 </>
               }
               hints={
@@ -2331,7 +2368,7 @@ function SimulatorApp({ onOpenRecording }) {
                 <>
                   <b>{"DSA"}</b>
                   <span ref={eegStatusRef}>{t("eeg.status.active")}</span>
-                  <em>{t("dsa.transition")}</em>
+                  <em>{t("reference.legacyDsa")}</em>
                   <div className="sb-dsa-caption-actions">
                     <button
                       type="button"
@@ -2384,6 +2421,7 @@ function SimulatorApp({ onOpenRecording }) {
                 <>
                   <div
                     className="sb-db-gradient"
+                    style={{ background: RECORDING_DSA_GRADIENT }}
                     role="img"
                     aria-label={t("dsa.scale")}
                   />
@@ -2867,25 +2905,31 @@ function SimulatorApp({ onOpenRecording }) {
               <h2>{t("display.heading")}</h2>
               <div className="sb-form-grid">
                 <SelectField
+                  label={t("reference.eegMotion")}
+                  value={eegMotion}
+                  onChange={setEegMotion}
+                  options={[
+                    ["sweep", t("reference.sweep")],
+                    ["scroll", t("reference.scroll")],
+                  ]}
+                />
+                <SelectField
                   label={t("display.window")}
                   value={eegWindowSeconds}
                   onChange={(A) => setEegWindowSeconds(Number(A))}
-                  options={[
-                    ["2", t("display.seconds", { count: 2 })],
-                    ["4", t("display.seconds", { count: 4 })],
-                    ["8", t("display.seconds", { count: 8 })],
-                  ]}
+                  options={SIMULATION_DISPLAY.eegWindows.map((seconds) => [
+                    String(seconds),
+                    t("display.seconds", { count: seconds }),
+                  ])}
                 />
                 <SelectField
                   label={t("display.amplitude")}
                   value={eegAmplitude}
                   onChange={(A) => setEegAmplitude(Number(A))}
-                  options={[
-                    ["25", "25 µV"],
-                    ["50", "50 µV"],
-                    ["120", "120 µV"],
-                    ["475", "475 µV"],
-                  ]}
+                  options={SIMULATION_DISPLAY.amplitudes.map((value) => [
+                    String(value),
+                    `${value} µV`,
+                  ])}
                 />
                 <SelectField
                   label={t("display.period")}
@@ -2911,6 +2955,9 @@ function SimulatorApp({ onOpenRecording }) {
                   <strong>{"0–45 Hz · −30/+50 dB"}</strong>
                 </div>
               </div>
+              <p className="sb-reference-note">
+                {t("reference.synthetic")} {t("reference.legacyDsaHelp")}
+              </p>
               <h2>{t("alarm.heading")}</h2>
               <div
                 className={`sb-qcon-alarm-control ${qconAlarmEnabled ? "active" : ""} ${qconAlarmTriggered ? "triggered" : ""}`}

@@ -1,15 +1,25 @@
 import * as React from "react";
-import { dsaDbToRgb } from "../simulation/engine.js";
 import { formatPosition } from "../recordings/playback.js";
-import { getRecordedIndices } from "../recordings/vectorPlots.js";
+import { getRecordedFrame } from "../recordings/vectorPlots.js";
+import { impedanceReadout } from "./RecordingImpedances.jsx";
+import {
+  RECORDING_DSA_STOPS,
+  getDsaScaleTicks,
+} from "../recordings/dsaScale.js";
 import RecordingPlot from "./RecordingPlot.jsx";
+import nativeLegend from "../assets/conoxview-dsa-scale.png?inline";
+import androidLegend from "../assets/conoxview-android-dsa-scale.png?inline";
+import {
+  getReferenceProfile,
+  isNativeSpectrum,
+} from "../recordings/referenceProfiles.js";
 
 const METRICS = [
-  ["qCON", "qcon", "#70ec8f"],
-  ["qNOX", "qnox", "#ffdb67"],
-  ["BSR", "bsr", "#ff8d94"],
+  ["qCON", "qcon", "#ffffff"],
+  ["qNOX", "qnox", "#ffff00"],
+  ["BSR", "bsr", "#ff0000"],
   ["SQI", "sqi", "#70ec8f"],
-  ["EMG", "emg", "#76c9ff"],
+  ["EMG", "emg", "#0080ff"],
 ];
 
 function Text({
@@ -56,7 +66,11 @@ const RecordingBlockView = React.forwardRef(function RecordingBlockView(
   ref,
 ) {
   const gradientId = `recording-dsa-scale-${React.useId().replaceAll(":", "")}`;
-  const indices = getRecordedIndices(data?.recording, position);
+  const frame = getRecordedFrame(data?.recording, position);
+  const indices = frame?.indices;
+  const nativeSpectrum = isNativeSpectrum(data?.spectrum);
+  const profile = getReferenceProfile(data?.referenceProfile);
+  const android = profile.id === "android-2.4";
   const normalized = {
     eegWindow: 4,
     amplitude: 120,
@@ -92,16 +106,9 @@ const RecordingBlockView = React.forwardRef(function RecordingBlockView(
       <title>{t("recording.layout.blocks")}</title>
       <defs>
         <linearGradient id={gradientId} x1="0" y1="1" x2="0" y2="0">
-          {Array.from({ length: 41 }, (_, step) => {
-            const [red, green, blue] = dsaDbToRgb(-30 + step * 2);
-            return (
-              <stop
-                key={step}
-                offset={`${step * 2.5}%`}
-                stopColor={`rgb(${red},${green},${blue})`}
-              />
-            );
-          })}
+          {RECORDING_DSA_STOPS.map(({ db, color, fraction }) => (
+            <stop key={db} offset={`${fraction * 100}%`} stopColor={color} />
+          ))}
         </linearGradient>
       </defs>
       <rect width="1600" height="1200" fill="#071118" />
@@ -112,12 +119,18 @@ const RecordingBlockView = React.forwardRef(function RecordingBlockView(
         {formatPosition(position, true)} / {formatPosition(duration)}
       </Text>
       <Text x={42} y={89} size={20} color="#f3c981">
-        {t("recording.experimentalShort")}
+        {profile.name} · {t("recording.experimentalShort")}
       </Text>
 
       <Box x={42} y={124} width={1516} height={134} fill="#02090d" />
       <Text x={64} y={151} size={19} color="#b6c8d1">
-        {t("recording.indices")}
+        {t("recording.state." + (frame?.monitorState?.kind || "unknown"), {
+          code: frame?.status,
+        })}
+      </Text>
+      <Text x={1534} y={151} size={19} color="#b6c8d1" align="end">
+        {t("recording.impedance")} (kΩ) ·{" "}
+        {impedanceReadout(frame?.impedances, frame?.impedanceStates)}
       </Text>
       {METRICS.map(([label, key, color], index) => (
         <g key={key}>
@@ -132,7 +145,11 @@ const RecordingBlockView = React.forwardRef(function RecordingBlockView(
             bold
             align="end"
           >
-            {Number.isFinite(indices?.[key]) ? indices[key] : "--"}
+            {Number.isFinite(indices?.[key])
+              ? indices[key]
+              : android
+                ? ""
+                : "--"}
           </Text>
         </g>
       ))}
@@ -142,7 +159,8 @@ const RecordingBlockView = React.forwardRef(function RecordingBlockView(
         {t("recording.eeg")}
       </Text>
       <Text x={1534} y={304} size={19} color="#b6c8d1" align="end">
-        {normalized.eegWindow} s · ±{normalized.amplitude} µV*
+        {normalized.eegWindow} s · {android ? "±" : ""}
+        {normalized.amplitude} µV
       </Text>
       <RecordingPlot
         {...plotProps}
@@ -155,17 +173,22 @@ const RecordingBlockView = React.forwardRef(function RecordingBlockView(
 
       <Box x={42} y={559} width={1516} height={328} />
       <Text x={64} y={586} size={20} color="#dceaf0" bold>
-        {t("recording.dsa")}
+        {t(`recording.dsa.${profile.id}`)}
       </Text>
       <Text x={1540} y={586} size={17} color="#b6c8d1" align="end">
-        dB / µV²/Hz
+        {android
+          ? "FFT (dB)"
+          : nativeSpectrum
+            ? t("recording.referenceScale")
+            : "dB / µV²/Hz"}
       </Text>
       {[
         [normalized.sef50, "SEF50", "#ffffff"],
         [normalized.sef95, "SEF95", "#ffacdf"],
       ].map(
         ([enabled, label, color], index) =>
-          enabled && (
+          enabled &&
+          !nativeSpectrum && (
             <g key={label}>
               <line
                 x1={900 + index * 119}
@@ -189,24 +212,39 @@ const RecordingBlockView = React.forwardRef(function RecordingBlockView(
         width={1372}
         height={257}
       />
-      <rect
-        x="1444"
-        y={scaleTop}
-        width="31"
-        height={scaleHeight}
-        fill={`url(#${gradientId})`}
-        stroke="#6a7a84"
-      />
-      {[0, 1, 2, 3, 4].map((step) => (
-        <Text
-          key={step}
-          x={1482}
-          y={scaleTop + (step * scaleHeight) / 4}
-          size={17}
-        >
-          {50 - step * 20 - normalized.colorOffset}
-        </Text>
-      ))}
+      {nativeSpectrum ? (
+        <image
+          href={android ? androidLegend : nativeLegend}
+          x="1444"
+          y={scaleTop}
+          width="80"
+          height={scaleHeight}
+          preserveAspectRatio="none"
+        />
+      ) : (
+        <>
+          <rect
+            x="1444"
+            y={scaleTop}
+            width="31"
+            height={scaleHeight}
+            fill={`url(#${gradientId})`}
+            stroke="#6a7a84"
+          />
+          {getDsaScaleTicks(normalized.colorOffset).map(
+            ({ value, fraction }) => (
+              <Text
+                key={fraction}
+                x={1482}
+                y={scaleTop + fraction * scaleHeight}
+                size={17}
+              >
+                {value}
+              </Text>
+            ),
+          )}
+        </>
+      )}
 
       <Box x={42} y={907} width={1516} height={232} />
       <Text x={64} y={934} size={20} color="#dceaf0" bold>
@@ -238,7 +276,7 @@ const RecordingBlockView = React.forwardRef(function RecordingBlockView(
         height={172}
       />
       <Text x={42} y={1170} size={17} color="#95acb9">
-        {t("recording.dsaMethod")}
+        {t(`recording.dsaMethod.${profile.id}`)}
       </Text>
     </svg>
   );

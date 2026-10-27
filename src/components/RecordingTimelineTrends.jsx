@@ -2,11 +2,11 @@ import * as React from "react";
 import { createSeriesPath } from "../recordings/vectorPlots.js";
 
 export const TIMELINE_INDICES = [
-  ["qcon", "qCON", "#70ec8f"],
-  ["qnox", "qNOX", "#ffdb67"],
-  ["bsr", "BSR", "#ff8d94"],
+  ["qcon", "qCON", "#ffffff"],
+  ["qnox", "qNOX", "#ffff00"],
+  ["bsr", "BSR", "#ff0000"],
   ["sqi", "SQI", "#c7a5ff"],
-  ["emg", "EMG", "#76c9ff"],
+  ["emg", "EMG", "#0080ff"],
 ];
 
 // Paths depend on the case, not the playhead: scrubbing only moves the cursor.

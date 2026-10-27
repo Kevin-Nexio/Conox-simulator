@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { sealConoxFrame } from "./fixtures/conoxProtocol.mjs";
 
 import { CxbinParseError, parseCxbin } from "../src/recordings/cxbin.js";
 import {
@@ -27,10 +28,10 @@ function frame({
   bytes[17] = status;
   for (const [key, offset] of Object.entries({
     qcon: 18,
-    qnox: 19,
+    qnox: 25,
     bsr: 20,
     sqi: 21,
-    emg: 25,
+    emg: 19,
   })) {
     bytes[offset] = indices[key];
   }
@@ -40,6 +41,8 @@ function frame({
     bytes[27 + 3 * i] = (raw >>> 8) & 0xff;
     bytes[28 + 3 * i] = raw & 0xff;
   }
+  for (let i = 0; i < 32; i++) view.setUint16(794 + i * 2, 31000 + i, false);
+  bytes[881] = (counter - 1) % 5;
   bytes.set(new TextEncoder().encode(caseId), 883);
   const clock = new Date(time);
   bytes.set(
@@ -53,7 +56,7 @@ function frame({
     ],
     959,
   );
-  return bytes;
+  return sealConoxFrame(bytes);
 }
 
 function joinFrames(...frames) {
@@ -104,9 +107,104 @@ test("decode offset-binary boundaries without losing buffer-view offsets", () =>
   assert.equal(result.frames[0].status, 128);
   assert.equal(result.experimental, true);
   assert.equal(result.calibration.verified, false);
-  assert.equal(result.indicesVerified, false);
+  assert.equal(result.indicesVerified, true);
   assert.equal(result.startedAt, "2026-01-02T03:04:05");
   assert.equal(result.clockTimezone, null);
+});
+
+test("wire byte 19 is EMG and byte 25 is qNOX, independently of fixture labels", () => {
+  const bytes = frame();
+  bytes.set([41, 6, 0, 100, 1, 2, 3, 73], 18);
+  sealConoxFrame(bytes);
+  const recording = parseCxbin(bytes);
+  const decoded = recording.frames[0];
+  assert.deepEqual(decoded.indices, {
+    qcon: 41,
+    qnox: 73,
+    bsr: 0,
+    sqi: 100,
+    emg: 6,
+  });
+  assert.deepEqual(decoded.impedances, [1, 2, 3]);
+  assert.deepEqual(decoded.rawImpedances, [1, 2, 3]);
+  assert.equal(recording.impedancesVerified, true);
+
+  bytes[19] = 100;
+  bytes[25] = 99;
+  sealConoxFrame(bytes);
+  assert.equal(parseCxbin(bytes).frames[0].indices.emg, 100);
+  assert.equal(parseCxbin(bytes).frames[0].indices.qnox, 99);
+  bytes[25] = 100;
+  sealConoxFrame(bytes);
+  assert.equal(parseCxbin(bytes).frames[0].indices.qnox, 100);
+  bytes[19] = 128;
+  sealConoxFrame(bytes);
+  assert.equal(parseCxbin(bytes).frames[0].indices.emg, null);
+});
+
+test("display EEG and nine spectral coefficients use the literal native offsets", () => {
+  const bytes = frame();
+  const view = new DataView(bytes.buffer);
+  view.setUint16(794, 0, false);
+  view.setUint16(796, 31000, false);
+  view.setUint16(856, 65535, false);
+  bytes[881] = 4;
+  const offsets = [882, 928, 929, 930, 931, 932, 933, 941, 942];
+  offsets.forEach((offset, i) => {
+    bytes[offset] = 17 + i;
+  });
+  sealConoxFrame(bytes);
+  const copy = bytes.slice();
+  const result = parseCxbin(bytes);
+  assert.equal(result.referenceEeg.sampleRate, 128);
+  assert.equal(result.referenceEeg.samples.length, 32);
+  assert.deepEqual([...result.referenceEeg.samples.slice(0, 2)], [0, 31000]);
+  assert.equal(result.referenceEeg.samples.at(-1), 65535);
+  assert.equal(result.referenceSpectrum.groups[0], 4);
+  assert.deepEqual(
+    [...result.referenceSpectrum.values],
+    [17, 18, 19, 20, 21, 22, 23, 24, 25],
+  );
+  assert.deepEqual(result.integrity, {
+    algorithm: "CRC-16/ARC",
+    verified: true,
+    checkedFrames: 1,
+  });
+  assert.deepEqual(bytes, copy);
+});
+
+test("electrode checks leave gaps and preserve unknown impedance codes", () => {
+  const readings = [
+    [0, 5, 10],
+    [128, 128, 128],
+    [1, 128, 128],
+    [1, 2, 3],
+    [15, 127, 255],
+  ];
+  const bytes = readings.map((values, i) => {
+    const next = frame({
+      counter: i + 1,
+      time: BASE_TIME + Math.floor(i / 4) * 1000,
+    });
+    next.set(values, 22);
+    return sealConoxFrame(next);
+  });
+  const recording = parseCxbin(joinFrames(...bytes));
+  assert.deepEqual(
+    recording.frames.map((f) => f.impedances),
+    [
+      [null, 5, 10],
+      [null, null, null],
+      [1, null, null],
+      [1, 2, 3],
+      [null, null, null],
+    ],
+  );
+  assert.deepEqual(
+    recording.frames.map((f) => f.rawImpedances),
+    readings,
+  );
+  assert.equal(recording.frames[4].impedanceStates[0].kind, "tooHigh");
 });
 
 test("exclude a previous-case prefix and keep the dominant case contiguous", () => {
@@ -140,7 +238,7 @@ test("do not display unsupported index values and preserve the original bytes", 
   );
   assert.deepEqual(result.frames[0].indices, {
     qcon: 99,
-    qnox: null,
+    qnox: 100,
     bsr: 100,
     sqi: null,
     emg: null,
@@ -154,7 +252,7 @@ test("do not display unsupported index values and preserve the original bytes", 
   });
   assert.deepEqual(
     result.warnings.find((warning) => warning.code === "invalidIndices"),
-    { code: "invalidIndices", count: 3 },
+    { code: "invalidIndices", count: 2 },
   );
 });
 
@@ -202,13 +300,15 @@ test("reject incomplete, unsupported, and damaged frames", () => {
   );
   const damaged = joinFrames(frame(), frame({ counter: 2 }));
   damaged[1024 + 4] = 0;
-  assert.throws(() => parseCxbin(damaged), hasCode("CORRUPT_FRAME"));
+  assert.throws(() => parseCxbin(damaged), hasCode("FRAME_CRC_MISMATCH"));
   const wrongCase = frame();
   wrongCase[883] = 0;
+  sealConoxFrame(wrongCase);
   assert.throws(() => parseCxbin(wrongCase), hasCode("INVALID_CASE_ID"));
   const wrongDate = frame();
   wrongDate[962] = 30;
   wrongDate[963] = 2;
+  sealConoxFrame(wrongDate);
   assert.throws(() => parseCxbin(wrongDate), hasCode("INVALID_TIMESTAMP"));
 });
 

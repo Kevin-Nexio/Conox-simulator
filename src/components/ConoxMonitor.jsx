@@ -1,6 +1,7 @@
 import { Metric } from "./UiPrimitives.jsx";
 
-const valueOrGap = (value) => (Number.isFinite(value) ? value : "--");
+const valueOrGap = (value, missing = "--") =>
+  Number.isFinite(value) ? value : missing;
 
 export function ConoxMonitor({
   frameControls,
@@ -39,13 +40,29 @@ export function ConoxMonitor({
   );
 }
 
-export function ConoxMetrics({ indices }) {
+export function ConoxMetrics({ indices, missingValue = "--" }) {
   return (
     <div className="sb-metrics">
-      <Metric label="SQI" value={valueOrGap(indices?.sqi)} tone="green" />
-      <Metric label="EMG" value={valueOrGap(indices?.emg)} tone="blue" />
-      <Metric label="BSR" value={valueOrGap(indices?.bsr)} tone="red" />
-      <Metric label="qNOX" value={valueOrGap(indices?.qnox)} tone="yellow" />
+      <Metric
+        label="SQI"
+        value={valueOrGap(indices?.sqi, missingValue)}
+        tone="green"
+      />
+      <Metric
+        label="EMG"
+        value={valueOrGap(indices?.emg, missingValue)}
+        tone="blue"
+      />
+      <Metric
+        label="BSR"
+        value={valueOrGap(indices?.bsr, missingValue)}
+        tone="red"
+      />
+      <Metric
+        label="qNOX"
+        value={valueOrGap(indices?.qnox, missingValue)}
+        tone="yellow"
+      />
     </div>
   );
 }
@@ -114,7 +131,13 @@ export function ConoxBell({ className }) {
   );
 }
 
-export function ConoxQconPanel({ value, valueClassName, status }) {
+export function ConoxQconPanel({
+  value,
+  valueClassName,
+  status,
+  statusClassName,
+  missingValue = "--",
+}) {
   return (
     <section className="sb-qcon">
       <div>
@@ -122,9 +145,9 @@ export function ConoxQconPanel({ value, valueClassName, status }) {
         {" qCON"}
       </div>
       <strong className={valueClassName} aria-live="polite">
-        {valueOrGap(value)}
+        {valueOrGap(value, missingValue)}
       </strong>
-      <small>{status}</small>
+      <small className={statusClassName}>{status}</small>
     </section>
   );
 }

@@ -1,10 +1,12 @@
 import * as React from "react";
 import { createRoot } from "react-dom/client";
+import { createDsaImage } from "../recordings/rendering.js";
 import { flushSync } from "react-dom";
 import RecordingBlockView from "./RecordingBlockView.jsx";
 import RecordingSimulatorView from "./RecordingSimulatorView.jsx";
 import { getPresentationSize } from "../recordings/presentation.js";
 import { snapshotElementToCanvas } from "../recordings/domExport.js";
+import { isNativeSpectrum } from "../recordings/referenceProfiles.js";
 
 /** Render the same native scene independently, leaving the UI playhead untouched. */
 export function createRecordingExportScene(options) {
@@ -32,8 +34,13 @@ export function createRecordingExportScene(options) {
       if (disposed || signal?.aborted) throw { code: "EXPORT_ABORTED" };
       const Component =
         layout === "blocks" ? RecordingBlockView : RecordingSimulatorView;
+      const dsaImage = isNativeSpectrum(options.data.spectrum)
+        ? createDsaImage(options.data.spectrum, 0, position)
+        : options.dsaImage;
       flushSync(() =>
-        root.render(<Component {...options} position={position} />),
+        root.render(
+          <Component {...options} dsaImage={dsaImage} position={position} />,
+        ),
       );
       // The wordmark has an automatic height. Resolve intrinsic image sizes
       // before reading computed layout, including the first exported frame.

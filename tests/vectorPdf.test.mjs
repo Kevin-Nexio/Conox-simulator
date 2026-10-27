@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { inflateSync } from "node:zlib";
 import { encodePdfText, svgToPdf } from "../src/recordings/vectorPdf.js";
 
 function element(name, attributes = {}, childElements = [], text = "") {
@@ -107,6 +108,7 @@ test("PDF text encoding preserves French, German and scientific characters safel
     "(\\265V\\262 \\351\\344\\222 \\(CONOX\\) \\\\)",
   );
   assert.equal(encodePdfText("0 → 10"), "(0 -> 10)");
+  assert.equal(encodePdfText("1 kΩ"), "(1 kOhm)");
 });
 
 test("block SVG exports actual PDF text and paths with byte-correct object offsets", async () => {
@@ -125,7 +127,23 @@ test("block SVG exports actual PDF text and paths with byte-correct object offse
   assert.doesNotMatch(text, /NaN|Infinity/);
 });
 
-test("only the DSA image becomes a JPEG XObject, never the whole overview", async () => {
+test("right-aligned impedance units are measured in the same spelling as the PDF text", async () => {
+  const root = fixture();
+  root.children.push(
+    element(
+      "text",
+      { x: 100, y: 70, fill: "#ffffff", "text-anchor": "end" },
+      [],
+      "1 kΩ",
+    ),
+  );
+  const bytes = await (await svgToPdf(root)).arrayBuffer();
+  const text = checkOffsets(Buffer.from(bytes));
+  // Without a canvas, width is length * font-size / 2: six characters at 20 px.
+  assert.match(text, /1 0 0 -1 40 70 Tm\n\(1 kOhm\) Tj/);
+});
+
+test("DSA pixels stay lossless in a PDF XObject without smearing missing columns", async () => {
   const root = fixture();
   root.children.push(
     element("image", {
@@ -136,7 +154,15 @@ test("only the DSA image becomes a JPEG XObject, never the whole overview", asyn
       href: "data:image/png;base64,AA==",
     }),
   );
-  const jpeg = new Uint8Array([255, 216, 17, 33, 255, 217]);
+  const rgb = Uint8Array.from([
+    0, 0, 255, 255, 0, 0, 0, 0, 0, 127, 255, 127, 255, 255, 0, 0, 0, 0,
+  ]);
+  const rgba = Uint8Array.from(
+    Array.from({ length: 6 }, (_, i) => [
+      ...rgb.slice(i * 3, i * 3 + 3),
+      255,
+    ]).flat(),
+  );
   class Image {
     naturalWidth = 2;
     naturalHeight = 3;
@@ -152,10 +178,8 @@ test("only the DSA image becomes a JPEG XObject, never the whole overview", asyn
           fillRect() {},
           drawImage() {},
           measureText: () => ({ width: 200 }),
+          getImageData: () => ({ data: rgba }),
         }),
-        toBlob(callback, type) {
-          callback(new Blob([jpeg], { type }));
-        },
       };
     },
   };
@@ -170,10 +194,14 @@ test("only the DSA image becomes a JPEG XObject, never the whole overview", asyn
   assert.match(text, /\/Width 2 \/Height 3/);
   assert.doesNotMatch(text, /\/Width 1600 \/Height 1200/);
   assert.match(text, /1372 0 0 -257 57 870 cm\n\/Im0 Do/);
+  assert.match(text, /\/Interpolate false \/Filter \/FlateDecode/);
+  assert.doesNotMatch(text, /\/DCTDecode/);
+  const image = text.slice(text.indexOf("/Subtype /Image"));
+  const length = Number(/\/Length (\d+)/.exec(image)[1]);
   const start = text.indexOf("stream\n", text.indexOf("/Subtype /Image")) + 7;
   assert.deepEqual(
-    bytes.subarray(start, start + jpeg.length),
-    Buffer.from(jpeg),
+    inflateSync(bytes.subarray(start, start + length)),
+    Buffer.from(rgb),
   );
   assert.match(text, /CONOX .* Tj/);
 });
