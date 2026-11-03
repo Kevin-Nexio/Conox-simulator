@@ -3804,3 +3804,278 @@ body:has(.game-app),
   border-radius: 0;
   box-shadow: none;
 }
+
+/* Bedside context and a slower, explicitly illustrative clinical sequence. */
+.clinical-discovery .simple-stage.show-room {
+  max-width: 1280px;
+  border-color: #a9cdd0;
+  background: #e5f1f2;
+}
+.clinical-room {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(290px, 1fr);
+  align-items: center;
+  overflow-y: auto;
+  padding: clamp(12px, 2vw, 24px);
+  gap: 16px;
+}
+.clinical-illustration {
+  min-width: 0;
+}
+.clinical-room-label {
+  display: inline-block;
+  padding: 6px 10px;
+  margin-left: 16px;
+  border-radius: 8px;
+  color: #fff;
+  background: #257e87;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+.clinical-illustration svg {
+  display: block;
+  width: 100%;
+  max-height: 365px;
+}
+.clinical-room-caption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px 8px;
+  font-size: 12px;
+  color: #3c6876;
+}
+.clinical-room-caption b {
+  color: #20596d;
+  font-size: 15px;
+}
+.clinical-briefing {
+  align-self: center;
+  background: #fff;
+  border: 1px solid #c6dbdf;
+  border-radius: 18px;
+  overflow: hidden;
+}
+.clinical-goal {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  align-items: center;
+  background: #1e6674;
+  color: #fff;
+  padding: 14px 18px;
+}
+.clinical-goal > span {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.9px;
+}
+.clinical-goal b {
+  grid-row: span 2;
+  font-size: 27px;
+}
+.clinical-goal small {
+  color: #deeff1;
+  font-size: 13px;
+}
+.clinical-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 14px 0;
+}
+.clinical-tabs button {
+  min-height: 44px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid #bdd3dc;
+  border-radius: 10px;
+  color: #31566e;
+  background: #f1f7fa;
+}
+.clinical-tabs button[aria-pressed="true"] {
+  color: #fff;
+  border-color: #216b94;
+  background: #216b94;
+}
+.clinical-detail {
+  min-height: 144px;
+  padding: 16px 18px 20px;
+}
+.clinical-detail h2 {
+  font-size: 18px;
+  color: #214a64;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+.clinical-detail p {
+  font-size: 14px;
+  line-height: 1.55;
+  color: #496777;
+}
+.clinical-monitor-stage {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+}
+.clinical-sequence {
+  flex: none;
+  align-self: center;
+  width: min(100%, 700px);
+  padding: 10px 14px;
+  border: 1px solid #dfc59b;
+  border-radius: 12px;
+  background: #fff7e9;
+  color: #80511e;
+}
+.clinical-sequence > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+.clinical-sequence span {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.clinical-sequence progress {
+  width: 100%;
+  height: 7px;
+  display: block;
+  margin: 8px 0;
+  accent-color: #b7782d;
+}
+.clinical-sequence small {
+  font-size: 11px;
+}
+.clinical-discovery .simple-bottom {
+  flex-wrap: wrap;
+}
+.clinical-discovery .simple-bottom .game-text-button {
+  min-height: 44px;
+  color: #326b7d;
+}
+.clinical-sources {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+}
+.clinical-sources a {
+  color: #216791;
+  font-size: 13px;
+}
+.pathways-app .path-icon.mint,
+.pathways-app .mint .path-icon {
+  color: #176c59;
+  background: #c3e8d6;
+}
+.pathways-app .blue .path-icon {
+  color: #1c5eaa;
+  background: #cbe1ff;
+}
+.pathways-app .lavender .path-icon {
+  color: #7144b1;
+  background: #e2d1fa;
+}
+.pathways-app .path-tool-buttons .selected {
+  background: #c7e3f4;
+  border-color: #3979a2;
+  color: #174c73;
+}
+.clinical-discovery .simple-action > .game-primary {
+  background: #26785f;
+  border-color: #1d604d;
+}
+.clinical-discovery .simple-action > .game-primary:hover {
+  background: #1e604e;
+}
+@media (max-width: 900px) {
+  .clinical-room {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    gap: 6px;
+    overflow: visible;
+  }
+  .clinical-illustration svg {
+    max-height: 225px;
+  }
+  .clinical-room-label {
+    font-size: 9px;
+    padding: 4px 8px;
+    margin-left: 6px;
+  }
+  .clinical-room-caption {
+    padding: 0 6px 6px;
+    font-size: 11px;
+  }
+  .clinical-discovery .simple-stage.show-room {
+    flex: none;
+    min-height: auto;
+    overflow: visible;
+  }
+  .clinical-discovery {
+    overflow-y: auto;
+  }
+  .clinical-detail {
+    min-height: 148px;
+  }
+}
+@media (max-width: 760px) {
+  .clinical-discovery .simple-stage.show-conox {
+    flex: 1 0 350px;
+    min-height: 350px;
+  }
+  .clinical-room {
+    padding: 10px;
+  }
+  .clinical-goal {
+    padding: 12px 14px;
+  }
+  .clinical-detail {
+    padding: 12px 14px 16px;
+  }
+  .clinical-detail h2 {
+    font-size: 17px;
+  }
+  .clinical-tabs {
+    padding: 10px 12px 0;
+    gap: 5px;
+  }
+  .clinical-tabs button {
+    font-size: 11px;
+    padding: 7px;
+  }
+  .clinical-sequence {
+    padding: 9px 11px;
+  }
+  .clinical-sequence > div {
+    font-size: 12px;
+  }
+  .clinical-discovery .simple-bottom > span {
+    width: 100%;
+    margin: 0;
+  }
+}
+@media (max-width: 1000px) and (max-height: 500px) and (orientation: landscape) {
+  .clinical-discovery:has(.show-room) {
+    display: flex;
+  }
+  .clinical-discovery .simple-stage.show-room {
+    grid-column: 1 / -1;
+  }
+  .clinical-room {
+    grid-template-columns: minmax(0, 1.2fr) minmax(280px, 1fr);
+  }
+  .clinical-discovery .simple-stage.show-room + .simple-action {
+    grid-column: 1 / -1;
+  }
+  .clinical-discovery .simple-stage.show-conox {
+    min-height: 300px;
+  }
+}

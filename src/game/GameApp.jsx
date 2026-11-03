@@ -8,7 +8,7 @@ import React, {
 import GameMonitor from "./GameMonitor.jsx";
 import { scenarioFor } from "./scenarios.js";
 import Buddy from "./Buddy.jsx";
-import { Discovery, CASE_KEY } from "./Discovery.jsx";
+import { Discovery, CASE_KEY, DISCOVERY_STEP_COUNT } from "./Discovery.jsx";
 import {
   SOURCE,
   METRICS,
@@ -242,7 +242,7 @@ function Home({ results, onChoose, caseDone }) {
                   {path.id === "discover"
                     ? caseDone
                       ? "\u2713 Demo explored"
-                      : "3 simple steps"
+                      : `${DISCOVERY_STEP_COUNT} simple steps`
                     : done
                       ? `${done} / 4 completed`
                       : "4 small missions"}
@@ -412,12 +412,13 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
     controls = useRef(null),
     heading = useRef(null),
     completed = useRef(false);
+  const references = m.references ?? [];
   const scenario = useMemo(
     () =>
       scenarioFor({
         scenarioId:
-          m.kind === "compare" && reference === 1
-            ? "strong-suppression"
+          m.kind === "compare"
+            ? references[reference].scenarioId
             : m.scenarioId,
       }),
     [m, reference],
@@ -474,7 +475,7 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
         : m.kind === "views"
           ? allView
           : m.kind === "compare"
-            ? seen.length === 2
+            ? seen.length === references.length
             : triggerSeen;
   const ready =
     m.kind === "scan"
@@ -484,7 +485,7 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
         : m.kind === "views"
           ? allView
           : m.kind === "compare"
-            ? seen.length === 2
+            ? seen.length === references.length
             : triggerSeen;
   function submit() {
     if (stage === "observe") {
@@ -588,10 +589,7 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
           </p>
           {m.kind === "compare" && (
             <div className={"path-reference-status"}>
-              {"Viewing reference "}
-              {reference === 0
-                ? "A \xB7 continuous activity"
-                : "B \xB7 suppression pattern"}
+              {references[reference].description}
             </div>
           )}
         </section>
@@ -718,21 +716,20 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
               )}
               {m.kind === "compare" && (
                 <div className={"path-tool-buttons"}>
-                  {[0, 1].map((i) => (
+                  {references.map((item, i) => (
                     <button
                       key={i}
                       className={`path-secondary ${reference === i ? "selected" : ""}`}
                       aria-pressed={reference === i}
                       onClick={() => setExample(i)}
                     >
-                      {"Reference "}
-                      {i ? "B" : "A"}
+                      {item.label}
                       {seen.includes(i) && <Icon name={"check"} size={16} />}
                     </button>
                   ))}
                   <p className={"path-tool-status"} aria-live={"polite"}>
                     {seen.length}
-                    {" / 2 references explored \xB7 Independent examples"}
+                    {` / ${references.length} references explored · Independent examples`}
                   </p>
                 </div>
               )}
@@ -964,7 +961,7 @@ export default function App() {
       localStorage.setItem(
         STORAGE_KEY,
         JSON.stringify({
-          version: 2,
+          version: 3,
           results,
         }),
       );

@@ -54,6 +54,11 @@ import {
   normalizeSimulationDisplay,
   simulationDsaPeriod,
 } from "./simulation/displaySettings.js";
+import {
+  createTrainingSequence,
+  trainingProfileAt,
+  trainingSuppressionAt,
+} from "./simulation/trainingSequence.js";
 import { RECORDING_DSA_GRADIENT } from "./recordings/dsaScale.js";
 import {
   ConoxMonitor,
@@ -237,6 +242,24 @@ export function SimulatorApp({
     trainingScenario ??
     SCENARIOS.find((A) => A.id === "target-a") ??
     SCENARIOS[0];
+  const training = React.useMemo(
+    () =>
+      embedded
+        ? createTrainingSequence(
+            DEFAULT_SCENARIO.profile,
+            trainingScenario.training,
+          )
+        : null,
+    [trainingScenario],
+  );
+  const trainingClockRef = React.useRef({
+    samples: 0,
+    windows: [],
+    suppressedSamples: 0,
+    burstEnvelopeSum: 0,
+  });
+  const initialProfile =
+    trainingProfileAt(training, 0) ?? DEFAULT_SCENARIO.profile;
   const [remoteRole, setRemoteRole] = React.useState(() =>
       embedded ? "full" : getInitialRemoteRole(),
     ),
@@ -274,12 +297,14 @@ export function SimulatorApp({
       embedded ? DEFAULT_SCENARIO.opioidLevel : 0,
     ),
     [eegWindowSeconds, setEegWindowSeconds] = React.useState(
-      SIMULATION_DISPLAY.defaultEegWindow,
+      training?.eegWindowSeconds ?? SIMULATION_DISPLAY.defaultEegWindow,
     ),
     [eegMotion, setEegMotion] = React.useState("sweep"),
     [eegAmplitude, setEegAmplitude] = React.useState(120),
     [signalGridVisible, setSignalGridVisible] = React.useState(true),
-    [dsaPeriodMinutes, setDsaPeriodMinutes] = React.useState(30),
+    [dsaPeriodMinutes, setDsaPeriodMinutes] = React.useState(
+      training?.trendWindowMinutes ?? 30,
+    ),
     [dsaColorScale, setDsaColorScale] = React.useState(0),
     [liveSync, setLiveSync] = React.useState(!1),
     [qconAlarmEnabled, setQconAlarmEnabled] = React.useState(!1),
@@ -297,21 +322,25 @@ export function SimulatorApp({
     [selectedKnowledgeTopic, setSelectedKnowledgeTopic] =
       React.useState("alpha"),
     [currentIndices, setCurrentIndices] = React.useState(
-      DEFAULT_SCENARIO.indices,
+      training
+        ? { ...DEFAULT_SCENARIO.indices, bsr: Math.round(initialProfile.bs) }
+        : DEFAULT_SCENARIO.indices,
     ),
     [trendHistory, setTrendHistory] = React.useState(() =>
-      Array.from(
-        {
-          length: 21601,
-        },
-        (A, R) => ({
-          qcon: DEFAULT_SCENARIO.indices.qcon,
-          qnox: DEFAULT_SCENARIO.indices.qnox,
-          bsr: DEFAULT_SCENARIO.indices.bsr,
-          emg: DEFAULT_SCENARIO.indices.emg,
-          seq: R - 21600,
-        }),
-      ),
+      training
+        ? []
+        : Array.from(
+            {
+              length: 21601,
+            },
+            (A, R) => ({
+              qcon: DEFAULT_SCENARIO.indices.qcon,
+              qnox: DEFAULT_SCENARIO.indices.qnox,
+              bsr: DEFAULT_SCENARIO.indices.bsr,
+              emg: DEFAULT_SCENARIO.indices.emg,
+              seq: R - 21600,
+            }),
+          ),
     ),
     [bolusActive, setBolusActive] = React.useState({
       primary: !1,
@@ -348,12 +377,12 @@ export function SimulatorApp({
       last: 0,
       step: -1,
     }),
-    scenarioProfileRef = React.useRef(DEFAULT_SCENARIO.profile),
+    scenarioProfileRef = React.useRef(initialProfile),
     scenarioIndicesRef = React.useRef(DEFAULT_SCENARIO.indices),
-    xa = DEFAULT_SCENARIO.profile,
+    xa = initialProfile,
     simulationStateRef = React.useRef({
       depth: EFFECT_LEVELS[embedded ? DEFAULT_SCENARIO.level : 2],
-      bands: xa.bands,
+      bands: embedded ? { ...xa.bands } : xa.bands,
       bs: xa.bs,
       suppressed: !1,
       burstEnvelope: 0,
@@ -377,7 +406,7 @@ export function SimulatorApp({
     dsaPeriodRef = React.useRef(dsaPeriodMinutes),
     dsaColorOffsetRef = React.useRef(0),
     trendSequenceRef = React.useRef(0),
-    originalDsaPeriod = React.useRef(30),
+    originalDsaPeriod = React.useRef(training?.trendWindowMinutes ?? 30),
     soloReturnView = React.useRef("eeg-dsa"),
     remoteClientIdRef = React.useRef(createClientId()),
     remoteActionRef = React.useRef(null),
@@ -500,9 +529,21 @@ export function SimulatorApp({
         lastDsaPeriod = null,
         dsaPixelRemainder = 0,
         dsaColumnSamples = [];
-      const Mt = () => {
+      const Mt = (trainingWindow = null) => {
+          const trainingProfile = trainingWindow
+            ? trainingProfileAt(training, trainingWindow.at - 0.5)
+            : null;
           const Y = simulationConfigRef.current,
-            Z = simulationStateRef.current,
+            Z = trainingWindow
+              ? {
+                  ...simulationStateRef.current,
+                  bands: trainingProfile.bands,
+                  bs: trainingProfile.bs,
+                  time: trainingWindow.at - 0.5,
+                  suppressed: trainingWindow.suppressedFraction >= 0.5,
+                  burstEnvelope: trainingWindow.burstEnvelope,
+                }
+              : simulationStateRef.current,
             medicationEffects = getMedicationEffects(Y, performance.now()),
             fe = 180,
             Qe = {
@@ -512,7 +553,7 @@ export function SimulatorApp({
               b: Z.bands.beta / 100,
               g: Z.bands.gamma / 100,
             },
-            ze = scenarioProfileRef.current,
+            ze = trainingProfile ?? scenarioProfileRef.current,
             ft = ze?.alphaWidth ?? 2,
             lt = ze?.alphaPulse
               ? 0.42 + 0.58 * Math.sin(Z.time * 0.47 + 0.7) ** 2
@@ -549,7 +590,7 @@ export function SimulatorApp({
               ze?.suppressAlpha ? 1 : 0,
             ].join("|");
           (ke && ke !== ta && (L = 1), (ke = ta));
-          const Dl = Math.max(Ve, L),
+          const Dl = trainingWindow ? 0 : Math.max(Ve, L),
             ml = 7.8,
             xl = (Z.time % ml) / ml,
             jl = clamp(1 - Ne, 0.08, 0.98),
@@ -558,13 +599,19 @@ export function SimulatorApp({
             Fa = jl * 0.5,
             Hl = Ne <= 0.02 || Bn < Fa,
             la = Math.min(0.08, Fa * 0.6),
-            Uu = Ne <= 0.02 ? 1 : smoothstep((Fa - Bn) / Math.max(la, 0.01));
-          ((Z.suppressed = Ne > 0.02 && !Hl),
-            (Z.burstEnvelope = Uu),
-            eegStatusRef.current &&
-              (eegStatusRef.current.textContent = Z.suppressed
-                ? t("eeg.status.suppression")
-                : t("eeg.status.active")));
+            Uu = trainingWindow
+              ? trainingWindow.burstEnvelope
+              : Ne <= 0.02
+                ? 1
+                : smoothstep((Fa - Bn) / Math.max(la, 0.01));
+          if (!trainingWindow) {
+            ((Z.suppressed = Ne > 0.02 && !Hl),
+              (Z.burstEnvelope = Uu),
+              eegStatusRef.current &&
+                (eegStatusRef.current.textContent = Z.suppressed
+                  ? t("eeg.status.suppression")
+                  : t("eeg.status.active")));
+          }
           const Oa = new Array(fe),
             Ia = clamp((Ne - 0.1) / 0.52, 0, 1),
             Ru = Ia * Ia * (3 - 2 * Ia),
@@ -675,9 +722,31 @@ export function SimulatorApp({
                       Math.sin(He * 0.29 + Z.time * 0.9) * 0.05) *
                       dl),
               )),
-              Ne > 0 && Ru > 0)
-            )
-              if (Z.suppressed) {
+              Ne > 0 && (trainingWindow || Ru > 0))
+            ) {
+              if (trainingWindow) {
+                // The same 128-Hz suppression decisions used by the raw trace
+                // contribute to this completed one-second DSA column.
+                const suppressedPower =
+                  X < 4
+                    ? 0.055 + (1 - Ne) * 0.13
+                    : X < 8
+                      ? 0.035 + (1 - Ne) * 0.09
+                      : X < 13
+                        ? 0.018 + (1 - Ne) * 0.055
+                        : X < 30
+                          ? 0.007 + (1 - Ne) * 0.022
+                          : 0.002 + (1 - Ne) * 0.006;
+                const fraction = trainingWindow.suppressedFraction;
+                le *=
+                  fraction * (1 - (1 - suppressedPower) * Pa) +
+                  (1 - fraction) +
+                  Ru *
+                    Uu *
+                    (2 * gaussian(X, 2, 3) +
+                      1.5 * gaussian(X, 9.5, 4.5) +
+                      0.55 * gaussian(X, 20, 10));
+              } else if (Z.suppressed) {
                 let Je = 1;
                 (X < 4
                   ? (Je = 0.055 + (1 - Ne) * 0.13)
@@ -697,6 +766,7 @@ export function SimulatorApp({
                     (2 * gaussian(X, 2, 3) +
                       1.5 * gaussian(X, 9.5, 4.5) +
                       0.55 * gaussian(X, 20, 10));
+            }
             Oa[He] = le;
           }
           for (let He = 0; He < Math.round(El * 4); He += 1) {
@@ -720,7 +790,7 @@ export function SimulatorApp({
                   (1 - smoothstep((le - 13.8) / 1.25));
               return He * (1 - Kt) + (-27.5 + gaussianNoise() * 0.8) * Kt;
             });
-          if (G) {
+          if (G && !trainingWindow) {
             const He = Z.suppressed
                 ? Math.min(Y.render.temporal / 100, 0.74)
                 : clamp(Y.render.temporal / 100, 0.62, 0.82),
@@ -784,13 +854,14 @@ export function SimulatorApp({
           }
           return 45;
         },
-        makeDsaSample = (Y, Z) => {
+        makeDsaSample = (Y, Z, at) => {
           const fe = Y instanceof Float32Array ? Y : new Float32Array(Y),
             Qe = Z instanceof Float64Array ? Z : new Float64Array(Z);
           return {
             spec: fe,
             sef50: spectralEdgeFrequency(Qe, 0.5),
             sef95: spectralEdgeFrequency(Qe, 0.95),
+            ...(at === undefined ? {} : { at }),
           };
         },
         sefY = (Y, Z) => {
@@ -823,17 +894,24 @@ export function SimulatorApp({
             dsaOverlayContext.lineJoin = "miter";
             dsaOverlayContext.setLineDash([]);
             dsaOverlayContext.beginPath();
-            let fe = sefY(dsaColumnSamples[0], Y);
-            dsaOverlayContext.moveTo(0, fe);
-            for (let Qe = 1; Qe < dsaOverlay.width; Qe += 1) {
-              const ze = sefY(
-                  dsaColumnSamples[Math.min(Qe, dsaColumnSamples.length - 1)],
-                  Y,
-                ),
+            let fe;
+            let connected = false;
+            for (let Qe = 0; Qe < dsaOverlay.width; Qe += 1) {
+              const sample =
+                dsaColumnSamples[Math.min(Qe, dsaColumnSamples.length - 1)];
+              if (!sample) {
+                connected = false;
+                continue;
+              }
+              const ze = sefY(sample, Y),
                 ft = Qe;
-              (dsaOverlayContext.lineTo(ft, fe),
-                ze !== fe && dsaOverlayContext.lineTo(ft, ze),
-                (fe = ze));
+              if (!connected) dsaOverlayContext.moveTo(ft, ze);
+              else {
+                dsaOverlayContext.lineTo(ft, fe);
+                if (ze !== fe) dsaOverlayContext.lineTo(ft, ze);
+              }
+              fe = ze;
+              connected = true;
             }
             (dsaOverlayContext.stroke(), dsaOverlayContext.restore());
           };
@@ -863,17 +941,20 @@ export function SimulatorApp({
         rl = () => {
           const Y = R.createImageData(A.width, A.height);
           const Z = dsaPeriodRef.current <= 1 ? 60 : dsaPeriodRef.current * 60,
-            fe = Math.max(0, me.length - 1 - Z),
+            fe = training
+              ? (me.at(-1)?.at ?? 0) - Z
+              : Math.max(0, me.length - 1 - Z),
             Qe = simulationConfigRef.current.render.frequencyPixel;
           dsaColumnSamples = new Array(A.width);
           for (let ze = 0; ze < A.width; ze += 1) {
             const ft = ze / Math.max(1, A.width - 1),
-              lt = Math.min(
-                me.length - 1,
-                Math.max(0, Math.round(fe + ft * Z)),
-              ),
-              vt = me[lt]?.spec ?? me[me.length - 1].spec;
-            dsaColumnSamples[ze] = me[lt] ?? me[me.length - 1];
+              lt = training
+                ? Math.ceil(fe + ft * Z) - (me[0]?.at ?? 1)
+                : Math.min(me.length - 1, Math.max(0, Math.round(fe + ft * Z))),
+              sample = training ? me[lt] : (me[lt] ?? me[me.length - 1]),
+              vt = sample?.spec;
+            dsaColumnSamples[ze] = sample;
+            if (!vt) continue;
             for (let El = 0; El < A.height; El += Qe) {
               const Ne = Math.min(A.height - 1, El + Math.floor(Qe / 2)),
                 ge = ((A.height - 1 - Ne) / (A.height - 1)) * (vt.length - 1),
@@ -897,6 +978,10 @@ export function SimulatorApp({
             drawSefColumns());
         },
         scrollDsa = () => {
+          if (training) {
+            rl();
+            return;
+          }
           const Y = dsaPeriodRef.current,
             Z = Y <= 1 ? 60 : Y * 60;
           if (lastDsaPeriod !== Y) {
@@ -937,6 +1022,19 @@ export function SimulatorApp({
           const Z = simulationConfigRef.current,
             fe = simulationStateRef.current,
             Qe = Math.min((Y - tt) / 1e3, 0.1);
+          if (training) {
+            // EEG samples own the teaching clock. Resize and requestAnimationFrame
+            // never advance it or restart the one-shot sequence.
+            const windows = trainingClockRef.current.windows.splice(0);
+            for (const window of windows) {
+              const output = Mt(window);
+              me.push(makeDsaSample(output.spec, output.power, window.at));
+              while (me.length > training.retentionSeconds + 1) me.shift();
+            }
+            if (windows.length) scrollDsa();
+            ve = requestAnimationFrame(zl);
+            return;
+          }
           if (((tt = Y), Z.running)) {
             const ze = scenarioProfileRef.current,
               medicationEffects = getMedicationEffects(Z, Y),
@@ -984,10 +1082,10 @@ export function SimulatorApp({
           }
           ve = requestAnimationFrame(zl);
         },
-        ue = Mt(),
-        Re = ue.spec,
-        Yt = new Float64Array(ue.power);
-      for (let Y = 0; Y <= 21600; Y += 1)
+        ue = training ? null : Mt(),
+        Re = ue?.spec,
+        Yt = training ? null : new Float64Array(ue.power);
+      for (let Y = 0; !training && Y <= 21600; Y += 1)
         me.push(
           makeDsaSample(
             new Float32Array(
@@ -1040,6 +1138,46 @@ export function SimulatorApp({
       const clock = { previous: performance.now(), remainder: 0 };
       let L = 0;
       const ke = () => {
+          if (training) {
+            const clock = trainingClockRef.current;
+            const elapsed = ++clock.samples / EEG_SAMPLE_RATE;
+            const profile = trainingProfileAt(training, elapsed);
+            const suppression = trainingSuppressionAt(
+              elapsed,
+              profile.bs,
+              training.suppressionCycleSeconds,
+            );
+            scenarioProfileRef.current = profile;
+            Object.assign(simulationStateRef.current, {
+              bands: { ...profile.bands },
+              bs: profile.bs,
+              time: elapsed,
+              ...suppression,
+            });
+            const status = suppression.suppressed
+              ? t("eeg.status.suppression")
+              : t("eeg.status.active");
+            if (
+              eegStatusRef.current &&
+              eegStatusRef.current.textContent !== status
+            )
+              eegStatusRef.current.textContent = status;
+            clock.suppressedSamples += Number(suppression.suppressed);
+            clock.burstEnvelopeSum += suppression.suppressed
+              ? 0
+              : suppression.burstEnvelope;
+            if (clock.samples % EEG_SAMPLE_RATE === 0) {
+              clock.windows.push({
+                at: elapsed,
+                suppressedFraction: clock.suppressedSamples / EEG_SAMPLE_RATE,
+                burstEnvelope: clock.burstEnvelopeSum / EEG_SAMPLE_RATE,
+              });
+              while (clock.windows.length > training.retentionSeconds + 1)
+                clock.windows.shift();
+              clock.suppressedSamples = 0;
+              clock.burstEnvelopeSum = 0;
+            }
+          }
           const ue = simulationConfigRef.current,
             Re = simulationStateRef.current,
             medicationEffects = getMedicationEffects(ue, performance.now()),
@@ -1311,6 +1449,26 @@ export function SimulatorApp({
                 simulationStateRef.current.time,
               )
             : null;
+        if (training) {
+          // The supplied reference indices retain their existing meaning. A
+          // profile timeline does not manufacture a new qCON/qNOX relationship.
+          const indices = {
+            ...(dynamicScenarioIndices ?? ve),
+            bsr: Math.round(simulationStateRef.current.bs),
+          };
+          setCurrentIndices(indices);
+          const second = Math.floor(
+            trainingClockRef.current.samples / EEG_SAMPLE_RATE,
+          );
+          if (second > trendSequenceRef.current) {
+            trendSequenceRef.current = second;
+            setTrendHistory((history) => [
+              ...history.slice(-training.retentionSeconds),
+              { ...indices, seq: second },
+            ]);
+          }
+          return;
+        }
         for (
           A.push({
             at: G,
@@ -2217,6 +2375,18 @@ export function SimulatorApp({
       upper: maskIndices ? null : qconAlarmMax,
       triggered: !maskIndices && qconAlarmTriggered,
       view: displayView,
+      get sequence() {
+        if (!training) return null;
+        const elapsed = trainingClockRef.current.samples / EEG_SAMPLE_RATE;
+        return {
+          elapsed:
+            training.duration > 0
+              ? Math.min(elapsed, training.duration)
+              : elapsed,
+          duration: training.duration,
+          completed: training.duration > 0 && elapsed >= training.duration,
+        };
+      },
     };
     return () => {
       trainingControls.current = null;
@@ -2233,6 +2403,7 @@ export function SimulatorApp({
     displayView,
     displayChoices,
     DISPLAY_VIEWS,
+    training,
   ]);
   const monitor = (
     <ConoxMonitor

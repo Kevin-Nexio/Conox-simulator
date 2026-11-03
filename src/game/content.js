@@ -1,3 +1,5 @@
+import { PATTERN_REFERENCES } from "./scenarios.js";
+
 export var SOURCE =
   "https://eifu.fresenius-kabi.com/medtech/conox-fixed/18958-2_CNX_SPEC_IFU_Conox2D_ENG.pdf";
 export var METRICS = [
@@ -130,7 +132,7 @@ export var PATHS = [
         id: "discover-display",
         title: "Look beyond the number",
         intro: "Explore EEG, DSA and suppression.",
-        scenarioId: "strong-suppression",
+        scenarioId: "icu-suppression",
         kind: "scan",
         evidence: ["bsr", "eeg"],
         prompt:
@@ -199,117 +201,165 @@ export var PATHS = [
       "Practise reading the information together in an ICU learning context.",
     missions: [
       {
-        id: "explore-quality",
-        title: "Get a reliable signal",
-        intro: "Investigate the measurement first.",
-        scenarioId: "artifact-emg",
+        id: "explore-goal",
+        title: "Agree the sedation goal",
+        intro: "Give the team a shared language.",
+        scenarioId: "target-a",
         kind: "scan",
-        evidence: ["emg", "eeg"],
+        evidence: ["qcon", "eeg"],
         prompt:
-          "Choose the two clues that help investigate muscle contamination.",
+          "Select qCON and EEG / DSA to review alongside the documented clinical target.",
         scene:
-          "An existing simulator example shows muscle-related interference. Examine the measurement before interpreting the indices.",
-        guide: "Compare EMG with the raw EEG and its frequency content.",
-        question: "What is the appropriate next check?",
-        options: options(
-          "Check movement, electrode contact, SQI and clinical context.",
-          [
-            "Conclude that an index rise proves wakefulness.",
-            "The index alone does not establish wakefulness.",
-          ],
-          [
-            "Hide EMG so the indices are easier to read.",
-            "EMG is useful context for interpreting the signal.",
-          ],
-        ),
+          "At handover, a colleague proposes converting the displayed qCON directly into a RASS score. The team needs to agree what this patient requires and how it will reassess that goal.",
+        guide:
+          "RASS assesses the response to stimulation. qCON is an EEG-derived index. Read them together without treating them as the same scale.",
+        question: "How would you describe the goal at handover?",
+        options: [
+          {
+            id: "a",
+            label: "Use qCON 65 as a universal equivalent of RASS −2.",
+            feedback:
+              "The relationship varies across patients, drugs and conditions. There is no fixed conversion.",
+          },
+          {
+            id: "b",
+            label:
+              "State the clinical target and its reason, then discuss the index, EEG and patient response together.",
+            correct: true,
+          },
+          {
+            id: "c",
+            label:
+              "Aim for the lowest possible qCON in every ventilated patient.",
+            feedback:
+              "The target follows the current treatment situation; a lower number is not automatically better.",
+          },
+        ],
         takeaway:
-          "EMG, SQI and the EEG help you investigate a change in the measurement.",
-        reference: "IFU \xA73.1, \xA73.7\u20133.8 \xB7 Signal interpretation.",
+          "A shared goal includes its clinical reason and when it will be reviewed. qCON adds a trend to that conversation; it does not assign a RASS score.",
+        reference: "qCON–RASS observational study · No universal conversion.",
+        url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC9067479/",
       },
       {
         id: "explore-trends",
-        title: "Follow the trend",
-        intro: "Open the combined display.",
-        scenarioId: "target-a",
+        title: "Put changes on a timeline",
+        intro: "Connect the display with treatment events.",
+        scenarioId: "icu-continuous",
         kind: "views",
-        prompt:
-          "Open \u201CAll signals\u201D to bring the trend panel into view.",
+        prompt: "Open “All signals” to see EEG, DSA and index trends together.",
         scene:
-          "The reference signal is stable. Use the display controls to see how the indices are presented over time.",
+          "At handover, the team asks when the EEG changed in relation to care, boluses or infusion adjustments. Practise finding the combined view on this reference display.",
         guide:
-          "The combined view brings the EEG, DSA and index trends onto the same screen.",
-        question: "What is the purpose of a trend display?",
-        options: options(
-          "Review how parameters change over time alongside other information.",
-          [
-            "Guarantee that the next values will remain stable.",
-            "A trend describes the displayed history, not a guaranteed future.",
-          ],
-          [
-            "Replace assessment of the current signal.",
-            "Past values and current signal information are complementary.",
-          ],
-        ),
+          "The raw EEG shows the current pattern. DSA and index trends help locate changes over time; clinical event times must be checked separately.",
+        question: "What makes a trend useful for reviewing sedation?",
+        options: [
+          {
+            id: "a",
+            label:
+              "Use the lowest index alone to calculate the correct infusion rate.",
+            feedback: "The display does not calculate an individual dose.",
+          },
+          {
+            id: "b",
+            label:
+              "Compare EEG and index changes with the timing of treatment and assessments.",
+            correct: true,
+          },
+          {
+            id: "c",
+            label:
+              "Diagnose drug tolerance or a ceiling effect from a plateau alone.",
+            feedback:
+              "A mismatch between dose and observed effect prompts a broader review; a plateau does not establish its cause.",
+          },
+        ],
         takeaway:
-          "Trends add a time dimension to the indices. Review them together with the signal and clinical events.",
-        reference: "IFU \xA73.10 \xB7 Parameter trend graphs.",
+          "Use the timeline to ask when a change began and what else happened. Review drug delivery, medication effects and the patient before explaining a changing dose–effect relationship.",
+        reference:
+          "ICU pEEG consensus · Raw EEG, spectrogram and clinical context.",
+        url: "https://link.springer.com/article/10.1007/s12028-022-01565-5",
       },
       {
-        id: "explore-care",
-        title: "During ICU care",
-        intro: "Choose what to observe around a care event.",
-        scenarioId: "target-a",
+        id: "explore-awakening",
+        title: "Prepare an awakening trial",
+        intro: "Revisit the goal as the situation changes.",
+        scenarioId: "alpha-loss",
         kind: "scan",
-        evidence: ["qcon", "qnox"],
+        evidence: ["qcon", "eeg"],
         prompt:
-          "Select the two indices you would review around a care event, in addition to the clinical assessment.",
+          "Select qCON and EEG / DSA as additional observations during a planned reassessment.",
         scene:
-          "Prepare an observation checklist for an ICU care event. The monitor remains a reference signal; no care response is being simulated.",
+          "Later in the ICU stay, the acute reason for deep sedation has resolved. The team is considering an awakening trial and first checks its local safety criteria.",
         guide:
-          "Keep consciousness and probability of response as separate questions.",
-        question: "What should be included when reviewing a care event?",
-        options: options(
-          "The event timing, qCON/qNOX trends, signal quality and clinical observations.",
-          [
-            "An automatic opioid dose calculated from qNOX alone.",
-            "qNOX alone does not specify a drug dose.",
-          ],
-          [
-            "A conclusion about pain from one qNOX value.",
-            "A single value is not a direct measure of perceived pain.",
-          ],
-        ),
+          "Observe responsiveness and tolerance alongside the EEG and trend. A higher index does not establish orientation or readiness for extubation.",
+        question: "How can EEG monitoring contribute to this trial?",
+        options: [
+          {
+            id: "a",
+            label:
+              "Start an awakening trial as soon as qCON reaches a fixed number.",
+            feedback:
+              "Eligibility is a clinical decision; a numerical threshold does not replace the safety screen.",
+          },
+          {
+            id: "b",
+            label:
+              "Add the EEG and index trend to clinical reassessment after the safety screen, using the team’s trial protocol.",
+            correct: true,
+          },
+          {
+            id: "c",
+            label:
+              "Treat the EEG as a guarantee that the patient can be extubated.",
+            feedback:
+              "Awakening and breathing readiness require their own assessments.",
+          },
+        ],
         takeaway:
-          "Observe the patient, the event and the monitoring information together. A reference signal cannot predict a particular patient\u2019s response.",
-        reference: "Tang et al., 2026 \xB7 Observational ICU study.",
-        url: "https://pubmed.ncbi.nlm.nih.gov/41818952/",
+          "Reassess the reason for sedation as the clinical situation evolves. EEG is an additional observation during a supervised trial, not its eligibility or stopping rule.",
+        reference: "AHRQ · Coordinated awakening and breathing trials.",
+        url: "https://www.ahrq.gov/hai/tools/mvp/modules/technical/sat-sbt-protocol.html",
       },
       {
         id: "explore-suppression",
-        title: "Spot suppression",
-        intro: "Compare two existing signal examples.",
-        scenarioId: "target-a",
+        title: "Deep does not mean suppressed",
+        intro: "Compare continuity, early gaps and suppression.",
+        scenarioId: "icu-continuous",
         kind: "compare",
-        prompt: "View both reference examples. Compare the EEG and the BSR.",
+        references: PATTERN_REFERENCES,
+        prompt:
+          "Explore all three references. Compare continuity in the EEG with BSR and DSA.",
         scene:
-          "Two separate simulator references, not successive stages of a patient\u2019s treatment.",
+          "Deep sedation may coexist with continuous activity. These three independent examples make the distinction from emerging discontinuity and longer suppressed intervals visible.",
         guide:
-          "In the second example, compare the quiet intervals with the suppression indicator.",
-        question: "Which description fits the second reference?",
-        options: options(
-          "Bursts alternate with suppressed intervals; interpret the finding in context.",
-          [
-            "BSR confirms sufficient analgesia.",
-            "BSR concerns EEG suppression, not analgesia.",
-          ],
-          [
-            "The lowest qCON is always the desired result.",
-            "The clinical goal cannot be determined from a low index alone.",
-          ],
-        ),
+          "Watch each pattern over several seconds. Quieter intervals lengthen across the examples; the comparison is not a drug-dose response.",
+        question: "Does a RASS of −4 or −5 require burst suppression?",
+        options: [
+          {
+            id: "a",
+            label:
+              "Yes, burst suppression confirms the target for every deeply sedated patient.",
+            feedback:
+              "Deep sedation is not a universal indication for suppression.",
+          },
+          {
+            id: "b",
+            label:
+              "No. The clinical response and the EEG pattern are separate observations; suppression needs its own context.",
+            correct: true,
+          },
+          {
+            id: "c",
+            label: "No, because a continuous EEG proves the patient is awake.",
+            feedback:
+              "Continuous alpha/delta activity can occur with deep sedation in this context.",
+          },
+        ],
         takeaway:
-          "EEG, DSA and BSR provide different views of the suppression pattern.",
-        reference: "IFU \xA73.6, \xA73.9 \xB7 Suppression and EEG.",
+          "Check whether suppression is intended. If it is unexpected, review the signal, possible causes and treatment goal with the team. Specific neurological indications need a separate specialist plan.",
+        reference:
+          "ICU pEEG consensus · Recognising and interpreting suppression.",
+        url: "https://link.springer.com/article/10.1007/s12028-022-01565-5",
       },
     ],
   },
@@ -328,31 +378,44 @@ export var PATHS = [
     missions: [
       {
         id: "challenge-artefact",
-        title: "Signal detective",
-        intro: "Separate observation from assumption.",
+        title: "Look beyond ventilator tolerance",
+        intro: "Investigate a cough, movement and fast activity.",
         scenarioId: "artifact-emg",
         kind: "scan",
         evidence: ["emg", "eeg"],
         prompt:
-          "Select the most relevant pair of clues for investigating this signal.",
+          "Choose the pair of clues that helps separate muscle activity from the EEG.",
         scene:
-          "Fast activity is visible in this simulator reference. Start with the evidence on the display.",
-        guide: "Compare the muscle-activity information with the EEG pattern.",
-        question: "Which conclusion is supported?",
-        options: options(
-          "Muscle activity may contribute; check the signal and clinical context.",
-          [
-            "This display proves awareness.",
-            "This signal pattern alone cannot establish awareness.",
-          ],
-          [
-            "qNOX provides a definite pain score here.",
-            "qNOX is not a direct pain-intensity measure.",
-          ],
-        ),
+          "Another patient on pressure support triggers breaths, coughs and intermittently becomes asynchronous. Fast activity appears on the display. These signs need investigation, not an automatic increase in sedation.",
+        guide:
+          "Movement and EMG may contribute to fast activity and higher indices. Neither synchrony nor a high number alone establishes the patient’s conscious experience.",
+        question: "What should happen before interpreting the index rise?",
+        options: [
+          {
+            id: "a",
+            label:
+              "Assume coughing proves pain and deepen sedation immediately.",
+            feedback:
+              "Cough and asynchrony have several possible causes, including tube irritation; assess them in context.",
+          },
+          {
+            id: "b",
+            label:
+              "Assess the patient, breathing interaction and signal quality; compare EMG with the raw EEG.",
+            correct: true,
+          },
+          {
+            id: "c",
+            label:
+              "Treat stable heart rate and SpO₂ as proof that sedation is adequate.",
+            feedback:
+              "These values matter for patient safety, but are not direct measures of sedation depth.",
+          },
+        ],
         takeaway:
-          "A sound interpretation distinguishes what you observe from what the display cannot establish on its own.",
-        reference: "IFU \xA73.1, \xA73.7\u20133.8.",
+          "Ventilator behaviour and haemodynamics are clinical clues. EEG adds information about brain activity; none of these observations should be turned into a diagnosis on its own.",
+        reference: "ICU pEEG consensus · EMG, artefacts and interpretation.",
+        url: "https://link.springer.com/article/10.1007/s12028-022-01565-5",
       },
       {
         id: "challenge-context",
@@ -385,69 +448,93 @@ export var PATHS = [
       },
       {
         id: "challenge-change",
-        title: "Find the change",
-        intro: "Describe the difference between two references.",
-        scenarioId: "target-a",
+        title: "Notice the early gaps",
+        intro: "Recognise a change before assuming its cause.",
+        scenarioId: "icu-continuous",
         kind: "compare",
-        prompt: "Inspect both examples and identify the change in continuity.",
+        references: PATTERN_REFERENCES,
+        prompt:
+          "Inspect all three references. Find the intermediate pattern as well as the marked suppression.",
         scene:
-          "Compare two independent reference patterns. Their order does not represent a patient trajectory or a drug response.",
+          "A clinical RASS assessment can remain unchanged while EEG continuity changes. These reference patterns let you practise noticing that difference.",
         guide:
-          "Look at continuity first, then check BSR. Do not infer a drug dose or a clinical cause.",
-        question: "What can you conclude from this comparison?",
-        options: options(
-          "The second reference has more suppressed intervals; the cause is not established by the comparison.",
-          [
-            "The comparison tells us the exact dose to change.",
-            "Independent signal examples do not define a treatment response.",
-          ],
-          [
-            "The second reference guarantees a faster ICU discharge.",
-            "This exercise contains no outcome information.",
-          ],
-        ),
+          "Look for the early interruptions, then the longer quieter periods. A gradual change and an abrupt change after a bolus need a review of their timing and possible causes.",
+        question: "What does a new discontinuous pattern justify?",
+        options: [
+          {
+            id: "a",
+            label: "Conclude that the clinical assessment is useless.",
+            feedback:
+              "The assessment describes the clinical response; EEG adds complementary information between assessments.",
+          },
+          {
+            id: "b",
+            label:
+              "Check signal quality, the treatment timeline and other causes, then reassess the agreed sedation goal.",
+            correct: true,
+          },
+          {
+            id: "c",
+            label: "Conclude that a specific propofol bolus must be the cause.",
+            feedback:
+              "Timing can suggest an association, but the pattern alone does not establish a drug or dose as its cause.",
+          },
+        ],
         takeaway:
-          "Describe the signal change precisely, then separate that description from a clinical explanation.",
-        reference: "IFU \xA73.1, \xA73.6 \xB7 Context and suppression.",
+          "Describe what changed before explaining why. EEG and DSA make changes in continuity visible; the patient and treatment history determine their meaning.",
+        reference:
+          "ICU pEEG consensus · Continuous observation and signal context.",
+        url: "https://link.springer.com/article/10.1007/s12028-022-01565-5",
       },
       {
         id: "challenge-reason",
-        title: "Explain your decision",
-        intro: "Build a complete observation checklist.",
+        title: "Make a useful handover",
+        intro: "Explain the goal, the evidence and the next check.",
         scenarioId: "target-a",
         kind: "scan",
         evidence: ["sqi", "eeg"],
         prompt:
-          "Beyond qCON and qNOX, select the pair that adds signal quality and signal patterns.",
+          "Beyond the indices, choose the pair that adds signal quality and the underlying EEG pattern.",
         scene:
-          "A colleague asks whether the two indices alone provide a complete assessment. Build your answer from the available information.",
+          "A colleague reports stable blood pressure, heart rate and SpO₂. The team also needs to know the sedation goal, clinical response and what the brain monitoring has shown.",
         guide:
-          "Combine measurement quality, the signal, indices, trends and clinical assessment.",
-        question: "Which explanation is complete?",
-        options: options(
-          "The indices add information; combine them with SQI, EEG, trends and the clinical assessment.",
-          [
-            "The indices alone guarantee an ideal state.",
-            "A complete assessment needs more than two numbers.",
-          ],
-          [
-            "If clinical context is needed, monitoring adds nothing.",
-            "Monitoring contributes complementary information.",
-          ],
-        ),
+          "Haemodynamics reflect illness and drugs as well as other influences. They do not replace assessment of sedation or the EEG.",
+        question: "Which handover gives the team a useful shared picture?",
+        options: [
+          {
+            id: "a",
+            label: "Stable blood pressure means the sedation target is met.",
+            feedback:
+              "Blood pressure is useful context, not a sedation-depth measurement.",
+          },
+          {
+            id: "b",
+            label:
+              "Explain why sedation is needed, the clinical target and response, signal quality, EEG/index trends and the reassessment plan.",
+            correct: true,
+          },
+          {
+            id: "c",
+            label:
+              "The qCON advisory has not activated, so there is nothing to reassess.",
+            feedback:
+              "A configured reminder complements active observation; it cannot confirm a complete clinical assessment.",
+          },
+        ],
         takeaway:
-          "The strength of the display is the information you can bring together. Explain your observations and what still needs checking.",
-        reference: "IFU \xA73.1 \xB7 Role of the monitor.",
+          "Monitor the function you want to understand. Brain monitoring complements clinical assessment; a frontal EEG display is not a complete neurological diagnosis. Keep the clinical goal explicit.",
+        reference: "ICU pEEG consensus · Multimodal assessment.",
+        url: "https://link.springer.com/article/10.1007/s12028-022-01565-5",
       },
     ],
   },
 ];
-export var STORAGE_KEY = "conox.challenge.pathways.v2";
+export var STORAGE_KEY = "conox.challenge.pathways.v3";
 export var ALL_MISSIONS = PATHS.flatMap((p) => p.missions);
 export function parseProgress(raw) {
   try {
     const d = JSON.parse(raw);
-    if (d?.version !== 2 || !d.results || typeof d.results !== "object")
+    if (d?.version !== 3 || !d.results || typeof d.results !== "object")
       return {};
     const out = {};
     for (const m of ALL_MISSIONS) {

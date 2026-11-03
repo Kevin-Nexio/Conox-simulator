@@ -9,23 +9,43 @@ import {
   isUnlocked,
   scoreFor,
 } from "../src/game/content.js";
-import { scenarioFor } from "../src/game/scenarios.js";
+import { scenarioFor, PATTERN_REFERENCES } from "../src/game/scenarios.js";
 import { SCENARIOS } from "../src/data/scenarios.js";
 
-test("all game references resolve to the main simulator catalogue", () => {
+test("game references resolve and teaching copies do not share mutable catalogue profiles", () => {
   const ids = new Set([
     ...ALL_MISSIONS.map((mission) => mission.scenarioId),
+    ...ALL_MISSIONS.flatMap((mission) =>
+      (mission.references ?? []).map((item) => item.scenarioId),
+    ),
+    "icu-progression",
     "target-a",
     "strong-suppression",
   ]);
   for (const scenarioId of ids) {
-    assert.equal(
-      scenarioFor({ scenarioId }),
-      SCENARIOS.find((scenario) => scenario.id === scenarioId),
-    );
+    assert.ok(scenarioFor({ scenarioId }).profile);
+    const original = SCENARIOS.find((scenario) => scenario.id === scenarioId);
+    if (original) assert.equal(scenarioFor({ scenarioId }), original);
   }
   assert.throws(() => scenarioFor({ scenarioId: "missing-case" }));
   assert.ok(scenarioFor({ scenarioId: "strong-suppression" }).profile.bs > 0);
+  const original = SCENARIOS.find((item) => item.id === "target-a");
+  const copy = scenarioFor({ scenarioId: "icu-continuous" });
+  assert.deepEqual(copy.profile, original.profile);
+  assert.notEqual(copy.profile, original.profile);
+  assert.notEqual(copy.profile.bands, original.profile.bands);
+  const sequence = scenarioFor({ scenarioId: "icu-progression" }).training
+    .sequence;
+  assert.notEqual(sequence[0].profile.bands, original.profile.bands);
+  assert.notEqual(sequence[0].profile.bands, sequence[1].profile.bands);
+  const suppression = PATTERN_REFERENCES.map(
+    (item) => scenarioFor(item).profile.bs,
+  );
+  assert.ok(
+    suppression[0] === 0 &&
+      suppression[1] > 0 &&
+      suppression[2] > suppression[1],
+  );
 });
 
 test("missions have unique IDs, valid evidence and exactly one accepted answer", () => {
@@ -35,18 +55,25 @@ test("missions have unique IDs, valid evidence and exactly one accepted answer",
   for (const mission of ALL_MISSIONS) {
     assert.equal(mission.options.filter((option) => option.correct).length, 1);
     for (const id of mission.evidence ?? []) assert.ok(metricIds.has(id));
+    if (mission.kind === "compare") {
+      assert.equal(mission.references.length, 3);
+      assert.equal(
+        new Set(mission.references.map((item) => item.scenarioId)).size,
+        3,
+      );
+    }
   }
 });
 
 test("malformed or obsolete progress is rejected without blocking the game", () => {
-  for (const raw of [null, "invalid", "null", '{"version":1,"results":{}}']) {
+  for (const raw of [null, "invalid", "null", '{"version":2,"results":{}}']) {
     assert.deepEqual(parseProgress(raw), {});
   }
   const [a, b, c] = ALL_MISSIONS;
   assert.deepEqual(
     parseProgress(
       JSON.stringify({
-        version: 2,
+        version: 3,
         results: {
           [a.id]: { score: 85 },
           [b.id]: { score: 101 },

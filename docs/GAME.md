@@ -8,23 +8,38 @@ normal page loads use the game's own pathname, following the standard
 ## Shared simulator
 
 `src/game/GameApp.jsx` and `Discovery.jsx` retain the three learning paths,
-twelve missions and guided ICU story from the supplied
+twelve missions and guided ICU story initially based on the supplied
 `Conox_Challenge_Simple_EN.html`. The bundled simulator and React runtime from
 that file are not used.
 
 `GameMonitor` renders the exported `SimulatorApp` from `src/App.jsx`, which uses
 the same simulation engine, EEG history, DSA drawing, indices and
-`ConoxMonitor` components as the main page. Mission references resolve directly
-against `src/data/scenarios.js`; there is no second scenario catalogue or signal
-generator. Changing reference remounts the simulator with clean histories.
+`ConoxMonitor` components as the main page. Mission references resolve against `src/data/scenarios.js`. Clinical teaching
+variants copy these profiles and opt into longer suppression cycles and a short
+live history; there is no second signal generator. Changing reference remounts
+the simulator with clean histories.
 Enlarging or resizing it keeps the same instance running.
 
 Embedded mode uses English and does not read or write the main simulator's
 preferences, change its demo URL, generate QR codes or join remote demo rooms.
 The qCON advisory and view controls call the existing simulator controls.
-The provisional ICU story renders missing index values in the DOM and disables
-index trends, rather than merely concealing numbers with CSS. Its existing
-clinical reservations and illustrative-signal notices remain in the game.
+The ICU story renders missing index values in the DOM and disables index trends,
+rather than merely concealing numbers with CSS. It does not establish a fixed
+RASS-to-qCON conversion. Clinical assumptions and evidence are recorded in
+[the clinical notes](GAME-CLINICAL-NOTES.md).
+
+The optional `trainingScenario.training` settings activate a teaching sequence
+inside the existing `SimulatorApp`. The game uses an eight-second EEG, a
+one-minute DSA and a twelve-second suppression cycle. Profiles interpolate over
+sixty seconds, then hold their final state until an explicit replay. The raw EEG
+and DSA share the same temporal suppression gate. History starts empty;
+`historySeconds` accepts only zero. qCON/qNOX remain reference values and are
+therefore hidden in the clinical narrative. Original simulator defaults and
+presets are unchanged when this opt-in is absent.
+
+The revised clinical story uses storage key `icu-story.v2`; revised missions
+use `pathways.v3`. Older scores remain stored under their old keys, but are not
+counted as completion of the new material.
 
 ## Phone layout
 
