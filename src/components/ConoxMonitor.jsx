@@ -1,5 +1,16 @@
 import { Metric } from "./UiPrimitives.jsx";
 
+// Module-relative assets also work from the nested game entry with a relative
+// Vite base (local previews and deployments below a different path).
+const brandLogoUrl = new URL(
+  "../../public/images/fresenius-kabi-logo.png",
+  import.meta.url,
+).href;
+const wordmarkUrl = new URL(
+  "../../public/images/conox-wordmark.png",
+  import.meta.url,
+).href;
+
 const valueOrGap = (value, missing = "--") =>
   Number.isFinite(value) ? value : missing;
 
@@ -8,6 +19,8 @@ export function ConoxMonitor({
   children,
   borderless = false,
   brandLabel = "Fresenius Kabi",
+  brandHref = "https://www.fresenius-kabi.com/de-ch",
+  brandTarget = "_blank",
 }) {
   return (
     <div
@@ -15,15 +28,12 @@ export function ConoxMonitor({
     >
       <a
         className="sb-device-brand"
-        href="https://www.fresenius-kabi.com/de-ch"
-        target="_blank"
-        rel="noreferrer"
+        href={brandHref}
+        target={brandTarget}
+        rel={brandTarget === "_blank" ? "noreferrer" : undefined}
         aria-label={brandLabel}
       >
-        <img
-          src={`${import.meta.env.BASE_URL}images/fresenius-kabi-logo.png`}
-          alt="Fresenius Kabi"
-        />
+        <img src={brandLogoUrl} alt="Fresenius Kabi" />
       </a>
       <span className="sb-device-led" aria-hidden="true" />
       {frameControls}
@@ -31,10 +41,7 @@ export function ConoxMonitor({
         <div className="sb-monitor">{children}</div>
       </div>
       <div className="sb-device-wordmark" aria-label="CONOX">
-        <img
-          src={`${import.meta.env.BASE_URL}images/conox-wordmark.png`}
-          alt="CONOX"
-        />
+        <img src={wordmarkUrl} alt="CONOX" />
       </div>
     </div>
   );

@@ -211,8 +211,19 @@ function isRemoteRevision(value) {
   );
 }
 
-function SimulatorApp({ onOpenRecording }) {
-  const [locale, setLocale] = React.useState(getInitialLocale);
+// Embedded exercises mount with a scenario key so every exercise starts with
+// the same renderer, initial indices and signal history as the main simulator.
+export function SimulatorApp({
+  onOpenRecording,
+  trainingScenario = null,
+  trainingControls = null,
+  trainingScreenOnly = false,
+  maskIndices = false,
+} = {}) {
+  const embedded = Boolean(trainingScenario);
+  const [locale, setLocale] = React.useState(() =>
+    embedded ? "en" : getInitialLocale(),
+  );
   const {
     t,
     tr,
@@ -223,10 +234,16 @@ function SimulatorApp({ onOpenRecording }) {
     eegKnowledge: EEG_KNOWLEDGE,
   } = React.useMemo(() => createI18n(locale), [locale]);
   const DEFAULT_SCENARIO =
-    SCENARIOS.find((A) => A.id === "target-a") ?? SCENARIOS[0];
-  const [remoteRole, setRemoteRole] = React.useState(getInitialRemoteRole),
+    trainingScenario ??
+    SCENARIOS.find((A) => A.id === "target-a") ??
+    SCENARIOS[0];
+  const [remoteRole, setRemoteRole] = React.useState(() =>
+      embedded ? "full" : getInitialRemoteRole(),
+    ),
     [borderlessDisplay, setBorderlessDisplay] = React.useState(false),
-    [demoSession, setDemoSession] = React.useState(getInitialDemoSession),
+    [demoSession, setDemoSession] = React.useState(() =>
+      embedded ? DEMO_SESSIONS[0] : getInitialDemoSession(),
+    ),
     [remotePeers, setRemotePeers] = React.useState(0),
     [remoteStatus, setRemoteStatus] = React.useState("remote.status.waiting"),
     [linkPanelOpen, setLinkPanelOpen] = React.useState(!1),
@@ -238,12 +255,24 @@ function SimulatorApp({ onOpenRecording }) {
       "dsa-index",
       "all",
     ]),
-    [primaryDrug, setPrimaryDrug] = React.useState("propofol"),
-    [primaryLevel, setPrimaryLevel] = React.useState(2),
-    [adjunctDrug, setAdjunctDrug] = React.useState("none"),
-    [adjunctLevel, setAdjunctLevel] = React.useState(0),
-    [opioidDrug, setOpioidDrug] = React.useState("none"),
-    [opioidLevel, setOpioidLevel] = React.useState(0),
+    [primaryDrug, setPrimaryDrug] = React.useState(
+      embedded ? DEFAULT_SCENARIO.drug : "propofol",
+    ),
+    [primaryLevel, setPrimaryLevel] = React.useState(
+      embedded ? DEFAULT_SCENARIO.level : 2,
+    ),
+    [adjunctDrug, setAdjunctDrug] = React.useState(
+      embedded ? DEFAULT_SCENARIO.adjunct : "none",
+    ),
+    [adjunctLevel, setAdjunctLevel] = React.useState(
+      embedded ? DEFAULT_SCENARIO.adjunctLevel : 0,
+    ),
+    [opioidDrug, setOpioidDrug] = React.useState(
+      embedded ? DEFAULT_SCENARIO.opioid : "none",
+    ),
+    [opioidLevel, setOpioidLevel] = React.useState(
+      embedded ? DEFAULT_SCENARIO.opioidLevel : 0,
+    ),
     [eegWindowSeconds, setEegWindowSeconds] = React.useState(
       SIMULATION_DISPLAY.defaultEegWindow,
     ),
@@ -261,8 +290,10 @@ function SimulatorApp({ onOpenRecording }) {
     [sef95Visible, setSef95Visible] = React.useState(!1),
     [simulationRunning, setSimulationRunning] = React.useState(!0),
     [simulatorEnabled, setSimulatorEnabled] = React.useState(!1),
-    [eegHintsEnabled, setEegHintsEnabled] = React.useState(!0),
-    [selectedScenarioId, setSelectedScenarioId] = React.useState("target-a"),
+    [eegHintsEnabled, setEegHintsEnabled] = React.useState(!embedded),
+    [selectedScenarioId, setSelectedScenarioId] = React.useState(
+      DEFAULT_SCENARIO.id,
+    ),
     [selectedKnowledgeTopic, setSelectedKnowledgeTopic] =
       React.useState("alpha"),
     [currentIndices, setCurrentIndices] = React.useState(
@@ -321,7 +352,7 @@ function SimulatorApp({ onOpenRecording }) {
     scenarioIndicesRef = React.useRef(DEFAULT_SCENARIO.indices),
     xa = DEFAULT_SCENARIO.profile,
     simulationStateRef = React.useRef({
-      depth: EFFECT_LEVELS[2],
+      depth: EFFECT_LEVELS[embedded ? DEFAULT_SCENARIO.level : 2],
       bands: xa.bands,
       bs: xa.bs,
       suppressed: !1,
@@ -365,9 +396,10 @@ function SimulatorApp({ onOpenRecording }) {
       window.dispatchEvent(new Event("conox-dsa-period-change"));
   }, [simulationRunning]);
   React.useEffect(() => {
+    if (embedded) return;
     window.localStorage.setItem("conox.locale", locale);
     document.documentElement.lang = locale;
-  }, [locale]);
+  }, [locale, embedded]);
   (React.useEffect(() => {
     simulationConfigRef.current = {
       drug: primaryDrug,
@@ -1723,22 +1755,24 @@ function SimulatorApp({ onOpenRecording }) {
       ol();
     },
     changeRemoteRole = (role) => {
+      if (embedded) return;
       const nextRole = REMOTE_ROLES.includes(role) ? role : "full";
       replaceRemoteUrl(nextRole, demoSession);
       setRemoteRole(nextRole);
     },
     changeDemoSession = (value) => {
+      if (embedded) return;
       const nextDemo = parseDemoSession(value) ?? DEMO_SESSIONS[0];
       replaceRemoteUrl(remoteRole, nextDemo);
       setDemoSession(nextDemo);
     },
     controllerUrl = React.useMemo(
-      () => buildRemoteUrl("controller", demoSession),
-      [demoSession],
+      () => (embedded ? "" : buildRemoteUrl("controller", demoSession)),
+      [demoSession, embedded],
     ),
     displayUrl = React.useMemo(
-      () => buildRemoteUrl("display", demoSession),
-      [demoSession],
+      () => (embedded ? "" : buildRemoteUrl("display", demoSession)),
+      [demoSession, embedded],
     ),
     qrCodeUrl = qrCodeDataUrl,
     Ji = (A) => {
@@ -1877,6 +1911,7 @@ function SimulatorApp({ onOpenRecording }) {
     return () => window.clearInterval(A);
   }, [journeyRunning, simulationRunning, NARKOSE_REISE, t]);
   React.useEffect(() => {
+    if (embedded) return;
     let active = !0;
     QRCode.toDataURL(controllerUrl, {
       errorCorrectionLevel: "M",
@@ -1896,7 +1931,7 @@ function SimulatorApp({ onOpenRecording }) {
     return () => {
       active = !1;
     };
-  }, [controllerUrl]);
+  }, [controllerUrl, embedded]);
   const remoteSnapshot = React.useMemo(
     () => ({
       version: 1,
@@ -1963,8 +1998,9 @@ function SimulatorApp({ onOpenRecording }) {
     ],
   );
   React.useEffect(() => {
+    if (embedded) return;
     remoteStateRef.current = remoteSnapshot;
-  }, [remoteSnapshot]);
+  }, [remoteSnapshot, embedded]);
   const sendRemoteState = React.useCallback((targetPeer) => {
     const action = remoteActionRef.current,
       revision = remoteRevisionRef.current,
@@ -2069,11 +2105,13 @@ function SimulatorApp({ onOpenRecording }) {
     else if (order < 0) sendRemoteState(peerId);
   };
   React.useEffect(() => {
+    if (embedded) return;
     try {
       window.localStorage.setItem(DEMO_STORAGE_KEY, String(demoSession));
     } catch {}
-  }, [demoSession]);
+  }, [demoSession, embedded]);
   React.useEffect(() => {
+    if (embedded) return;
     const joinedAt = Date.now();
     remoteJoinedAtRef.current = joinedAt;
     remoteRevisionRef.current = {
@@ -2137,8 +2175,9 @@ function SimulatorApp({ onOpenRecording }) {
       remoteActionRef.current = null;
       room.leave()?.catch?.(() => {});
     };
-  }, [demoSession, sendRemoteState]);
+  }, [demoSession, sendRemoteState, embedded]);
   React.useEffect(() => {
+    if (embedded) return;
     const timeoutId = window.setTimeout(() => {
       const json = JSON.stringify(remoteSnapshot);
       if (json === remoteKnownStateRef.current.json) return;
@@ -2153,7 +2192,453 @@ function SimulatorApp({ onOpenRecording }) {
       sendRemoteState();
     }, 80);
     return () => window.clearTimeout(timeoutId);
-  }, [remoteSnapshot, sendRemoteState]);
+  }, [remoteSnapshot, sendRemoteState, embedded]);
+  React.useLayoutEffect(() => {
+    if (!embedded || !trainingControls) return;
+    trainingControls.current = {
+      setView: (view) => {
+        if (!maskIndices && Object.hasOwn(DISPLAY_VIEWS, view))
+          activateDirectView(view);
+      },
+      setAdvisory: (enabled) => {
+        if (!maskIndices) setQconAlarmEnabled(Boolean(enabled));
+      },
+      setLower: (value) => {
+        if (!maskIndices && Number.isFinite(Number(value)))
+          changeQconAlarmMin(value);
+      },
+      setUpper: (value) => {
+        if (!maskIndices && Number.isFinite(Number(value)))
+          changeQconAlarmMax(value);
+      },
+      indices: maskIndices ? null : currentIndices,
+      enabled: !maskIndices && qconAlarmEnabled,
+      lower: maskIndices ? null : qconAlarmMin,
+      upper: maskIndices ? null : qconAlarmMax,
+      triggered: !maskIndices && qconAlarmTriggered,
+      view: displayView,
+    };
+    return () => {
+      trainingControls.current = null;
+    };
+  }, [
+    embedded,
+    trainingControls,
+    maskIndices,
+    currentIndices,
+    qconAlarmEnabled,
+    qconAlarmMin,
+    qconAlarmMax,
+    qconAlarmTriggered,
+    displayView,
+    displayChoices,
+    DISPLAY_VIEWS,
+  ]);
+  const monitor = (
+    <ConoxMonitor
+      borderless={embedded && trainingScreenOnly}
+      brandLabel={embedded ? "Return to game home" : t("brand.open")}
+      brandHref={embedded ? "./" : undefined}
+      brandTarget={embedded ? "_self" : undefined}
+      frameControls={
+        maskIndices || (embedded && trainingScreenOnly) ? null : (
+          <>
+            <button
+              type="button"
+              className={`sb-live-switch ${liveSync ? "on" : "off"}`}
+              aria-pressed={liveSync}
+              aria-label={liveSync ? t("live.on") : t("live.off")}
+              onClick={toggleLiveSync}
+            >
+              <span className="sb-live-dot" aria-hidden="true" />
+              <strong>{"LIVE"}</strong>
+              <small>
+                {liveSync ? t("live.status.on") : t("live.status.off")}
+              </small>
+            </button>
+            <button
+              type="button"
+              className={`sb-qcon-alarm-key ${qconAlarmEnabled ? "on" : "off"} ${qconAlarmTriggered ? "alert" : ""}`}
+              aria-pressed={qconAlarmEnabled}
+              aria-label={
+                qconAlarmEnabled ? t("alarm.disable") : t("alarm.enable")
+              }
+              title={
+                qconAlarmEnabled
+                  ? t("alarm.activeTitle", {
+                      min: qconAlarmMin,
+                      max: qconAlarmMax,
+                    })
+                  : t("alarm.enable")
+              }
+              onClick={toggleQconAlarm}
+            >
+              <svg
+                className="sb-frame-alarm-bell"
+                viewBox="0 0 32 32"
+                aria-hidden="true"
+              >
+                <path d="M7 23h18c-2.2-2.7-3.3-6.2-3.3-10.1 0-4.1-2.5-7-5.7-7s-5.7 2.9-5.7 7C10.3 16.8 9.2 20.3 7 23Z" />
+                <path d="M13.2 25.4c.5 1.4 1.5 2.2 2.8 2.2s2.3-.8 2.8-2.2" />
+                <path d="M14.2 5.8V4.2h3.6v1.6" />
+              </svg>
+            </button>
+          </>
+        )
+      }
+    >
+      <ConoxMetrics indices={maskIndices ? null : currentIndices} />
+      <ConoxEegPanel
+        displayView={displayView}
+        caption={
+          <>
+            <b>{"EEG"}</b>
+            <span>{t("reference.eegChannel")}</span>
+            <em>
+              {eegWindowSeconds}
+              {" s"}
+            </em>
+          </>
+        }
+        scale={
+          <>
+            <span>{"-"}</span>
+            <b>{eegAmplitude}</b>
+            <small>{"µV"}</small>
+            <span>{"-"}</span>
+          </>
+        }
+        hints={
+          eegHintsEnabled && (
+            <div className="sb-eeg-detection" aria-live="polite">
+              <span>{Ou}</span>
+              <b>{Et}</b>
+            </div>
+          )
+        }
+      >
+        <canvas
+          ref={rawEegCanvasRef}
+          width={1e3}
+          height={170}
+          aria-label={t("eeg.rawLabel")}
+        />
+      </ConoxEegPanel>
+      <ConoxDsaPanel
+        displayView={displayView}
+        caption={
+          <>
+            <b>{"DSA"}</b>
+            <span ref={eegStatusRef}>{t("eeg.status.active")}</span>
+            <em>{t("reference.legacyDsa")}</em>
+            {!maskIndices && (
+              <div className="sb-dsa-caption-actions">
+                <button
+                  type="button"
+                  className={`sb-sef-toggle ${sef50Visible ? "active" : ""}`}
+                  aria-pressed={sef50Visible}
+                  onClick={() => setSef50Visible((A) => !A)}
+                  title={t("dsa.sef50Title")}
+                >
+                  {"SEF50"}
+                  <i aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  className={`sb-sef-toggle sef95 ${sef95Visible ? "active" : ""}`}
+                  aria-pressed={sef95Visible}
+                  onClick={() => setSef95Visible((A) => !A)}
+                  title={t("dsa.sef95Title")}
+                >
+                  {"SEF95"}
+                  <i aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  className="sb-view-direct"
+                  onClick={
+                    displayView === "dsa-only"
+                      ? returnToEeg
+                      : showSpectrogramOnly
+                  }
+                  title={
+                    displayView === "dsa-only"
+                      ? t("dsa.showEeg")
+                      : t("dsa.onlyTitle")
+                  }
+                >
+                  {displayView === "dsa-only" ? "EEG" : t("dsa.only")}
+                </button>
+              </div>
+            )}
+          </>
+        }
+        frequencyAxis={
+          <>
+            {[45, 40, 35, 30, 25, 20, 15, 10, 5, 0].map((A) => (
+              <span key={A}>{A}</span>
+            ))}
+            <b>{"Hz"}</b>
+          </>
+        }
+        colorScale={
+          <>
+            <div
+              className="sb-db-gradient"
+              style={{ background: RECORDING_DSA_GRADIENT }}
+              role="img"
+              aria-label={t("dsa.scale")}
+            />
+            <div
+              className="sb-db-labels"
+              role="group"
+              aria-label={t("dsa.scaleLevel", {
+                level:
+                  dsaColorScale > 0
+                    ? `+${dsaColorScale}`
+                    : String(dsaColorScale),
+              })}
+            >
+              <button
+                type="button"
+                title={t("dsa.scaleUp")}
+                aria-label={t("dsa.scaleUp")}
+                disabled={dsaColorScale >= DSA_SCALE_MAX}
+                onClick={() =>
+                  setDsaColorScale((level) =>
+                    Math.min(DSA_SCALE_MAX, level + 1),
+                  )
+                }
+              >
+                {"+"}
+              </button>
+              {dsaColorScale !== 0 && (
+                <i
+                  className="sb-db-level"
+                  style={{
+                    top: `${50 - (dsaColorScale / DSA_SCALE_MAX) * 32}%`,
+                  }}
+                  aria-hidden="true"
+                />
+              )}
+              <button
+                type="button"
+                title={t("dsa.scaleDown")}
+                aria-label={t("dsa.scaleDown")}
+                disabled={dsaColorScale <= DSA_SCALE_MIN}
+                onClick={() =>
+                  setDsaColorScale((level) =>
+                    Math.max(DSA_SCALE_MIN, level - 1),
+                  )
+                }
+              >
+                {"−"}
+              </button>
+            </div>
+          </>
+        }
+        timeline={Array.from(
+          {
+            length: 5,
+          },
+          (A, R) => (
+            <span key={R}>{formatTimelineLabel(R)}</span>
+          ),
+        )}
+      >
+        <canvas
+          ref={dsaCanvasRef}
+          width={900}
+          height={260}
+          aria-label={t("dsa.label")}
+        />
+        <canvas
+          ref={dsaOverlayRef}
+          className="sb-sef-overlay"
+          width={900}
+          height={260}
+          aria-label={t("dsa.sefLabel")}
+        />
+        {signalGridVisible && (
+          <div className="sb-band-guides" aria-hidden="true">
+            <i
+              style={{
+                top: "33.3%",
+              }}
+            />
+            <i
+              style={{
+                top: "71.1%",
+              }}
+            />
+            <i
+              style={{
+                top: "82.2%",
+              }}
+            />
+            <i
+              style={{
+                top: "91.1%",
+              }}
+            />
+          </div>
+        )}
+      </ConoxDsaPanel>
+      <ConoxQconPanel
+        value={maskIndices ? null : currentIndices.qcon}
+        valueClassName={
+          qconAlarmTriggered
+            ? qconAlarmFlash
+              ? "alarm-orange"
+              : "alarm-white"
+            : ""
+        }
+        status={
+          maskIndices
+            ? null
+            : qconAlarmTriggered
+              ? currentIndices.qcon < qconAlarmMin
+                ? t("alarm.below", { min: qconAlarmMin })
+                : t("alarm.above", { max: qconAlarmMax })
+              : qconAlarmEnabled
+                ? t("alarm.active", {
+                    min: qconAlarmMin,
+                    max: qconAlarmMax,
+                  })
+                : liveSync
+                  ? t("alarm.sync")
+                  : t("alarm.delayed")
+        }
+      />
+      {!maskIndices && (
+        <div
+          className="sb-view-switch"
+          aria-label={t("display.viewAria", {
+            label: DISPLAY_VIEWS[displayView].label,
+          })}
+        >
+          {displayChoices.map((A, R) => (
+            <button
+              key={`${R}-${A}`}
+              type="button"
+              className="sb-view-option"
+              onClick={() => selectDisplayChoice(R)}
+              title={DISPLAY_VIEWS[A].description}
+              aria-label={DISPLAY_VIEWS[A].label}
+            >
+              {DisplayViewIconFor(A)}
+              <small>{DISPLAY_VIEWS[A].label}</small>
+            </button>
+          ))}
+        </div>
+      )}
+      {!maskIndices && (
+        <section
+          className={`sb-trendbox ${["eeg-index", "dsa-index", "all"].includes(displayView) ? "" : "hidden"} ${displayView === "all" ? "layout-all-bottom" : ""}`}
+          aria-label={t("display.trendAria")}
+          aria-hidden={!["eeg-index", "dsa-index", "all"].includes(displayView)}
+        >
+          <div className="sb-trend-scale" aria-hidden="true">
+            <span>{"100"}</span>
+            <span>{"75"}</span>
+            <span>{"50"}</span>
+            <span>{"25"}</span>
+            <span>{"0"}</span>
+          </div>
+          <TrendChart samples={trendSamples} />
+          <div className="sb-trend-legend">
+            <b className="qcon">{"qCON"}</b>
+            <b className="qnox">{"qNOX"}</b>
+            <b className="bsr">{"BSR"}</b>
+            <b className="emg">{"EMG"}</b>
+          </div>
+          <div className="sb-trend-time">
+            {Array.from(
+              {
+                length: 5,
+              },
+              (A, R) => (
+                <span key={R}>{formatTimelineLabel(R)}</span>
+              ),
+            )}
+          </div>
+        </section>
+      )}
+      {!embedded && (
+        <section className="sb-assistant sb-case-picker">
+          <h3>{t("cases.title")}</h3>
+          <label>
+            <span>{t("cases.select")}</span>
+            <select
+              value={selectedScenarioId ?? ""}
+              onChange={(A) => {
+                const R = SCENARIOS.find((me) => me.id === A.target.value);
+                R && ea(R);
+              }}
+              aria-label={t("cases.aria")}
+            >
+              {zt?.group === "journey" && (
+                <option value={zt.id}>
+                  {t("cases.journey", { name: zt.name })}
+                </option>
+              )}
+              {!selectedScenarioId && (
+                <option value="">{t("cases.free")}</option>
+              )}
+              {SCENARIOS.map((A) => (
+                <option key={A.id} value={A.id}>
+                  {A.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="button" onClick={wi}>
+            {t("cases.random")}
+          </button>
+          <button
+            type="button"
+            className={simulationRunning ? "" : "paused"}
+            aria-pressed={!simulationRunning}
+            onClick={() =>
+              setSimulationRunning(
+                (A) => ((simulationConfigRef.current.running = !A), !A),
+              )
+            }
+          >
+            {simulationRunning ? t("control.pause") : t("control.resume")}
+          </button>
+        </section>
+      )}
+      <div
+        className={`sb-monitor-footer ${eegHintsEnabled ? "analysis-on" : "analysis-off"}`}
+        aria-label={t("analysis.aria")}
+      >
+        {eegHintsEnabled ? (
+          <>
+            <span>
+              <b>{t("analysis.pattern")}</b>
+              {Et}
+            </span>
+            <span>
+              <b>{t("analysis.dominant")}</b>
+              {Ou}
+            </span>
+            <span>
+              <b>{t("analysis.assessment")}</b>
+              {ki}
+            </span>
+          </>
+        ) : (
+          <>
+            <span />
+            <span />
+            <span />
+          </>
+        )}
+      </div>
+    </ConoxMonitor>
+  );
+  if (embedded) return <div className="game-embedded">{monitor}</div>;
   return (
     <main
       className={`sb-shell role-${remoteRole}${borderlessDisplay ? " display-borderless" : ""}${linkPanelOpen ? " link-open" : ""}`}
@@ -2278,395 +2763,7 @@ function SimulatorApp({ onOpenRecording }) {
       )}
       <div className="sb-grid">
         <section className="sb-monitor-column">
-          <ConoxMonitor
-            brandLabel={t("brand.open")}
-            frameControls={
-              <>
-                <button
-                  type="button"
-                  className={`sb-live-switch ${liveSync ? "on" : "off"}`}
-                  aria-pressed={liveSync}
-                  aria-label={liveSync ? t("live.on") : t("live.off")}
-                  onClick={toggleLiveSync}
-                >
-                  <span className="sb-live-dot" aria-hidden="true" />
-                  <strong>{"LIVE"}</strong>
-                  <small>
-                    {liveSync ? t("live.status.on") : t("live.status.off")}
-                  </small>
-                </button>
-                <button
-                  type="button"
-                  className={`sb-qcon-alarm-key ${qconAlarmEnabled ? "on" : "off"} ${qconAlarmTriggered ? "alert" : ""}`}
-                  aria-pressed={qconAlarmEnabled}
-                  aria-label={
-                    qconAlarmEnabled ? t("alarm.disable") : t("alarm.enable")
-                  }
-                  title={
-                    qconAlarmEnabled
-                      ? t("alarm.activeTitle", {
-                          min: qconAlarmMin,
-                          max: qconAlarmMax,
-                        })
-                      : t("alarm.enable")
-                  }
-                  onClick={toggleQconAlarm}
-                >
-                  <svg
-                    className="sb-frame-alarm-bell"
-                    viewBox="0 0 32 32"
-                    aria-hidden="true"
-                  >
-                    <path d="M7 23h18c-2.2-2.7-3.3-6.2-3.3-10.1 0-4.1-2.5-7-5.7-7s-5.7 2.9-5.7 7C10.3 16.8 9.2 20.3 7 23Z" />
-                    <path d="M13.2 25.4c.5 1.4 1.5 2.2 2.8 2.2s2.3-.8 2.8-2.2" />
-                    <path d="M14.2 5.8V4.2h3.6v1.6" />
-                  </svg>
-                </button>
-              </>
-            }
-          >
-            <ConoxMetrics indices={currentIndices} />
-            <ConoxEegPanel
-              displayView={displayView}
-              caption={
-                <>
-                  <b>{"EEG"}</b>
-                  <span>{t("reference.eegChannel")}</span>
-                  <em>
-                    {eegWindowSeconds}
-                    {" s"}
-                  </em>
-                </>
-              }
-              scale={
-                <>
-                  <span>{"-"}</span>
-                  <b>{eegAmplitude}</b>
-                  <small>{"µV"}</small>
-                  <span>{"-"}</span>
-                </>
-              }
-              hints={
-                eegHintsEnabled && (
-                  <div className="sb-eeg-detection" aria-live="polite">
-                    <span>{Ou}</span>
-                    <b>{Et}</b>
-                  </div>
-                )
-              }
-            >
-              <canvas
-                ref={rawEegCanvasRef}
-                width={1e3}
-                height={170}
-                aria-label={t("eeg.rawLabel")}
-              />
-            </ConoxEegPanel>
-            <ConoxDsaPanel
-              displayView={displayView}
-              caption={
-                <>
-                  <b>{"DSA"}</b>
-                  <span ref={eegStatusRef}>{t("eeg.status.active")}</span>
-                  <em>{t("reference.legacyDsa")}</em>
-                  <div className="sb-dsa-caption-actions">
-                    <button
-                      type="button"
-                      className={`sb-sef-toggle ${sef50Visible ? "active" : ""}`}
-                      aria-pressed={sef50Visible}
-                      onClick={() => setSef50Visible((A) => !A)}
-                      title={t("dsa.sef50Title")}
-                    >
-                      {"SEF50"}
-                      <i aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      className={`sb-sef-toggle sef95 ${sef95Visible ? "active" : ""}`}
-                      aria-pressed={sef95Visible}
-                      onClick={() => setSef95Visible((A) => !A)}
-                      title={t("dsa.sef95Title")}
-                    >
-                      {"SEF95"}
-                      <i aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      className="sb-view-direct"
-                      onClick={
-                        displayView === "dsa-only"
-                          ? returnToEeg
-                          : showSpectrogramOnly
-                      }
-                      title={
-                        displayView === "dsa-only"
-                          ? t("dsa.showEeg")
-                          : t("dsa.onlyTitle")
-                      }
-                    >
-                      {displayView === "dsa-only" ? "EEG" : t("dsa.only")}
-                    </button>
-                  </div>
-                </>
-              }
-              frequencyAxis={
-                <>
-                  {[45, 40, 35, 30, 25, 20, 15, 10, 5, 0].map((A) => (
-                    <span key={A}>{A}</span>
-                  ))}
-                  <b>{"Hz"}</b>
-                </>
-              }
-              colorScale={
-                <>
-                  <div
-                    className="sb-db-gradient"
-                    style={{ background: RECORDING_DSA_GRADIENT }}
-                    role="img"
-                    aria-label={t("dsa.scale")}
-                  />
-                  <div
-                    className="sb-db-labels"
-                    role="group"
-                    aria-label={t("dsa.scaleLevel", {
-                      level:
-                        dsaColorScale > 0
-                          ? `+${dsaColorScale}`
-                          : String(dsaColorScale),
-                    })}
-                  >
-                    <button
-                      type="button"
-                      title={t("dsa.scaleUp")}
-                      aria-label={t("dsa.scaleUp")}
-                      disabled={dsaColorScale >= DSA_SCALE_MAX}
-                      onClick={() =>
-                        setDsaColorScale((level) =>
-                          Math.min(DSA_SCALE_MAX, level + 1),
-                        )
-                      }
-                    >
-                      {"+"}
-                    </button>
-                    {dsaColorScale !== 0 && (
-                      <i
-                        className="sb-db-level"
-                        style={{
-                          top: `${50 - (dsaColorScale / DSA_SCALE_MAX) * 32}%`,
-                        }}
-                        aria-hidden="true"
-                      />
-                    )}
-                    <button
-                      type="button"
-                      title={t("dsa.scaleDown")}
-                      aria-label={t("dsa.scaleDown")}
-                      disabled={dsaColorScale <= DSA_SCALE_MIN}
-                      onClick={() =>
-                        setDsaColorScale((level) =>
-                          Math.max(DSA_SCALE_MIN, level - 1),
-                        )
-                      }
-                    >
-                      {"−"}
-                    </button>
-                  </div>
-                </>
-              }
-              timeline={Array.from(
-                {
-                  length: 5,
-                },
-                (A, R) => (
-                  <span key={R}>{formatTimelineLabel(R)}</span>
-                ),
-              )}
-            >
-              <canvas
-                ref={dsaCanvasRef}
-                width={900}
-                height={260}
-                aria-label={t("dsa.label")}
-              />
-              <canvas
-                ref={dsaOverlayRef}
-                className="sb-sef-overlay"
-                width={900}
-                height={260}
-                aria-label={t("dsa.sefLabel")}
-              />
-              {signalGridVisible && (
-                <div className="sb-band-guides" aria-hidden="true">
-                  <i
-                    style={{
-                      top: "33.3%",
-                    }}
-                  />
-                  <i
-                    style={{
-                      top: "71.1%",
-                    }}
-                  />
-                  <i
-                    style={{
-                      top: "82.2%",
-                    }}
-                  />
-                  <i
-                    style={{
-                      top: "91.1%",
-                    }}
-                  />
-                </div>
-              )}
-            </ConoxDsaPanel>
-            <ConoxQconPanel
-              value={currentIndices.qcon}
-              valueClassName={
-                qconAlarmTriggered
-                  ? qconAlarmFlash
-                    ? "alarm-orange"
-                    : "alarm-white"
-                  : ""
-              }
-              status={
-                qconAlarmTriggered
-                  ? currentIndices.qcon < qconAlarmMin
-                    ? t("alarm.below", { min: qconAlarmMin })
-                    : t("alarm.above", { max: qconAlarmMax })
-                  : qconAlarmEnabled
-                    ? t("alarm.active", {
-                        min: qconAlarmMin,
-                        max: qconAlarmMax,
-                      })
-                    : liveSync
-                      ? t("alarm.sync")
-                      : t("alarm.delayed")
-              }
-            />
-            <div
-              className="sb-view-switch"
-              aria-label={t("display.viewAria", {
-                label: DISPLAY_VIEWS[displayView].label,
-              })}
-            >
-              {displayChoices.map((A, R) => (
-                <button
-                  key={`${R}-${A}`}
-                  type="button"
-                  className="sb-view-option"
-                  onClick={() => selectDisplayChoice(R)}
-                  title={DISPLAY_VIEWS[A].description}
-                  aria-label={DISPLAY_VIEWS[A].label}
-                >
-                  {DisplayViewIconFor(A)}
-                  <small>{DISPLAY_VIEWS[A].label}</small>
-                </button>
-              ))}
-            </div>
-            <section
-              className={`sb-trendbox ${["eeg-index", "dsa-index", "all"].includes(displayView) ? "" : "hidden"} ${displayView === "all" ? "layout-all-bottom" : ""}`}
-              aria-label={t("display.trendAria")}
-              aria-hidden={
-                !["eeg-index", "dsa-index", "all"].includes(displayView)
-              }
-            >
-              <div className="sb-trend-scale" aria-hidden="true">
-                <span>{"100"}</span>
-                <span>{"75"}</span>
-                <span>{"50"}</span>
-                <span>{"25"}</span>
-                <span>{"0"}</span>
-              </div>
-              <TrendChart samples={trendSamples} />
-              <div className="sb-trend-legend">
-                <b className="qcon">{"qCON"}</b>
-                <b className="qnox">{"qNOX"}</b>
-                <b className="bsr">{"BSR"}</b>
-                <b className="emg">{"EMG"}</b>
-              </div>
-              <div className="sb-trend-time">
-                {Array.from(
-                  {
-                    length: 5,
-                  },
-                  (A, R) => (
-                    <span key={R}>{formatTimelineLabel(R)}</span>
-                  ),
-                )}
-              </div>
-            </section>
-            <section className="sb-assistant sb-case-picker">
-              <h3>{t("cases.title")}</h3>
-              <label>
-                <span>{t("cases.select")}</span>
-                <select
-                  value={selectedScenarioId ?? ""}
-                  onChange={(A) => {
-                    const R = SCENARIOS.find((me) => me.id === A.target.value);
-                    R && ea(R);
-                  }}
-                  aria-label={t("cases.aria")}
-                >
-                  {zt?.group === "journey" && (
-                    <option value={zt.id}>
-                      {t("cases.journey", { name: zt.name })}
-                    </option>
-                  )}
-                  {!selectedScenarioId && (
-                    <option value="">{t("cases.free")}</option>
-                  )}
-                  {SCENARIOS.map((A) => (
-                    <option key={A.id} value={A.id}>
-                      {A.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button type="button" onClick={wi}>
-                {t("cases.random")}
-              </button>
-              <button
-                type="button"
-                className={simulationRunning ? "" : "paused"}
-                aria-pressed={!simulationRunning}
-                onClick={() =>
-                  setSimulationRunning(
-                    (A) => ((simulationConfigRef.current.running = !A), !A),
-                  )
-                }
-              >
-                {simulationRunning ? t("control.pause") : t("control.resume")}
-              </button>
-            </section>
-            <div
-              className={`sb-monitor-footer ${eegHintsEnabled ? "analysis-on" : "analysis-off"}`}
-              aria-label={t("analysis.aria")}
-            >
-              {eegHintsEnabled ? (
-                <>
-                  <span>
-                    <b>{t("analysis.pattern")}</b>
-                    {Et}
-                  </span>
-                  <span>
-                    <b>{t("analysis.dominant")}</b>
-                    {Ou}
-                  </span>
-                  <span>
-                    <b>{t("analysis.assessment")}</b>
-                    {ki}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span />
-                  <span />
-                  <span />
-                </>
-              )}
-            </div>
-          </ConoxMonitor>
+          {monitor}
           <div className="sb-device-actions" aria-label={t("docs.aria")}>
             <a
               href="#"
