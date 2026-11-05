@@ -1,5 +1,6 @@
 export const RECORDING_REFERENCE = {
   fr: {
+    "reference.dsaCalculation": "Calcul du DSA",
     "recording.experimental":
       "Lecture selon le profil ConoxView choisi. Référence logicielle issue de l’app ; étalonnage physique et concordance avec un appareil non validés. Usage pédagogique.",
     "recording.experimentalShort": "Référence logicielle · usage pédagogique",
@@ -58,6 +59,7 @@ export const RECORDING_REFERENCE = {
     "recording.state.sensorExpired": "Capteur expiré",
   },
   de: {
+    "reference.dsaCalculation": "DSA-Berechnung",
     "recording.experimental":
       "Wiedergabe mit dem gewählten ConoxView-Profil. Softwarereferenz aus der App; physikalische Kalibrierung und Gerätevergleich nicht validiert. Für Schulungszwecke.",
     "recording.experimentalShort": "Softwarereferenz · für Schulungszwecke",
@@ -116,6 +118,7 @@ export const RECORDING_REFERENCE = {
     "recording.state.sensorExpired": "Sensor abgelaufen",
   },
   en: {
+    "reference.dsaCalculation": "DSA calculation",
     "recording.experimental":
       "Replay using the selected ConoxView profile. Software reference from the app; physical calibration and device agreement are not validated. For education.",
     "recording.experimentalShort": "Software reference · for education",

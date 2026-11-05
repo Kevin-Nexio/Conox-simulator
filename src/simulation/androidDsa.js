@@ -23,7 +23,7 @@ export function createAndroidSimulationDsa() {
       calculator.calculate(buffer);
       samples = 0;
       columns.push({ time: elapsed - 0.5, bytes });
-      if (columns.length > 3600) columns.shift();
+      if (columns.length > 21600) columns.shift();
       if (elapsed % 5 === 0) publishedAt = elapsed;
     },
     reset() {

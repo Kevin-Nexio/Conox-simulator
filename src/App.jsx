@@ -1,4 +1,9 @@
 import * as React from "react";
+import {
+  createAndroidSimulationDsa,
+  paintAndroidSimulationDsa,
+} from "./simulation/androidDsa.js";
+import androidLegend from "./assets/conoxview-android-dsa-scale.png";
 import QRCode from "qrcode";
 import { joinRoom } from "trystero";
 import {
@@ -311,6 +316,7 @@ export function SimulatorApp({
     [dsaPeriodMinutes, setDsaPeriodMinutes] = React.useState(
       training?.trendWindowMinutes ?? 30,
     ),
+    [dsaModel, setDsaModel] = React.useState("legacy"),
     [dsaColorScale, setDsaColorScale] = React.useState(0),
     [liveSync, setLiveSync] = React.useState(!1),
     [qconAlarmEnabled, setQconAlarmEnabled] = React.useState(!1),
@@ -409,6 +415,8 @@ export function SimulatorApp({
     eegMotionRef = React.useRef(eegMotion),
     eegAmplitudeRef = React.useRef(eegAmplitude),
     signalGridRef = React.useRef(signalGridVisible),
+    androidHistoryRef = React.useRef(null),
+    dsaModelRef = React.useRef(dsaModel),
     dsaPeriodRef = React.useRef(dsaPeriodMinutes),
     dsaColorOffsetRef = React.useRef(0),
     trendSequenceRef = React.useRef(0),
@@ -525,6 +533,11 @@ export function SimulatorApp({
       return () => window.clearInterval(A);
     }, [simulationRunning]),
     React.useEffect(() => {
+      dsaModelRef.current = dsaModel;
+      window.dispatchEvent(new Event("conox-dsa-period-change"));
+    }, [dsaModel]),
+    React.useEffect(() => {
+      androidHistoryRef.current ??= createAndroidSimulationDsa();
       const A = dsaCanvasRef.current;
       if (!A) return;
       const R = A.getContext("2d", {
@@ -900,7 +913,8 @@ export function SimulatorApp({
             dsaOverlay.width,
             dsaOverlay.height,
           );
-          if (!dsaColumnSamples.length) return;
+          if (dsaModelRef.current === "android" || !dsaColumnSamples.length)
+            return;
           const drawTrend = (Y, Z) => {
             dsaOverlayContext.save();
             dsaOverlayContext.strokeStyle = Z;
@@ -954,6 +968,20 @@ export function SimulatorApp({
             }
         },
         rl = () => {
+          if (dsaModelRef.current === "android") {
+            paintAndroidSimulationDsa(
+              R,
+              androidHistoryRef.current,
+              dsaPeriodRef.current * 60,
+            );
+            dsaOverlayContext?.clearRect(
+              0,
+              0,
+              dsaOverlay.width,
+              dsaOverlay.height,
+            );
+            return;
+          }
           const Y = R.createImageData(A.width, A.height);
           const Z = dsaPeriodRef.current <= 1 ? 60 : dsaPeriodRef.current * 60,
             fe = training
@@ -993,7 +1021,7 @@ export function SimulatorApp({
             drawSefColumns());
         },
         scrollDsa = () => {
-          if (training) {
+          if (training || dsaModelRef.current === "android") {
             rl();
             return;
           }
@@ -1423,6 +1451,7 @@ export function SimulatorApp({
           for (let index = 0; index < ticks * EEG_BATCH_SIZE; index++) {
             const sample = ke();
             appendEegSample(history, sample);
+            if (!embedded) androidHistoryRef.current?.append(sample);
           }
           Mt();
         };
@@ -1713,6 +1742,16 @@ export function SimulatorApp({
       }));
     }, [trendHistory, dsaPeriodMinutes]),
     formatTimelineLabel = (A) => {
+      if (dsaModel === "android") {
+        const end = Math.max(
+          dsaPeriodMinutes * 60,
+          androidHistoryRef.current?.snapshot().position ?? 0,
+        );
+        const seconds = Math.round(
+          end - dsaPeriodMinutes * 60 + A * dsaPeriodMinutes * 15,
+        );
+        return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+      }
       if (A === 4) return t("timeline.now");
       if (dsaPeriodMinutes === 1) return `−${60 - A * 15} s`;
       const R = dsaPeriodMinutes - (A / 4) * dsaPeriodMinutes;
@@ -2125,6 +2164,7 @@ export function SimulatorApp({
       signalGridVisible,
       dsaPeriodMinutes,
       originalDsaPeriodMinutes: originalDsaPeriod.current,
+      dsaModel,
       dsaColorScale,
       liveSync,
       qconAlarmEnabled,
@@ -2155,6 +2195,7 @@ export function SimulatorApp({
       eegAmplitude,
       signalGridVisible,
       dsaPeriodMinutes,
+      dsaModel,
       dsaColorScale,
       liveSync,
       qconAlarmEnabled,
@@ -2241,6 +2282,7 @@ export function SimulatorApp({
       setEegAmplitude(displaySettings.eegAmplitude);
       setSignalGridVisible(snapshot.signalGridVisible !== false);
       setDsaPeriodMinutes(displaySettings.dsaPeriodMinutes);
+      setDsaModel(snapshot.dsaModel === "android" ? "android" : "legacy");
       setDsaColorScale(snapshot.dsaColorScale ?? 0);
       setLiveSync(Boolean(snapshot.liveSync));
       setQconAlarmEnabled(Boolean(snapshot.qconAlarmEnabled));
@@ -2517,8 +2559,14 @@ export function SimulatorApp({
           <>
             <b>{"DSA"}</b>
             <span ref={eegStatusRef}>{t("eeg.status.active")}</span>
-            <em>{t("reference.legacyDsa")}</em>
-            {!maskIndices && (
+            <em>
+              {t(
+                dsaModel === "android"
+                  ? "reference.syntheticDsa"
+                  : "reference.legacyDsa",
+              )}
+            </em>
+            {!maskIndices && dsaModel !== "android" && (
               <div className="sb-dsa-caption-actions">
                 <button
                   type="button"
@@ -2562,67 +2610,86 @@ export function SimulatorApp({
         }
         frequencyAxis={
           <>
-            {[45, 40, 35, 30, 25, 20, 15, 10, 5, 0].map((A) => (
+            {[
+              dsaModel === "android" ? 44 : 45,
+              40,
+              35,
+              30,
+              25,
+              20,
+              15,
+              10,
+              5,
+              0,
+            ].map((A) => (
               <span key={A}>{A}</span>
             ))}
             <b>{"Hz"}</b>
           </>
         }
         colorScale={
-          <>
-            <div
-              className="sb-db-gradient"
-              style={{ background: RECORDING_DSA_GRADIENT }}
-              role="img"
-              aria-label={t("dsa.scale")}
+          dsaModel === "android" ? (
+            <img
+              src={androidLegend}
+              alt={t("dsa.scale")}
+              style={{ height: "100%", width: "100%", objectFit: "fill" }}
             />
-            <div
-              className="sb-db-labels"
-              role="group"
-              aria-label={t("dsa.scaleLevel", {
-                level:
-                  dsaColorScale > 0
-                    ? `+${dsaColorScale}`
-                    : String(dsaColorScale),
-              })}
-            >
-              <button
-                type="button"
-                title={t("dsa.scaleUp")}
-                aria-label={t("dsa.scaleUp")}
-                disabled={dsaColorScale >= DSA_SCALE_MAX}
-                onClick={() =>
-                  setDsaColorScale((level) =>
-                    Math.min(DSA_SCALE_MAX, level + 1),
-                  )
-                }
+          ) : (
+            <>
+              <div
+                className="sb-db-gradient"
+                style={{ background: RECORDING_DSA_GRADIENT }}
+                role="img"
+                aria-label={t("dsa.scale")}
+              />
+              <div
+                className="sb-db-labels"
+                role="group"
+                aria-label={t("dsa.scaleLevel", {
+                  level:
+                    dsaColorScale > 0
+                      ? `+${dsaColorScale}`
+                      : String(dsaColorScale),
+                })}
               >
-                {"+"}
-              </button>
-              {dsaColorScale !== 0 && (
-                <i
-                  className="sb-db-level"
-                  style={{
-                    top: `${50 - (dsaColorScale / DSA_SCALE_MAX) * 32}%`,
-                  }}
-                  aria-hidden="true"
-                />
-              )}
-              <button
-                type="button"
-                title={t("dsa.scaleDown")}
-                aria-label={t("dsa.scaleDown")}
-                disabled={dsaColorScale <= DSA_SCALE_MIN}
-                onClick={() =>
-                  setDsaColorScale((level) =>
-                    Math.max(DSA_SCALE_MIN, level - 1),
-                  )
-                }
-              >
-                {"−"}
-              </button>
-            </div>
-          </>
+                <button
+                  type="button"
+                  title={t("dsa.scaleUp")}
+                  aria-label={t("dsa.scaleUp")}
+                  disabled={dsaColorScale >= DSA_SCALE_MAX}
+                  onClick={() =>
+                    setDsaColorScale((level) =>
+                      Math.min(DSA_SCALE_MAX, level + 1),
+                    )
+                  }
+                >
+                  {"+"}
+                </button>
+                {dsaColorScale !== 0 && (
+                  <i
+                    className="sb-db-level"
+                    style={{
+                      top: `${50 - (dsaColorScale / DSA_SCALE_MAX) * 32}%`,
+                    }}
+                    aria-hidden="true"
+                  />
+                )}
+                <button
+                  type="button"
+                  title={t("dsa.scaleDown")}
+                  aria-label={t("dsa.scaleDown")}
+                  disabled={dsaColorScale <= DSA_SCALE_MIN}
+                  onClick={() =>
+                    setDsaColorScale((level) =>
+                      Math.max(DSA_SCALE_MIN, level - 1),
+                    )
+                  }
+                >
+                  {"−"}
+                </button>
+              </div>
+            </>
+          )
         }
         timeline={Array.from(
           {
@@ -3240,12 +3307,30 @@ export function SimulatorApp({
                 />
                 <div className="sb-readonly">
                   <label>{t("display.dsaScale")}</label>
-                  <strong>{"0–45 Hz · −30/+50 dB"}</strong>
+                  <strong>
+                    {dsaModel === "android"
+                      ? "1–44 Hz · ConoxView Android"
+                      : "0–45 Hz · −30/+50 dB"}
+                  </strong>
                 </div>
               </div>
               <p className="sb-reference-note">
-                {t("reference.synthetic")} {t("reference.legacyDsaHelp")}
+                {t("reference.synthetic")}{" "}
+                {t(
+                  dsaModel === "android"
+                    ? "reference.syntheticDsa"
+                    : "reference.legacyDsaHelp",
+                )}
               </p>
+              <SelectField
+                label={t("reference.dsaCalculation")}
+                value={dsaModel}
+                onChange={(value) => setDsaModel(value)}
+                options={[
+                  ["legacy", t("reference.legacyDsa")],
+                  ["android", "ConoxView Android 2.4"],
+                ]}
+              />
               <h2>{t("alarm.heading")}</h2>
               <div
                 className={`sb-qcon-alarm-control ${qconAlarmEnabled ? "active" : ""} ${qconAlarmTriggered ? "triggered" : ""}`}
