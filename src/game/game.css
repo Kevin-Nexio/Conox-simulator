@@ -3485,19 +3485,21 @@ body:has(.game-app),
   grid-template-columns: minmax(0, 2.15fr) minmax(325px, 1fr);
   gap: 24px;
 }
-.mission-brief {
-  font-size: 11px;
-  line-height: 1.5;
-  color: #718294;
-  margin: 4px 0 12px;
+.pathways-app .game-decision .mission-brief,
+.pathways-app .game-decision .game-prompt {
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: var(--ink);
+}
+.pathways-app .game-decision .mission-brief {
+  margin: 4px 0 16px;
 }
 .pathways-app .game-monitor-caption {
   font-size: 10px;
   padding: 9px 7px 0;
 }
 .pathways-app .game-decision .game-prompt {
-  font-size: 13px;
-  margin-bottom: 14px !important;
+  margin-bottom: 18px !important;
 }
 @media (max-width: 1000px) and (min-width: 701px) {
   .pathways-app .game-play-layout {
@@ -3575,9 +3577,7 @@ body:has(.game-app),
   .path-home-intro p,
   .path-description,
   .path-map-heading p,
-  .pathways-app .game-context p,
-  .mission-brief,
-  .pathways-app .game-decision .game-prompt {
+  .pathways-app .game-context p {
     font-size: 14px;
     line-height: 1.5;
   }

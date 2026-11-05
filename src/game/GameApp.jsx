@@ -477,6 +477,9 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
     if (stage === "observe") {
       if (!observed) {
         setObsErrors((n) => n + 1);
+        if (m.kind === "scan") {
+          setSelected((prev) => prev.filter((id) => m.evidence.includes(id)));
+        }
         setFeedback("observation");
         return;
       }

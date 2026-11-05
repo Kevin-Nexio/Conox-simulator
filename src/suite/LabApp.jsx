@@ -108,7 +108,7 @@ export default function SuiteApp() {
     ...item,
     ...copy.solutions[index],
   }));
-  const [deviceFrame, setDeviceFrame] = useState(false);
+  const [deviceFrame, setDeviceFrame] = useState(true);
   const [focusControls, setFocusControls] = useState(false);
   const [pendingSolution, setPendingSolution] = useState(null);
   const [caseLoaded, setCaseLoaded] = useState(false);
