@@ -1,5 +1,5 @@
+import LanguageSelect from "../components/LanguageSelect.jsx";
 import { useGameI18n } from "./GameI18n.jsx";
-import { GAME_LOCALES } from "./i18n.js";
 import React, {
   useState,
   useEffect,
@@ -1041,19 +1041,11 @@ export default function App() {
           role="group"
           aria-label={t("app.language")}
         >
-          {GAME_LOCALES.map((language) => (
-            <button
-              key={language.code}
-              type="button"
-              lang={language.code}
-              aria-label={language.name}
-              title={language.name}
-              aria-pressed={locale === language.code}
-              onClick={() => setLocale(language.code)}
-            >
-              {language.code.toUpperCase()}
-            </button>
-          ))}
+          <LanguageSelect
+            locale={locale}
+            onChange={setLocale}
+            label={t("app.language")}
+          />
         </div>
       </header>
       <main ref={main} className={"game-content"}>

@@ -830,6 +830,9 @@ body:has(.lab),
   color: var(--lab-blue-ink);
 }
 .lab .recording-stage:not(.is-fullscreen) {
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: auto;
   min-height: 400px;
   height: clamp(400px, 51vw, 670px);
   max-height: none;
@@ -2027,4 +2030,32 @@ body:has(.lab),
 }
 .lab:has(.role-display) .lab-workspace {
   padding: 0;
+}
+
+.language-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.language-select select {
+  max-width: 175px;
+  min-height: 40px;
+  padding: 8px 28px 8px 12px;
+  border: 1px solid var(--lab-line, #cbd5e1);
+  border-radius: 8px;
+  color: var(--lab-ink, #183552);
+  background-color: var(--lab-surface, #fff);
+  font: inherit;
+  font-size: 13px;
+}
+.lab-language {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+@media (max-width: 680px) {
+  .lab .lab-language select {
+    max-width: 120px;
+    font-size: 12px;
+  }
 }

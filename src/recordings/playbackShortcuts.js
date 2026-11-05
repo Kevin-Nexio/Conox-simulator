@@ -36,9 +36,9 @@ export function isPlaybackControl(target) {
 }
 
 /** Mouse/touch transport actions return keyboard control to the monitor. */
-export function restorePlaybackFocusAfterPointer(event, fullscreen) {
+export function restorePlaybackFocusAfterPointer(event) {
   const host = event.currentTarget;
-  if (!fullscreen || !(event.detail > 0) || !host) return false;
+  if (!(event.detail > 0) || !host) return false;
   let button = null;
   let node = event.target;
   for (; node && node !== host; node = node.parentElement) {
@@ -56,13 +56,9 @@ export function restorePlaybackFocusAfterPointer(event, fullscreen) {
   return true;
 }
 
-/** Fullscreen playback commands; seeking is bounded by the whole recording. */
-export function getPlaybackShortcut(
-  event,
-  { fullscreen, locked, position, duration },
-) {
+/** Playback commands; seeking is bounded by the whole recording. */
+export function getPlaybackShortcut(event, { locked, position, duration }) {
   if (
-    !fullscreen ||
     locked ||
     event.defaultPrevented ||
     event.isComposing ||
@@ -79,5 +75,9 @@ export function getPlaybackShortcut(
   const step = event.shiftKey ? 30 : 5;
   const current = Number.isFinite(position) ? position : 0;
   const next = current + (event.key === "ArrowLeft" ? -step : step);
-  return { type: "seek", position: Math.min(duration, Math.max(0, next)) };
+  return {
+    type: "seek",
+    position: Math.min(duration, Math.max(0, next)),
+    preservePlaying: true,
+  };
 }

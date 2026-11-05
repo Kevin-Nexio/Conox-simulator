@@ -1,3 +1,5 @@
+import LanguageSelect from "../components/LanguageSelect.jsx";
+import { getLocaleCatalog } from "../i18n/catalog.js";
 import { useEffect, useRef, useState } from "react";
 import { SimulatorApp } from "../App.jsx";
 import RecordingPlayer from "../components/RecordingPlayer.jsx";
@@ -50,11 +52,7 @@ const DESIGNS = [
 ];
 const SOLUTIONS = [
   {
-    id:
-      window.location.pathname.endsWith("/game/") ||
-      window.location.pathname.endsWith("/game/index.html")
-        ? "jeu"
-        : "simulateur",
+    id: "simulateur",
     short: "Simulateur",
     title: "Explorer les signaux.",
     description:
@@ -90,14 +88,18 @@ function initialState() {
     design: "clair",
     solution: SOLUTIONS.some((s) => s.id === params.get("solution"))
       ? params.get("solution")
-      : "simulateur",
+      : window.location.pathname.endsWith("/game/") ||
+          window.location.pathname.endsWith("/game/index.html")
+        ? "jeu"
+        : "simulateur",
   };
 }
 
 export default function SuiteApp() {
   const [state, setState] = useState(initialState);
   const [locale, setLocale] = useState(initialSuiteLocale);
-  const copy = LAB_MESSAGES[locale];
+  const copy =
+    getLocaleCatalog(locale)?.suite ?? LAB_MESSAGES[locale] ?? LAB_MESSAGES.en;
   const designs = DESIGNS.map((item, index) => ({
     ...item,
     ...copy.designs[index],
@@ -183,23 +185,11 @@ export default function SuiteApp() {
           {navigation("lab-top-nav")}
           <span className="lab-suite-note">{copy.suiteNote}</span>
           <div className="lab-language" role="group" aria-label={copy.language}>
-            {[
-              { code: "de", name: "Deutsch" },
-              { code: "fr", name: "Français" },
-              { code: "en", name: "English" },
-            ].map((language) => (
-              <button
-                key={language.code}
-                type="button"
-                lang={language.code}
-                title={language.name}
-                aria-label={language.name}
-                aria-pressed={locale === language.code}
-                onClick={() => setLocale(language.code)}
-              >
-                {language.code.toUpperCase()}
-              </button>
-            ))}
+            <LanguageSelect
+              locale={locale}
+              onChange={setLocale}
+              label={copy.language}
+            />
           </div>
         </header>
         <aside className="lab-sidebar">

@@ -1,3 +1,4 @@
+import { EUROPE_LOCALES } from "../i18n/catalog.js";
 import { clampTimelinePosition } from "./timeline.js";
 import { normalizeEventMarker } from "./eventMarkers.js";
 import {
@@ -114,7 +115,10 @@ export function validateCaseState(state, duration) {
   const profile = getReferenceProfile(referenceProfile);
   return {
     referenceProfile,
-    locale: oneOf(state.locale, ["fr", "de", "en"]),
+    locale: oneOf(
+      state.locale,
+      EUROPE_LOCALES.map((item) => item.code),
+    ),
     position: time(state.position),
     speed: oneOf(state.speed, [0.25, 0.5, 1, 2, 3, 4]),
     selection: { start, end },

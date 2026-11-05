@@ -1,3 +1,8 @@
+import {
+  EUROPE_LOCALES,
+  getLocaleCatalog,
+  supportedLocale,
+} from "../i18n/catalog.js";
 import { METRICS, PATHS } from "./content.js";
 import { PATTERN_REFERENCES } from "./scenarios.js";
 import en from "./locales/en.json" with { type: "json" };
@@ -6,11 +11,7 @@ import de from "./locales/de.json" with { type: "json" };
 import frContent from "./locales/fr-content.json" with { type: "json" };
 import deContent from "./locales/de-content.json" with { type: "json" };
 
-export const GAME_LOCALES = [
-  { code: "en", name: "English" },
-  { code: "de", name: "Deutsch" },
-  { code: "fr", name: "Français" },
-];
+export const GAME_LOCALES = EUROPE_LOCALES;
 export const GAME_LOCALE_KEY = "conox.game.locale";
 const PATH_FIELDS = [
   "title",
@@ -64,9 +65,7 @@ export const GAME_MESSAGES = {
 };
 
 export function supportedGameLocale(value) {
-  const language =
-    typeof value === "string" ? value.toLowerCase().split(/[-_]/)[0] : "";
-  return GAME_LOCALES.some((item) => item.code === language) ? language : null;
+  return supportedLocale(value);
 }
 
 export function getInitialGameLocale(environment = globalThis) {
@@ -89,7 +88,8 @@ export function getInitialGameLocale(environment = globalThis) {
 
 export function createGameI18n(requestedLocale) {
   const locale = supportedGameLocale(requestedLocale) ?? "en";
-  const messages = GAME_MESSAGES[locale];
+  const messages =
+    getLocaleCatalog(locale)?.game ?? GAME_MESSAGES[locale] ?? GAME_MESSAGES.en;
   const t = (key, values = {}) => {
     const template = messages[key] ?? GAME_MESSAGES.en[key] ?? key;
     return template.replace(/\{\{(\w+)\}\}/g, (_, name) => values[name] ?? "");

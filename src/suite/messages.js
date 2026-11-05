@@ -1,3 +1,4 @@
+import { supportedLocale } from "../i18n/catalog.js";
 export const LAB_MESSAGES = {
   fr: {
     skip: "Aller à l’outil",
@@ -271,10 +272,10 @@ export const LAB_MESSAGES = {
 
 export function initialSuiteLocale() {
   const url = new URLSearchParams(window.location.search).get("lang");
-  if (Object.hasOwn(LAB_MESSAGES, url)) return url;
+  if (supportedLocale(url)) return supportedLocale(url);
   try {
     const saved = localStorage.getItem("conox.suite.locale");
-    if (Object.hasOwn(LAB_MESSAGES, saved)) return saved;
+    if (supportedLocale(saved)) return supportedLocale(saved);
   } catch {
     /* A blocked preference store does not prevent using the preview. */
   }

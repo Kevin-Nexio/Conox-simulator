@@ -1,6 +1,7 @@
+import LanguageSelect from "./LanguageSelect.jsx";
 import * as React from "react";
 import { createI18n, getInitialLocale, LOCALES } from "../i18n/index.js";
-import { RECORDING_UI } from "../i18n/recordings.js";
+import { loadLocale } from "../i18n/catalog.js";
 import {
   advancePlayback,
   formatPosition,
@@ -36,6 +37,10 @@ import {
   caseDownloadName,
 } from "../recordings/caseFile.js";
 import "../styles/recordings.css";
+import {
+  getPlaybackShortcut,
+  restorePlaybackFocusAfterPointer,
+} from "../recordings/playbackShortcuts.js";
 
 export default function RecordingPlayer({
   onClose,
@@ -49,6 +54,7 @@ export default function RecordingPlayer({
   );
   const locale = suiteLocale ?? selectedLocale;
   const { t, displayViews } = React.useMemo(() => createI18n(locale), [locale]);
+  const playerRef = React.useRef(null);
   const [data, setData] = React.useState(null);
   const [isDemo, setIsDemo] = React.useState(false);
   const [referenceProfile, setReferenceProfile] = React.useState(
@@ -132,12 +138,12 @@ export default function RecordingPlayer({
     workerRef.current = null;
     setBusy(false);
   };
-  const seek = (value) => {
+  const seek = (value, { preservePlaying = false } = {}) => {
     const next = clampTimelinePosition(
       value,
       data?.recording.durationSeconds || 0,
     );
-    setPlaying(false);
+    if (!preservePlaying) setPlaying(false);
     positionRef.current = next;
     setPosition(next);
   };
@@ -151,6 +157,31 @@ export default function RecordingPlayer({
       seek(selection.start);
     setPlaying(!playing);
   };
+  React.useEffect(() => {
+    if (!data) return;
+    const onPlaybackKey = (event) => {
+      const player = playerRef.current;
+      if (!player) return;
+      // Suite dialogs and controls outside the reader keep their own keys.
+      const modal = document.querySelector('[aria-modal="true"]');
+      if (modal && !modal.matches(".recording-stage.is-fullscreen")) return;
+      if (event.target !== document.body && !player.contains(event.target))
+        return;
+      const dialog = event.target.closest?.('[role="dialog"], dialog');
+      if (dialog && !dialog.matches(".recording-stage.is-fullscreen")) return;
+      const command = getPlaybackShortcut(event, {
+        locked,
+        position: positionRef.current,
+        duration: data.recording.durationSeconds,
+      });
+      if (!command) return;
+      event.preventDefault();
+      if (command.type === "toggle") togglePlaying();
+      else seek(command.position, { preservePlaying: command.preservePlaying });
+    };
+    document.addEventListener("keydown", onPlaybackKey);
+    return () => document.removeEventListener("keydown", onPlaybackKey);
+  }, [data, locked, playing, selection, selectionError]);
   const changeSettings = (next) => {
     if (locked) return;
     if (next.referenceProfile && next.referenceProfile !== referenceProfile) {
@@ -246,7 +277,7 @@ export default function RecordingPlayer({
         setError(code);
       };
       worker.onerror = () => fail("UNKNOWN");
-      worker.onmessage = ({ data: result }) => {
+      worker.onmessage = async ({ data: result }) => {
         if (request !== requestRef.current) return;
         if (result.error) {
           fail(result.error);
@@ -262,6 +293,15 @@ export default function RecordingPlayer({
             locale,
             result.referenceProfile,
           );
+        let restoredLocale = restored.locale;
+        if (!suiteLocale) {
+          try {
+            await loadLocale(restoredLocale);
+          } catch {
+            restoredLocale = locale;
+          }
+          if (request !== requestRef.current) return;
+        }
         sourceBlobRef.current = sourceSnapshot.slice(
           0,
           result.sourceByteLength,
@@ -271,7 +311,7 @@ export default function RecordingPlayer({
         setIsDemo(Boolean(options.isDemo));
         onLoaded?.();
         setReferenceProfile(result.referenceProfile);
-        setLocale(restored.locale);
+        setLocale(restoredLocale);
         positionRef.current = restored.position;
         setPosition(restored.position);
         setSpeed(restored.speed);
@@ -520,11 +560,20 @@ export default function RecordingPlayer({
     }
   };
   const recording = data?.recording;
+  const errorKey = `recording.error.${error}`;
   const errorText =
-    error &&
-    (RECORDING_UI[locale][`recording.error.${error}`] || t("recording.error"));
+    error && (t(errorKey) === errorKey ? t("recording.error") : t(errorKey));
   return (
     <main
+      ref={playerRef}
+      tabIndex={-1}
+      onClick={(event) => {
+        if (
+          event.target.closest?.(".recording-transport") &&
+          !document.querySelector('[aria-modal="true"]')
+        )
+          restorePlaybackFocusAfterPointer(event);
+      }}
       lang={locale}
       className={`sb-shell recording-shell${recording ? " has-recording" : ""}`}
     >
@@ -535,18 +584,7 @@ export default function RecordingPlayer({
         </div>
         <div className="recording-header-tools">
           <div className="sb-language-switch" aria-label="Language">
-            {LOCALES.map((item) => (
-              <button
-                key={item.code}
-                type="button"
-                className={locale === item.code ? "active" : ""}
-                disabled={Boolean(exporting)}
-                aria-pressed={locale === item.code}
-                onClick={() => setLocale(item.code)}
-              >
-                {item.label}
-              </button>
-            ))}
+            <LanguageSelect locale={locale} onChange={setLocale} />
           </div>
           <button
             type="button"

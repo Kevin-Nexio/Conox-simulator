@@ -122,10 +122,10 @@ test("language choice prefers the game preference, then simulator, then supporte
     getInitialGameLocale(
       env({ [GAME_LOCALE_KEY]: "invalid" }, ["it-CH", "FR-CH"]),
     ),
-    "fr",
+    "it",
   );
   assert.equal(getInitialGameLocale(env({})), "de");
-  assert.equal(getInitialGameLocale(env({}, ["es-ES"])), "en");
+  assert.equal(getInitialGameLocale(env({}, ["es-ES"])), "es");
   assert.equal(
     getInitialGameLocale({ navigator: { language: "fr-CH" } }),
     "fr",

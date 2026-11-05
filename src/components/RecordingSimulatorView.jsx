@@ -108,6 +108,7 @@ export default function RecordingSimulatorView({
   return (
     <div
       className="recording-simulator-view"
+      data-layout={layout}
       data-sensor-severity={frame?.monitorState?.severity}
     >
       <ConoxMonitor

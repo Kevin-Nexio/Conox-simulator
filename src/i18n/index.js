@@ -1,4 +1,9 @@
 import {
+  EUROPE_LOCALES,
+  getLocaleCatalog,
+  supportedLocale,
+} from "./catalog.js";
+import {
   DRUG_PROFILES as BASE_DRUG_PROFILES,
   EEG_KNOWLEDGE as BASE_EEG_KNOWLEDGE,
   NARKOSE_REISE as BASE_NARKOSE_REISE,
@@ -7,11 +12,7 @@ import {
 import { DISPLAY_VIEWS as BASE_DISPLAY_VIEWS } from "../components/DisplayViewIcon.jsx";
 import { RECORDING_UI } from "./recordings.js";
 
-export const LOCALES = [
-  { code: "de", label: "DE", name: "Deutsch" },
-  { code: "fr", label: "FR", name: "Français" },
-  { code: "en", label: "EN", name: "English" },
-];
+export const LOCALES = EUROPE_LOCALES;
 
 const DEFAULT_LOCALE = "de";
 
@@ -1146,13 +1147,15 @@ function localizeScenario(scenario, text) {
 }
 
 function localizeJourneyStep(step, locale) {
-  const phase = journeyPhases[locale]?.[step.phase] ?? step.phase;
+  const extra = getLocaleCatalog(locale)?.simulator;
+  const phase =
+    (extra?.journeyPhases ?? journeyPhases[locale])?.[step.phase] ?? step.phase;
   return {
     ...step,
     phase,
     scenario: localizeScenario(
       step.scenario,
-      scenarioNames[locale]?.[step.scenario.id],
+      (extra?.scenarioNames ?? scenarioNames[locale])?.[step.scenario.id],
     ),
   };
 }
@@ -1168,27 +1171,41 @@ export function normalizeLocale(locale) {
 }
 
 export function getInitialLocale() {
-  const saved = window.localStorage.getItem("conox.locale");
-  if (saved) return normalizeLocale(saved);
-
-  const browserLocale = window.navigator.language?.slice(0, 2).toLowerCase();
-  return normalizeLocale(browserLocale);
+  const query = supportedLocale(
+    new URLSearchParams(window.location.search).get("lang"),
+  );
+  if (query) return query;
+  try {
+    const saved = supportedLocale(
+      window.localStorage.getItem("conox.suite.locale") ??
+        window.localStorage.getItem("conox.locale"),
+    );
+    if (saved) return saved;
+  } catch {}
+  return supportedLocale(window.navigator.language) ?? DEFAULT_LOCALE;
 }
 
 export function translateStatic(key) {
   const activeLocale = normalizeLocale(
     window.localStorage.getItem("conox.locale"),
   );
-  return ui[activeLocale]?.[key] ?? ui.de[key] ?? key;
+  return (
+    getLocaleCatalog(activeLocale)?.simulator.ui[key] ??
+    ui[activeLocale]?.[key] ??
+    ui.de[key] ??
+    key
+  );
 }
 
 export function createI18n(locale) {
   const activeLocale = normalizeLocale(locale);
-  const dictionary = ui[activeLocale] ?? ui.de;
+  const extra = getLocaleCatalog(activeLocale)?.simulator;
+  const dictionary = extra?.ui ?? ui[activeLocale] ?? ui.en;
 
   const t = (key, values) =>
     interpolate(dictionary[key] ?? ui.de[key] ?? key, values);
-  const tr = (text) => detectionText[activeLocale]?.[text] ?? text;
+  const tr = (text) =>
+    (extra?.detectionText ?? detectionText[activeLocale])?.[text] ?? text;
 
   return {
     locale: activeLocale,
@@ -1196,7 +1213,7 @@ export function createI18n(locale) {
     tr,
     displayViews: Object.fromEntries(
       Object.entries(BASE_DISPLAY_VIEWS).map(([id, value]) => {
-        const text = displayViews[activeLocale]?.[id];
+        const text = (extra?.displayViews ?? displayViews[activeLocale])?.[id];
         return [
           id,
           text ? { ...value, label: text[0], description: text[1] } : value,
@@ -1205,15 +1222,15 @@ export function createI18n(locale) {
     ),
     drugProfiles: localizeRecordById(
       BASE_DRUG_PROFILES,
-      drugText[activeLocale],
+      extra?.drugText ?? drugText[activeLocale],
     ),
     eegKnowledge: localizeRecordById(
       BASE_EEG_KNOWLEDGE,
-      knowledgeText[activeLocale],
+      extra?.knowledgeText ?? knowledgeText[activeLocale],
     ),
     scenarios: localizeById(
       BASE_SCENARIOS,
-      scenarioNames[activeLocale],
+      extra?.scenarioNames ?? scenarioNames[activeLocale],
       localizeScenario,
     ),
     getJourney: () =>
@@ -1222,3 +1239,14 @@ export function createI18n(locale) {
       ),
   };
 }
+
+// Source catalogue for static locale generation and completeness checks.
+export const EN_SIMULATOR_CATALOG = {
+  ui: ui.en,
+  displayViews: displayViews.en,
+  drugText: drugText.en,
+  scenarioNames: scenarioNames.en,
+  journeyPhases: journeyPhases.en,
+  knowledgeText: knowledgeText.en,
+  detectionText: detectionText.en,
+};

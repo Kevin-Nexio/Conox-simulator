@@ -1,3 +1,4 @@
+import LanguageSelect from "./components/LanguageSelect.jsx";
 import * as React from "react";
 import {
   createAndroidSimulationDsa,
@@ -2956,18 +2957,7 @@ export function SimulatorApp({
               {t("recording.open")}
             </button>
             <div className="sb-language-switch" aria-label="Language">
-              {LOCALES.map((item) => (
-                <button
-                  key={item.code}
-                  type="button"
-                  className={locale === item.code ? "active" : ""}
-                  title={item.name}
-                  aria-pressed={locale === item.code}
-                  onClick={() => setLocale(item.code)}
-                >
-                  {item.label}
-                </button>
-              ))}
+              <LanguageSelect locale={locale} onChange={setLocale} />
             </div>
             <button
               className="sb-btn"
