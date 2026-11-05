@@ -50,6 +50,17 @@ close control, Escape support and keyboard focus containment. Safe-area padding
 and dynamic viewport height accommodate mobile browser controls and notches.
 The header logo and the framed monitor's logo return to the game's home.
 
+Choosing a quiz path opens the first unfinished mission directly. A completed
+path starts again at its first mission, retaining best scores. The mission list
+is shown only in the final summary; resetting there immediately starts the first
+mission. Phones open the question panel first, with the monitor one tab away.
+
+The guided story uses the existing borderless monitor display at all sizes,
+giving EEG and DSA more room without changing their proportions. The bedside
+illustration separates the propofol IV line, breathing circuit and optional EEG
+sensor. A short learning guide explains why EEG is useful, its ICU context, and
+the sensor-to-monitor connection using the existing simulator terminology.
+
 ## Build and validation
 
 `npm run check` checks structure, formatting, the test suite and both Vite entries.

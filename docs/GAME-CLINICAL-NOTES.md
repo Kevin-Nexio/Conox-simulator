@@ -54,3 +54,21 @@ additional reminder rather than the central teaching objective.
 
 The revised material has software and browser checks; it is not represented as
 independently clinically validated or as a substitute for local protocols.
+
+## Visual and introductory revision, 5 November 2026
+
+The bedside scene shows a separate, schematic Agilia-style syringe pump. Its
+propofol IV line ends at a hand cannula; the breathing circuit connects the
+mouth to the ventilator. The final scene adds a forehead sensor connected to a
+Conox monitor. These drawings illustrate connections, not device installation
+instructions. The scene explicitly shows propofol alone to focus the example
+on brain activity; it does not depict the patient's complete ICU treatment.
+
+The introductory guide builds on the simulator's existing information and the
+ICU EEG consensus above. It describes EEG as complementary to clinical
+assessment, without claiming that haemodynamics alone measure sedation depth
+or that EEG replaces other ICU monitoring. The
+[Conox instructions for use](https://eifu.fresenius-kabi.com/medtech/conox-fixed/18958-2_CNX_SPEC_IFU_Conox2D_ENG.pdf)
+describe the three-electrode sensor, patient cable and monitor, and limit use to
+monitoring during anaesthesia and sedation. The guide preserves the distinction
+from a diagnostic EEG system and does not determine drug doses from indices.

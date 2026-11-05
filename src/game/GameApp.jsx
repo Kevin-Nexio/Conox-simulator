@@ -266,15 +266,7 @@ function Home({ results, onChoose, caseDone }) {
     </AutoFit>
   );
 }
-function PathMap({
-  path,
-  results,
-  onStart,
-  onHome,
-  onReset,
-  summary,
-  onDiscover,
-}) {
+function PathSummary({ path, results, onStart, onHome, onReset, onDiscover }) {
   const done = path.missions.filter((m) => results[m.id]).length;
   const points = path.missions.reduce(
     (n, m) => n + (results[m.id]?.score || 0),
@@ -293,15 +285,13 @@ function PathMap({
       <div className={"path-map-heading"}>
         <div>
           <span className={"game-eyebrow"}>
-            {summary ? "PATH COMPLETE \xB7 NICELY DONE" : "YOUR LEARNING PATH"}
+            {"PATH COMPLETE \xB7 NICELY DONE"}
           </span>
-          <h1 tabIndex={-1}>
-            {summary ? "A clearer picture. Well earned." : path.title}
-          </h1>
+          <h1 tabIndex={-1}>{"A clearer picture. Well earned."}</h1>
           <p>
-            {summary
-              ? "Revisit a mission or explore another path. Your best scores stay with you."
-              : path.outcome}
+            {
+              "Revisit a mission or explore another path. Your best scores stay with you."
+            }
           </p>
           <div className={"path-map-stats"}>
             <strong>
@@ -398,7 +388,7 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
     [obsErrors, setObsErrors] = useState(0),
     [answerErrors, setAnswerErrors] = useState([]),
     [feedback, setFeedback] = useState(""),
-    [panel, setPanel] = useState("monitor"),
+    [panel, setPanel] = useState("challenge"),
     [exit, setExit] = useState(false),
     [detail, setDetail] = useState(false),
     [advisory, setAdvisory] = useState({
@@ -553,7 +543,7 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
           onClick={() => (stage === "done" ? onExit() : setExit(true))}
         >
           <Icon name={"back"} />
-          {" All missions"}
+          {" Choose a path"}
         </button>
         <span>
           {path.title}
@@ -982,6 +972,17 @@ export default function App() {
     setAttempt((n) => n + 1);
     setView("mission");
   }
+  function startPath(id) {
+    const selectedPath = PATHS.find((item) => item.id === id);
+    if (!selectedPath) return;
+    const next = selectedPath.missions.findIndex(
+      (mission) => !results[mission.id],
+    );
+    setPathId(id);
+    setActive(Math.max(0, next));
+    setAttempt((n) => n + 1);
+    setView("mission");
+  }
   return (
     <div className={"game-app pathways-app"}>
       <header className={"game-header"}>
@@ -1045,16 +1046,17 @@ export default function App() {
             caseDone={caseDone}
             results={results}
             onChoose={(id) => {
-              setPathId(id);
-              setView(id === "discover" ? "discovery" : "map");
+              if (id === "discover") {
+                setPathId(id);
+                setView("discovery");
+              } else startPath(id);
             }}
           />
         ) : view === "discovery" ? (
           <Discovery
             onComplete={() => setCaseDone(true)}
-            AutoFit={AutoFit}
             onExit={() => setView("home")}
-            onBasics={() => setView("map")}
+            onBasics={() => startPath("discover")}
           />
         ) : view === "mission" ? (
           <Mission
@@ -1062,7 +1064,7 @@ export default function App() {
             mission={path.missions[active]}
             path={path}
             index={active}
-            onExit={() => setView("map")}
+            onExit={() => setView("home")}
             onFinish={(id, score) =>
               setResults((prev) => mergeResult(prev, id, score))
             }
@@ -1071,10 +1073,9 @@ export default function App() {
             }
           />
         ) : (
-          <PathMap
+          <PathSummary
             path={path}
             results={results}
-            summary={view === "summary"}
             onStart={start}
             onDiscover={() => setView("discovery")}
             onHome={() => setView("home")}
@@ -1102,7 +1103,7 @@ export default function App() {
               return next;
             });
             setReset(false);
-            setView("map");
+            start(0);
           }}
           onCancel={() => setReset(false)}
         />

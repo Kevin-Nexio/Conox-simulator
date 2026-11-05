@@ -3793,10 +3793,10 @@ body:has(.game-app),
 .game-monitor-host.is-expanded .game-monitor {
   filter: none;
 }
-.game-monitor-host.is-expanded .game-embedded {
+.game-monitor-host.is-screen .game-embedded {
   height: calc(882px / 1.72);
 }
-.game-monitor-host.is-expanded .sb-monitor-wrap.conox-monitor-borderless {
+.game-monitor-host.is-screen .sb-monitor-wrap.conox-monitor-borderless {
   width: 882px;
   height: calc(882px / 1.72);
   aspect-ratio: 1.72;
@@ -4077,5 +4077,392 @@ body:has(.game-app),
   }
   .clinical-discovery .simple-stage.show-conox {
     min-height: 300px;
+  }
+}
+
+/* Keep the bedside scene readable and the live screen at its own proportions. */
+.clinical-illustration .patient-scene {
+  max-height: 390px;
+  height: auto;
+}
+.clinical-focus-note {
+  margin: 8px 12px 0 !important;
+  padding: 10px 13px;
+  border: 1px solid #bbd9d9;
+  border-radius: 12px;
+  background: #f3fbfa;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #456c73;
+}
+.clinical-focus-note b {
+  color: #235965;
+  margin-inline-end: 0.35em;
+}
+.clinical-discovery {
+  overflow-y: auto;
+}
+.clinical-discovery .simple-stage.show-conox {
+  flex: 1 0 360px;
+  min-height: 360px;
+}
+.clinical-monitor-stage {
+  max-width: 1160px;
+  margin-inline: auto;
+}
+.game-monitor-host.is-screen:not(.is-expanded) .game-monitor {
+  overflow: hidden;
+  border-radius: 12px;
+  box-shadow: 0 7px 24px #18344922;
+}
+.clinical-sequence {
+  padding: 8px 12px;
+}
+.clinical-sequence progress {
+  margin: 6px 0;
+}
+.clinical-sequence small {
+  display: none;
+}
+.clinical-reassessment {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 24px;
+  width: 100%;
+  max-width: 1400px;
+  min-height: 0;
+  align-items: stretch;
+}
+.clinical-reassessment figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+.clinical-reassessment .patient-scene {
+  display: block;
+  width: 100%;
+  max-height: 300px;
+}
+.clinical-reassessment figcaption {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  color: #406776;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.clinical-reassessment figcaption b {
+  color: #24556b;
+  font-size: 16px;
+}
+.pathways-app .path-hello .game-buddy {
+  width: 230px;
+  height: 230px;
+}
+.pathways-app .path-map-heading .game-buddy {
+  width: 140px;
+  height: 155px;
+}
+.pathways-app .path-coach .game-buddy {
+  width: 104px;
+  height: 112px;
+}
+.clinical-discovery .simple-action > .game-buddy {
+  width: 104px;
+  height: 112px;
+}
+
+.learning-guide {
+  width: min(880px, calc(100vw - 40px));
+  max-width: 880px;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  background: #f7fbff;
+}
+.learning-guide-header {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 16px 22px 0;
+  flex: none;
+}
+.learning-guide-header .game-buddy {
+  width: 100px;
+  height: 110px;
+  object-fit: contain;
+  flex: none;
+}
+.learning-guide-header > div {
+  flex: 1;
+}
+.learning-guide-header > div > span {
+  color: #587c97;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+.learning-guide-header h2 {
+  margin: 5px 0 0;
+  font-size: 26px;
+  line-height: 1.2;
+  color: #244b70;
+}
+.learning-close {
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 28px;
+  align-self: flex-start;
+}
+.learning-topics {
+  display: flex;
+  flex: none;
+  gap: 8px;
+  padding: 8px 24px 16px;
+}
+.learning-topics button {
+  flex: 1;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #bdd4e5;
+  border-radius: 12px;
+  color: #365d7d;
+  background: #edf5fc;
+  font-size: 14px;
+  font-weight: 800;
+}
+.learning-topics button[aria-pressed="true"] {
+  background: #2d6e99;
+  border-color: #2d6e99;
+  color: #fff;
+}
+.learning-guide-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 24px 18px;
+}
+.learning-guide-body h3 {
+  margin: 0 0 12px;
+  font-size: 23px;
+  color: #204e69;
+}
+.learning-guide-body p {
+  font-size: 15px;
+  line-height: 1.65;
+  color: #4c697e;
+  margin: 0;
+}
+.learning-flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+.learning-flow > div {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid #c8dfe6;
+  border-radius: 15px;
+  background: #fff;
+}
+.learning-flow > div > span {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #d4ebe8;
+  color: #2a756b;
+  font-weight: 800;
+  font-size: 13px;
+}
+.learning-flow b {
+  font-size: 15px;
+  color: #285774;
+}
+.learning-flow small {
+  font-size: 13px;
+  line-height: 1.45;
+  color: #53758b;
+}
+.learning-guide-body .learning-note {
+  border-left: 3px solid #86bbaa;
+  padding-left: 13px;
+  font-size: 13px;
+}
+.learning-source {
+  display: inline-block;
+  margin-top: 14px;
+  font-size: 12px;
+  color: #3a7197;
+}
+.learning-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 18px;
+  margin: 16px 0;
+}
+.learning-metrics > div {
+  padding: 9px 0;
+  border-top: 1px solid #d9e5ed;
+}
+.learning-metrics dt {
+  font-size: 14px;
+  color: #244f70;
+  font-weight: 800;
+}
+.learning-metrics dd {
+  margin: 3px 0 0;
+  color: #5c7387;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.learning-guide-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 14px 24px;
+  border-top: 1px solid #d4e3ed;
+  flex: none;
+}
+.learning-guide-footer > .game-primary {
+  flex: 1;
+  min-height: 44px;
+}
+.learning-guide-footer > a {
+  width: 100%;
+  text-align: center;
+  font-size: 12px;
+  color: #52788f;
+}
+@media (max-width: 1000px) {
+  .clinical-discovery .simple-stage.show-reassessment {
+    flex: none;
+    min-height: 0;
+    overflow: visible;
+  }
+  .clinical-reassessment {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+  .clinical-reassessment .patient-scene {
+    max-height: 220px;
+  }
+  .clinical-reassessment .clinical-monitor-stage {
+    height: 330px;
+  }
+}
+@media (max-width: 760px) {
+  .pathways-app .path-hello .game-buddy {
+    width: 110px;
+    height: 125px;
+  }
+  .pathways-app .path-coach .game-buddy {
+    width: 90px;
+    height: 98px;
+  }
+  .clinical-discovery .simple-action {
+    grid-template-columns: 74px minmax(0, 1fr);
+  }
+  .clinical-discovery .simple-action > .game-buddy {
+    width: 74px;
+    height: 82px;
+  }
+  .clinical-illustration .patient-scene {
+    max-height: none;
+  }
+  .clinical-focus-note {
+    margin: 8px 6px 0 !important;
+  }
+  .learning-guide {
+    max-height: calc(100dvh - 40px);
+    width: calc(100vw - 40px);
+  }
+  .learning-guide-header {
+    padding: 8px 12px 0;
+    gap: 8px;
+  }
+  .learning-guide-header .game-buddy {
+    width: 76px;
+    height: 86px;
+  }
+  .learning-guide-header h2 {
+    font-size: 22px;
+  }
+  .learning-guide-header > div > span {
+    font-size: 9px;
+  }
+  .learning-topics {
+    padding: 8px 12px 12px;
+    gap: 5px;
+  }
+  .learning-topics button {
+    font-size: 12px;
+    padding: 7px;
+  }
+  .learning-guide-body {
+    padding: 8px 16px 16px;
+  }
+  .learning-guide-body h3 {
+    font-size: 21px;
+  }
+  .learning-flow {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin: 16px 0;
+  }
+  .learning-flow > div {
+    grid-template-columns: 28px 1fr;
+    padding: 12px;
+    gap: 4px 10px;
+  }
+  .learning-flow > div > span {
+    grid-row: span 2;
+  }
+  .learning-guide-footer {
+    padding: 10px 14px;
+  }
+  .learning-guide-footer > .game-primary {
+    flex-basis: 100%;
+    order: -1;
+  }
+  .learning-guide-footer > .game-text-button {
+    flex: 1;
+  }
+  .learning-guide-footer > a {
+    width: auto;
+    flex: 1;
+  }
+}
+@media (max-width: 1000px) and (max-height: 500px) and (orientation: landscape) {
+  .clinical-discovery {
+    grid-template-rows: auto auto minmax(372px, 1fr) auto;
+    row-gap: 8px;
+  }
+  .clinical-discovery .simple-bottom {
+    min-height: 44px;
+  }
+  .clinical-discovery:has(.show-reassessment) {
+    display: flex;
+  }
+  .clinical-reassessment {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  }
+  .clinical-reassessment .clinical-monitor-stage {
+    height: 300px;
+  }
+  .learning-guide-header .game-buddy {
+    width: 50px;
+    height: 56px;
+  }
+  .learning-guide-header h2 {
+    font-size: 20px;
   }
 }

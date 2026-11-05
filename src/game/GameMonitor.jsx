@@ -11,6 +11,7 @@ export default function GameMonitor({
   scenario,
   controls,
   maskIndices = false,
+  screenOnly = false,
 }) {
   const [expanded, setExpanded] = useState(false);
   const host = useRef(null);
@@ -18,7 +19,8 @@ export default function GameMonitor({
   const monitor = useRef(null);
   const toggle = useRef(null);
   const wasExpanded = useRef(false);
-  const ratio = expanded ? SCREEN_RATIO : FRAME_RATIO;
+  const showScreen = expanded || screenOnly;
+  const ratio = showScreen ? SCREEN_RATIO : FRAME_RATIO;
 
   useLayoutEffect(() => {
     const fit = () => {
@@ -91,7 +93,7 @@ export default function GameMonitor({
   return (
     <div
       ref={host}
-      className={`game-monitor-host${expanded ? " is-expanded" : ""}`}
+      className={`game-monitor-host${showScreen ? " is-screen" : ""}${expanded ? " is-expanded" : ""}`}
       role={expanded ? "dialog" : undefined}
       aria-modal={expanded ? true : undefined}
       aria-label={expanded ? "Enlarged Conox monitor" : undefined}
@@ -117,7 +119,7 @@ export default function GameMonitor({
             key={scenario.id}
             trainingScenario={scenario}
             trainingControls={controls}
-            trainingScreenOnly={expanded}
+            trainingScreenOnly={showScreen}
             maskIndices={maskIndices}
           />
         </div>

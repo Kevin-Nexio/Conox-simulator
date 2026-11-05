@@ -8,6 +8,8 @@ import React, {
 import GameMonitor from "./GameMonitor.jsx";
 import { scenarioFor } from "./scenarios.js";
 import PatientRoom from "./PatientRoom.jsx";
+import PatientScene from "./PatientScene.jsx";
+import LearningGuide from "./LearningGuide.jsx";
 import Buddy from "./Buddy.jsx";
 
 export const CASE_KEY = "conox.challenge.icu-story.v2";
@@ -50,6 +52,7 @@ function ReferenceMonitor({ progressive, replay }) {
         scenario={scenario}
         controls={controls}
         maskIndices
+        screenOnly
       />
       {progressive && (
         <div className="clinical-sequence">
@@ -60,9 +63,9 @@ function ReferenceMonitor({ progressive, replay }) {
           <progress
             value={elapsed}
             max={60}
-            aria-label="Progress through the illustrative EEG sequence"
+            aria-label={"Progress through the illustrative EEG sequence"}
           />
-          <small>Watch the raw EEG and the one-minute DSA together.</small>
+          <small>{"Watch the raw EEG and the one-minute DSA together."}</small>
         </div>
       )}
     </div>
@@ -102,46 +105,45 @@ function InfoDialog({ onClose }) {
         aria-modal="true"
         aria-labelledby="case-info-title"
       >
-        <h2 id="case-info-title">About this clinical story</h2>
+        <h2 id="case-info-title">{"About this clinical story"}</h2>
         <p>
-          This fictional patient has early severe ARDS. The team has documented
-          a temporary RASS −4 goal for controlled ventilation while preparing
-          prone positioning. This is an individual scenario, not a sedation
-          target for every patient with ARDS. No neuromuscular blockade is
-          present during the RASS assessments.
+          {
+            "This fictional patient has early severe ARDS. The team has documented a temporary RASS −4 goal for controlled ventilation while preparing prone positioning. This is an individual scenario, not a sedation target for every patient with ARDS. No neuromuscular blockade is present during the RASS assessments."
+          }
         </p>
         <p>
-          Deep sedation and burst suppression are different observations. RASS
-          −4 or −5 does not define an EEG pattern. Suppression is not intended
-          in this case; specific neurological indications require their own
-          specialist plan.
+          {
+            "To keep the example simple, only intravenous propofol is shown. This is a teaching focus on brain activity, not a complete ICU treatment. EEG helps assess the effect of sedation alongside clinical assessment."
+          }
         </p>
         <p>
-          The 60-second sequence is a teaching illustration, not the time course
-          of a drug or a patient recording. The shared simulator generates the
-          signals. Indices are hidden because the story does not establish a
-          numerical RASS–qCON conversion. Alpha/delta activity is an example in
-          this propofol context, not a universal target.
+          {
+            "Deep sedation and burst suppression are different observations. RASS −4 or −5 does not define an EEG pattern. Suppression is not intended in this case; specific neurological indications require their own specialist plan."
+          }
         </p>
         <p>
-          The reassessment illustrates what the team would review together. No
-          dose or treatment interval is calculated. A frontal EEG display
-          complements clinical assessment; it does not provide a complete
-          neurological diagnosis or establish analgesia.
+          {
+            "The 60-second sequence is a teaching illustration, not the time course of a drug or a patient recording. The shared simulator generates the signals. Indices are hidden because the story does not establish a numerical RASS–qCON conversion. Alpha/delta activity is an example in this propofol context, not a universal target."
+          }
+        </p>
+        <p>
+          {
+            "The reassessment illustrates what the team would review together. No dose or treatment interval is calculated. A frontal EEG display complements clinical assessment; it does not provide a complete neurological diagnosis or establish analgesia."
+          }
         </p>
         <div className="clinical-sources">
           <a href={CONSENSUS} target="_blank" rel="noreferrer">
-            International ICU pEEG consensus ↗
+            {"International ICU pEEG consensus ↗"}
           </a>
           <a href={ARDS} target="_blank" rel="noreferrer">
-            ATS ARDS guideline ↗
+            {"ATS ARDS guideline ↗"}
           </a>
           <a href={QCON_RASS} target="_blank" rel="noreferrer">
-            qCON and RASS: observational evidence ↗
+            {"qCON and RASS: observational evidence ↗"}
           </a>
         </div>
         <button ref={close} className="game-primary" onClick={onClose}>
-          Close
+          {"Close"}
         </button>
       </section>
     </div>
@@ -151,6 +153,7 @@ function InfoDialog({ onClose }) {
 export function Discovery({ onExit, onBasics, onComplete }) {
   const [step, setStep] = useState(0);
   const [info, setInfo] = useState(false);
+  const [learning, setLearning] = useState(false);
   const [replay, setReplay] = useState(0);
   const [saveError, setSaveError] = useState(false);
   const heading = useRef(null);
@@ -182,7 +185,7 @@ export function Discovery({ onExit, onBasics, onComplete }) {
   const copy = [
     [
       "What can the clinical assessment tell us?",
-      "RASS describes the response to stimulation. It cannot show whether brain activity remains continuous. Explore the bedside context, then add the EEG.",
+      "Our focus is the brain. EEG helps us observe propofol's effect on brain activity, alongside the clinical response. Explore the bedside context, then add the EEG.",
     ],
     [
       "Deep sedation does not mean burst suppression.",
@@ -201,15 +204,15 @@ export function Discovery({ onExit, onBasics, onComplete }) {
     "Add the EEG",
     "Watch the change",
     "See the reassessment",
-    "Start again",
+    "Try the Conox controls",
   ];
   return (
     <div ref={story} className="simple-discovery clinical-discovery">
       <nav className="simple-nav">
         <button className="game-text-button" onClick={onExit}>
-          ← Paths
+          {"← Paths"}
         </button>
-        <span>DISCOVER EEG</span>
+        <span>{"DISCOVER EEG"}</span>
         <div
           className="simple-progress"
           aria-label={`Step ${step + 1} of ${DISCOVERY_STEP_COUNT}`}
@@ -233,12 +236,12 @@ export function Discovery({ onExit, onBasics, onComplete }) {
         {step > 0 && (
           <span className="simple-rass">
             RASS <b>−4</b>
-            <small>clinical assessment</small>
+            <small>{"clinical assessment"}</small>
           </span>
         )}
       </div>
       <section
-        className={`simple-stage ${step === 0 ? "show-room" : "show-conox"}`}
+        className={`simple-stage ${step === 0 ? "show-room" : "show-conox"}${step === lastStep ? " show-reassessment" : ""}`}
         aria-label={
           step === 0
             ? "Clinical context"
@@ -249,6 +252,21 @@ export function Discovery({ onExit, onBasics, onComplete }) {
       >
         {step === 0 ? (
           <PatientRoom />
+        ) : step === lastStep ? (
+          <div className="clinical-reassessment">
+            <figure>
+              <PatientScene withEeg />
+              <figcaption>
+                <b>{"Bring brain monitoring to the bedside."}</b>
+                <span>
+                  {
+                    "The forehead sensor connects to Conox. Read the EEG alongside the clinical assessment."
+                  }
+                </span>
+              </figcaption>
+            </figure>
+            <ReferenceMonitor key={step} progressive={false} replay={replay} />
+          </div>
         ) : (
           <ReferenceMonitor
             key={step}
@@ -265,22 +283,24 @@ export function Discovery({ onExit, onBasics, onComplete }) {
         </div>
         <button
           className="game-primary"
-          onClick={() => setStep(step === lastStep ? 0 : step + 1)}
+          onClick={() => (step === lastStep ? onBasics() : setStep(step + 1))}
         >
-          {actions[step]}{" "}
-          <span aria-hidden="true">{step === lastStep ? "↻" : "→"}</span>
+          {actions[step]} <span aria-hidden="true">→</span>
         </button>
       </div>
       <div className="simple-bottom">
+        <button className="game-text-button" onClick={() => setLearning(true)}>
+          {"Why EEG? · Meet Conox"}
+        </button>
         <button className="game-text-button" onClick={() => setInfo(true)}>
-          About this story
+          {"About this story"}
         </button>
         {step > 0 && (
           <button
             className="game-text-button"
             onClick={() => setStep(step - 1)}
           >
-            ← Previous
+            {"← Previous"}
           </button>
         )}
         {step === 2 && (
@@ -288,7 +308,7 @@ export function Discovery({ onExit, onBasics, onComplete }) {
             className="game-text-button"
             onClick={() => setReplay((n) => n + 1)}
           >
-            Replay sequence ↻
+            {"Replay sequence ↻"}
           </button>
         )}
         <span>
@@ -297,13 +317,21 @@ export function Discovery({ onExit, onBasics, onComplete }) {
             : "A fictional ICU case · No quiz, no timer"}
         </span>
         {step === lastStep && (
-          <button className="game-text-button" onClick={onBasics}>
-            Try the Conox controls →
+          <button className="game-text-button" onClick={() => setStep(0)}>
+            {"Start the story again ↻"}
           </button>
         )}
-        {saveError && <span role="status">Progress could not be saved.</span>}
+        {saveError && (
+          <span role="status">{"Progress could not be saved."}</span>
+        )}
       </div>
       {info && <InfoDialog onClose={() => setInfo(false)} />}
+      {learning && (
+        <LearningGuide
+          onClose={() => setLearning(false)}
+          onControls={onBasics}
+        />
+      )}
     </div>
   );
 }
