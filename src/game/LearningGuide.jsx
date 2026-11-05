@@ -1,45 +1,22 @@
 import { useEffect, useRef, useState } from "react";
+import { useGameI18n } from "./GameI18n.jsx";
 import Buddy from "./Buddy.jsx";
-import { SOURCE, METRICS } from "./content.js";
+import { SOURCE } from "./content.js";
 
 const CONSENSUS =
   "https://link.springer.com/article/10.1007/s12028-022-01565-5";
 export default function LearningGuide({ onClose, onControls }) {
-  const TOPICS = [
-    {
-      label: "Why EEG?",
-      title: "Observe the brain during sedation.",
-      text: "Propofol changes brain activity. EEG helps us observe that effect continuously, alongside the patient's clinical response. Blood pressure and ventilator behaviour remain important, but do not directly show the EEG pattern.",
-      note: "The simulator's alpha/delta example shows continuous activity. Deep sedation does not require burst suppression.",
-      steps: [
-        ["Clinical assessment", "How does the patient respond?"],
-        ["Raw EEG", "What is the brain activity doing?"],
-        ["Together", "Compare the observations with the goal."],
-      ],
-    },
-    {
-      label: "Why in ICU?",
-      title: "Follow a changing clinical situation.",
-      text: "The reason for sedation can change during an ICU stay. EEG and DSA can reveal changes in continuity between clinical assessments, including unexpected suppression. Interpret the pattern with signal quality, medications and the patient's condition.",
-      note: "Clinical assessment and EEG-derived indices describe different information. There is no fixed RASS-to-qCON conversion.",
-      steps: [
-        ["Agree the goal", "Why is sedation needed now?"],
-        ["Observe the trend", "What changed, and when?"],
-        ["Reassess together", "Does the plan still fit the patient?"],
-      ],
-    },
-    {
-      label: "Meet Conox",
-      title: "From the sensor to the screen.",
-      text: "A disposable forehead sensor with three electrodes records the EEG. A patient cable connects it to the monitor, which brings the waveform, spectrogram and processed indices together.",
-      note: "Conox supports monitoring during anaesthesia and sedation. It is not a diagnostic EEG system, and its indices alone do not determine a drug dose.",
-      steps: [
-        ["Forehead sensor", "Records the signal"],
-        ["Patient cable", "Connects sensor and monitor"],
-        ["Conox display", "EEG · DSA · indices"],
-      ],
-    },
-  ];
+  const { t, metrics: METRICS } = useGameI18n();
+  const TOPICS = [0, 1, 2].map((index) => ({
+    label: t(`guide.topic.${index}.label`),
+    title: t(`guide.topic.${index}.title`),
+    text: t(`guide.topic.${index}.text`),
+    note: t(`guide.topic.${index}.note`),
+    steps: [0, 1, 2].map((step) => [
+      t(`guide.topic.${index}.step.${step}.title`),
+      t(`guide.topic.${index}.step.${step}.detail`),
+    ]),
+  }));
   const [topic, setTopic] = useState(0);
   const close = useRef(null);
   const body = useRef(null);
@@ -82,19 +59,19 @@ export default function LearningGuide({ onClose, onControls }) {
         <header className="learning-guide-header">
           <Buddy />
           <div>
-            <span>{"EXPLORE WITH CONI"}</span>
-            <h2 id="learning-title">{"A closer look at EEG."}</h2>
+            <span>{t("guide.eyebrow")}</span>
+            <h2 id="learning-title">{t("guide.title")}</h2>
           </div>
           <button
             ref={close}
             className="game-text-button learning-close"
-            aria-label={"Close learning guide"}
+            aria-label={t("guide.close")}
             onClick={onClose}
           >
             ×
           </button>
         </header>
-        <nav className="learning-topics" aria-label={"EEG learning topics"}>
+        <nav className="learning-topics" aria-label={t("guide.topics")}>
           {TOPICS.map((item, index) => (
             <button
               key={item.label}
@@ -128,7 +105,7 @@ export default function LearningGuide({ onClose, onControls }) {
                     <dt>{metric.label}</dt>
                     <dd>
                       {metric.id === "qnox"
-                        ? "Probability of response to a noxious stimulus"
+                        ? t("mission.response")
                         : metric.detail}
                     </dd>
                   </div>
@@ -142,20 +119,20 @@ export default function LearningGuide({ onClose, onControls }) {
               target="_blank"
               rel="noreferrer"
             >
-              {topic === 2 ? "Conox instructions for use" : "ICU EEG consensus"}{" "}
+              {topic === 2 ? t("guide.sourceIfu") : t("guide.sourceConsensus")}{" "}
               ↗
             </a>
           </div>
         </div>
         <footer className="learning-guide-footer">
           <button className="game-text-button" onClick={onClose}>
-            {"Back to the story"}
+            {t("guide.back")}
           </button>
           <button className="game-primary" onClick={onControls}>
-            {"Try the Conox controls →"}
+            {t("discovery.tryControls")}
           </button>
           <a href="../" target="_blank" rel="noreferrer">
-            {"Explore the full simulator ↗"}
+            {t("guide.simulator")}
           </a>
         </footer>
       </section>

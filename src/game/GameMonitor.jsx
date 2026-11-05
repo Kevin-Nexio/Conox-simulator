@@ -1,3 +1,4 @@
+import { useGameI18n } from "./GameI18n.jsx";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { SimulatorApp } from "../App.jsx";
 
@@ -13,6 +14,7 @@ export default function GameMonitor({
   maskIndices = false,
   screenOnly = false,
 }) {
+  const { t, locale } = useGameI18n();
   const [expanded, setExpanded] = useState(false);
   const host = useRef(null);
   const area = useRef(null);
@@ -96,7 +98,7 @@ export default function GameMonitor({
       className={`game-monitor-host${showScreen ? " is-screen" : ""}${expanded ? " is-expanded" : ""}`}
       role={expanded ? "dialog" : undefined}
       aria-modal={expanded ? true : undefined}
-      aria-label={expanded ? "Enlarged Conox monitor" : undefined}
+      aria-label={expanded ? t("monitor.enlarged") : undefined}
     >
       <div className="game-monitor-toolbar">
         <button
@@ -106,7 +108,7 @@ export default function GameMonitor({
           aria-expanded={expanded}
           onClick={() => setExpanded((value) => !value)}
         >
-          {expanded ? "Close enlarged monitor" : "Enlarge monitor"}
+          {expanded ? t("monitor.close") : t("monitor.enlarge")}
         </button>
       </div>
       <div ref={area} className="game-monitor-area">
@@ -118,6 +120,7 @@ export default function GameMonitor({
           <SimulatorApp
             key={scenario.id}
             trainingScenario={scenario}
+            trainingLocale={locale}
             trainingControls={controls}
             trainingScreenOnly={showScreen}
             maskIndices={maskIndices}

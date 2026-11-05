@@ -2,3 +2,6 @@ node_modules/
 dist/
 public/documents/
 legacy/
+
+prototypes/
+.claude/

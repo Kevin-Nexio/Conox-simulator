@@ -1,7 +1,10 @@
 import { EFFECT_LABELS } from "../data/index.js";
 import { clamp } from "../simulation/engine.js";
 
-export function TrendChart({ samples }) {
+export function TrendChart({
+  samples,
+  ariaLabel = "Zeitverlauf von qCON, qNOX, BSR und EMG",
+}) {
   const pointsFor = (metric) =>
     samples
       .map((sample, index) => {
@@ -19,7 +22,7 @@ export function TrendChart({ samples }) {
       viewBox="0 0 600 180"
       preserveAspectRatio="none"
       role="img"
-      aria-label="Zeitverlauf von qCON, qNOX, BSR und EMG"
+      aria-label={ariaLabel}
     >
       {[0, 45, 90, 135, 180].map((y) => (
         <line key={y} x1="0" y1={y} x2="600" y2={y} />

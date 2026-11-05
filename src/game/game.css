@@ -4466,3 +4466,78 @@ body:has(.game-app),
     font-size: 20px;
   }
 }
+
+/* Keep the language choice available throughout the activity, also on phones. */
+.game-language-switch {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid #c5d9dd;
+  border-radius: 12px;
+  background: #f7fafc;
+  flex-shrink: 0;
+}
+.game-language-switch button {
+  min-width: 40px;
+  min-height: 40px;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #315b66;
+  font-size: 12px;
+  font-weight: 800;
+}
+.game-language-switch button[aria-pressed="true"] {
+  background: #d6ecfc;
+  border-color: #4280ce;
+  color: #183765;
+}
+.game-language-switch button:focus-visible {
+  outline: 3px solid #4280ce;
+  outline-offset: 2px;
+}
+.pathways-app .game-header {
+  column-gap: 12px;
+}
+.path-header-note,
+.path-header-right {
+  margin-left: auto;
+}
+.path-option > strong,
+.path-mission-card b,
+.simple-heading h1,
+.clinical-detail h2 {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px), (max-width: 1000px) and (max-height: 500px) {
+  .pathways-app .game-header {
+    flex-wrap: wrap;
+  }
+  .game-language-switch {
+    margin-left: auto;
+  }
+  .game-language-switch button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .game-brand > span {
+    font-size: 18px;
+  }
+  .path-header-right {
+    order: 3;
+  }
+}
+
+@media (min-width: 901px) and (max-height: 800px) {
+  .clinical-room {
+    align-items: start;
+    padding: 12px;
+  }
+  .clinical-briefing {
+    align-self: start;
+  }
+  .clinical-illustration .patient-scene {
+    max-height: 180px;
+  }
+}

@@ -1,3 +1,4 @@
+import { useGameI18n } from "./GameI18n.jsx";
 import React, {
   useState,
   useEffect,
@@ -20,6 +21,7 @@ const ARDS = "https://pmc.ncbi.nlm.nih.gov/articles/PMC10870893/";
 const QCON_RASS = "https://pmc.ncbi.nlm.nih.gov/articles/PMC9067479/";
 
 function ReferenceMonitor({ progressive, replay }) {
+  const { t } = useGameI18n();
   const controls = useRef(null);
   const [elapsed, setElapsed] = useState(0);
   const scenario = useMemo(
@@ -39,12 +41,12 @@ function ReferenceMonitor({ progressive, replay }) {
   }, [progressive, replay]);
   const phase =
     elapsed < 15
-      ? "Continuous activity"
+      ? t("discovery.phase.continuous")
       : elapsed < 35
-        ? "Early discontinuity"
+        ? t("discovery.phase.early")
         : elapsed < 60
-          ? "Suppressed intervals lengthen"
-          : "Suppression is now prominent";
+          ? t("discovery.phase.lengthen")
+          : t("discovery.phase.prominent");
   return (
     <div className="clinical-monitor-stage">
       <GameMonitor
@@ -63,9 +65,9 @@ function ReferenceMonitor({ progressive, replay }) {
           <progress
             value={elapsed}
             max={60}
-            aria-label={"Progress through the illustrative EEG sequence"}
+            aria-label={t("discovery.sequenceProgress")}
           />
-          <small>{"Watch the raw EEG and the one-minute DSA together."}</small>
+          <small>{t("discovery.watch")}</small>
         </div>
       )}
     </div>
@@ -73,6 +75,7 @@ function ReferenceMonitor({ progressive, replay }) {
 }
 
 function InfoDialog({ onClose }) {
+  const { t } = useGameI18n();
   const close = useRef(null);
   useEffect(() => {
     const before = document.activeElement;
@@ -105,45 +108,25 @@ function InfoDialog({ onClose }) {
         aria-modal="true"
         aria-labelledby="case-info-title"
       >
-        <h2 id="case-info-title">{"About this clinical story"}</h2>
-        <p>
-          {
-            "This fictional patient has early severe ARDS. The team has documented a temporary RASS −4 goal for controlled ventilation while preparing prone positioning. This is an individual scenario, not a sedation target for every patient with ARDS. No neuromuscular blockade is present during the RASS assessments."
-          }
-        </p>
-        <p>
-          {
-            "To keep the example simple, only intravenous propofol is shown. This is a teaching focus on brain activity, not a complete ICU treatment. EEG helps assess the effect of sedation alongside clinical assessment."
-          }
-        </p>
-        <p>
-          {
-            "Deep sedation and burst suppression are different observations. RASS −4 or −5 does not define an EEG pattern. Suppression is not intended in this case; specific neurological indications require their own specialist plan."
-          }
-        </p>
-        <p>
-          {
-            "The 60-second sequence is a teaching illustration, not the time course of a drug or a patient recording. The shared simulator generates the signals. Indices are hidden because the story does not establish a numerical RASS–qCON conversion. Alpha/delta activity is an example in this propofol context, not a universal target."
-          }
-        </p>
-        <p>
-          {
-            "The reassessment illustrates what the team would review together. No dose or treatment interval is calculated. A frontal EEG display complements clinical assessment; it does not provide a complete neurological diagnosis or establish analgesia."
-          }
-        </p>
+        <h2 id="case-info-title">{t("discovery.aboutTitle")}</h2>
+        <p>{t("discovery.aboutPatient")}</p>
+        <p>{t("discovery.aboutFocus")}</p>
+        <p>{t("discovery.aboutSuppression")}</p>
+        <p>{t("discovery.aboutSequence")}</p>
+        <p>{t("discovery.aboutReview")}</p>
         <div className="clinical-sources">
           <a href={CONSENSUS} target="_blank" rel="noreferrer">
-            {"International ICU pEEG consensus ↗"}
+            {t("discovery.sourceConsensus")}
           </a>
           <a href={ARDS} target="_blank" rel="noreferrer">
-            {"ATS ARDS guideline ↗"}
+            {t("discovery.sourceArds")}
           </a>
           <a href={QCON_RASS} target="_blank" rel="noreferrer">
-            {"qCON and RASS: observational evidence ↗"}
+            {t("discovery.sourceQcon")}
           </a>
         </div>
         <button ref={close} className="game-primary" onClick={onClose}>
-          {"Close"}
+          {t("common.close")}
         </button>
       </section>
     </div>
@@ -151,6 +134,7 @@ function InfoDialog({ onClose }) {
 }
 
 export function Discovery({ onExit, onBasics, onComplete }) {
+  const { t } = useGameI18n();
   const [step, setStep] = useState(0);
   const [info, setInfo] = useState(false);
   const [learning, setLearning] = useState(false);
@@ -177,45 +161,36 @@ export function Discovery({ onExit, onBasics, onComplete }) {
     }
   }, [step]);
   const titles = [
-    "Start with the treatment goal.",
-    "Deep sedation. Continuous EEG.",
-    "The EEG changes between assessments.",
-    "Reassess the patient and the goal.",
+    t("discovery.title.0"),
+    t("discovery.title.1"),
+    t("discovery.title.2"),
+    t("discovery.title.3"),
   ];
   const copy = [
-    [
-      "What can the clinical assessment tell us?",
-      "Our focus is the brain. EEG helps us observe propofol's effect on brain activity, alongside the clinical response. Explore the bedside context, then add the EEG.",
-    ],
-    [
-      "Deep sedation does not mean burst suppression.",
-      "This reference shows continuous alpha/delta activity. The clinical RASS is −4 in our story. EEG and the clinical score describe different aspects of the patient's state.",
-    ],
-    [
-      "Watch the quiet intervals become longer.",
-      "The sequence develops gradually over 60 seconds. This change may occur without a different RASS score. Check signal quality, treatment timing and other causes; do not deepen sedation just to obtain a lower number.",
-    ],
-    [
-      "Same clinical score. A more continuous pattern.",
-      "After reviewing signal quality, possible causes and the treatment plan, the team reassesses. This illustrative endpoint combines RASS −4 with continuous EEG. The display does not calculate how to get there.",
-    ],
+    [t("discovery.heading.0"), t("discovery.copy.0")],
+    [t("discovery.heading.1"), t("discovery.copy.1")],
+    [t("discovery.heading.2"), t("discovery.copy.2")],
+    [t("discovery.heading.3"), t("discovery.copy.3")],
   ];
   const actions = [
-    "Add the EEG",
-    "Watch the change",
-    "See the reassessment",
-    "Try the Conox controls",
+    t("discovery.action.0"),
+    t("discovery.action.1"),
+    t("discovery.action.2"),
+    t("discovery.action.3"),
   ];
   return (
     <div ref={story} className="simple-discovery clinical-discovery">
       <nav className="simple-nav">
         <button className="game-text-button" onClick={onExit}>
-          {"← Paths"}
+          {t("discovery.paths")}
         </button>
-        <span>{"DISCOVER EEG"}</span>
+        <span>{t("discovery.label")}</span>
         <div
           className="simple-progress"
-          aria-label={`Step ${step + 1} of ${DISCOVERY_STEP_COUNT}`}
+          aria-label={t("discovery.step", {
+            step: step + 1,
+            total: DISCOVERY_STEP_COUNT,
+          })}
         >
           {titles.map((title, i) => (
             <i
@@ -236,7 +211,7 @@ export function Discovery({ onExit, onBasics, onComplete }) {
         {step > 0 && (
           <span className="simple-rass">
             RASS <b>−4</b>
-            <small>{"clinical assessment"}</small>
+            <small>{t("discovery.assessment")}</small>
           </span>
         )}
       </div>
@@ -244,10 +219,10 @@ export function Discovery({ onExit, onBasics, onComplete }) {
         className={`simple-stage ${step === 0 ? "show-room" : "show-conox"}${step === lastStep ? " show-reassessment" : ""}`}
         aria-label={
           step === 0
-            ? "Clinical context"
+            ? t("discovery.context")
             : step === 2
-              ? "Gradual EEG discontinuity sequence"
-              : "Continuous alpha and delta reference"
+              ? t("discovery.sequence")
+              : t("discovery.continuous")
         }
       >
         {step === 0 ? (
@@ -257,12 +232,8 @@ export function Discovery({ onExit, onBasics, onComplete }) {
             <figure>
               <PatientScene withEeg />
               <figcaption>
-                <b>{"Bring brain monitoring to the bedside."}</b>
-                <span>
-                  {
-                    "The forehead sensor connects to Conox. Read the EEG alongside the clinical assessment."
-                  }
-                </span>
+                <b>{t("discovery.bedsideTitle")}</b>
+                <span>{t("discovery.bedsideCopy")}</span>
               </figcaption>
             </figure>
             <ReferenceMonitor key={step} progressive={false} replay={replay} />
@@ -290,17 +261,17 @@ export function Discovery({ onExit, onBasics, onComplete }) {
       </div>
       <div className="simple-bottom">
         <button className="game-text-button" onClick={() => setLearning(true)}>
-          {"Why EEG? · Meet Conox"}
+          {t("discovery.guide")}
         </button>
         <button className="game-text-button" onClick={() => setInfo(true)}>
-          {"About this story"}
+          {t("discovery.about")}
         </button>
         {step > 0 && (
           <button
             className="game-text-button"
             onClick={() => setStep(step - 1)}
           >
-            {"← Previous"}
+            {t("common.previous")}
           </button>
         )}
         {step === 2 && (
@@ -308,22 +279,18 @@ export function Discovery({ onExit, onBasics, onComplete }) {
             className="game-text-button"
             onClick={() => setReplay((n) => n + 1)}
           >
-            {"Replay sequence ↻"}
+            {t("discovery.replay")}
           </button>
         )}
         <span>
-          {step > 0
-            ? "Illustrative EEG · No fixed RASS–qCON conversion"
-            : "A fictional ICU case · No quiz, no timer"}
+          {step > 0 ? t("discovery.noConversion") : t("discovery.fictional")}
         </span>
         {step === lastStep && (
           <button className="game-text-button" onClick={() => setStep(0)}>
-            {"Start the story again ↻"}
+            {t("discovery.restart")}
           </button>
         )}
-        {saveError && (
-          <span role="status">{"Progress could not be saved."}</span>
-        )}
+        {saveError && <span role="status">{t("discovery.saveError")}</span>}
       </div>
       {info && <InfoDialog onClose={() => setInfo(false)} />}
       {learning && (

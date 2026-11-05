@@ -7,7 +7,7 @@ import {
 
 test("only the three requested layouts are supported, with the framed simulator as default", () => {
   for (const [layout, height] of [
-    ["blocks", 1200],
+    ["blocks", 900],
     ["simulator-frame", 1120],
     ["simulator-screen", 900],
   ]) {

@@ -75,6 +75,7 @@ export function ConoxMetrics({ indices, missingValue = "--" }) {
 }
 
 export function ConoxEegPanel({
+  ariaLabel = "Raw EEG",
   displayView = "eeg-dsa",
   caption,
   scale,
@@ -87,7 +88,7 @@ export function ConoxEegPanel({
   return (
     <section
       className={`sb-rawbox ${active ? "active" : ""} ${displayView === "all" ? "layout-all-top" : displayView === "eeg-only" ? "layout-full" : "layout-top"}`}
-      aria-label="Raw EEG"
+      aria-label={ariaLabel}
       aria-hidden={!active}
     >
       <div className="sb-signal-caption">{caption}</div>

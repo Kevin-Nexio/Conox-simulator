@@ -1,51 +1,35 @@
+import { useGameI18n } from "./GameI18n.jsx";
 import { useState } from "react";
 import PatientScene from "./PatientScene.jsx";
 
 export default function PatientRoom() {
-  const BRIEFING = [
-    {
-      label: "Treatment goal",
-      title: "Deep sedation has a reason.",
-      text: "Early severe ARDS. For this patient, the team has chosen temporary deep sedation to support controlled, lung-protective ventilation. Prone positioning is being prepared.",
-    },
-    {
-      label: "At the bedside",
-      title: "Intubated. Ventilated. Closely observed.",
-      text: "For clarity, this example shows propofol alone, delivered intravenously. It does not depict a complete ICU treatment. EEG helps us observe the effect on brain activity alongside the clinical assessment.",
-    },
-    {
-      label: "Clinical assessment",
-      title: "Target RASS −4. Observed RASS −4.",
-      text: "No response to voice; movement to physical stimulation. There is no neuromuscular blockade in this teaching case. This assessment does not tell us whether the EEG is continuous or suppressed.",
-    },
-  ];
+  const { t } = useGameI18n();
+  const BRIEFING = [0, 1, 2].map((index) => ({
+    label: t(`room.label.${index}`),
+    title: t(`room.title.${index}`),
+    text: t(`room.text.${index}`),
+  }));
   const [detail, setDetail] = useState(0);
   return (
     <div className="clinical-room">
       <div className="clinical-illustration">
-        <span className="clinical-room-label">{"ICU · ACUTE PHASE"}</span>
+        <span className="clinical-room-label">{t("room.phase")}</span>
         <PatientScene />
         <div className="clinical-room-caption">
-          <b>{"Severe ARDS"}</b>
-          <span>{"Intubated · IV propofol · Proning planned"}</span>
+          <b>{t("room.ards")}</b>
+          <span>{t("room.caption")}</span>
         </div>
         <p className="clinical-focus-note">
-          <b>{"Our focus: the brain."}</b>
-          {
-            "Only propofol is shown to keep this learning case simple. Other ICU treatments are outside the example."
-          }
+          <b>{t("room.focusTitle")}</b> {t("room.focusCopy")}
         </p>
       </div>
       <div className="clinical-briefing">
         <div className="clinical-goal">
-          <span>{"THIS PATIENT’S GOAL"}</span>
+          <span>{t("room.goal")}</span>
           <b>RASS −4</b>
-          <small>{"Temporary deep sedation"}</small>
+          <small>{t("room.sedation")}</small>
         </div>
-        <div
-          className="clinical-tabs"
-          aria-label={"Explore the clinical context"}
-        >
+        <div className="clinical-tabs" aria-label={t("room.context")}>
           {BRIEFING.map((item, i) => (
             <button
               key={item.label}

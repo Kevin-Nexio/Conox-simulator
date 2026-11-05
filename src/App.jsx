@@ -221,14 +221,18 @@ function isRemoteRevision(value) {
 export function SimulatorApp({
   onOpenRecording,
   trainingScenario = null,
+  trainingLocale = "en",
   trainingControls = null,
   trainingScreenOnly = false,
   maskIndices = false,
+  localPreview = false,
+  suiteLocale = null,
 } = {}) {
   const embedded = Boolean(trainingScenario);
-  const [locale, setLocale] = React.useState(() =>
-    embedded ? "en" : getInitialLocale(),
+  const [selectedLocale, setLocale] = React.useState(() =>
+    embedded ? trainingLocale : (suiteLocale ?? getInitialLocale()),
   );
+  const locale = embedded ? trainingLocale : (suiteLocale ?? selectedLocale);
   const {
     t,
     tr,
@@ -238,6 +242,8 @@ export function SimulatorApp({
     getJourney: NARKOSE_REISE,
     eegKnowledge: EEG_KNOWLEDGE,
   } = React.useMemo(() => createI18n(locale), [locale]);
+  // Animation loops read the current language without rebuilding signal history.
+  const translationRef = React.useRef(t);
   const DEFAULT_SCENARIO =
     trainingScenario ??
     SCENARIOS.find((A) => A.id === "target-a") ??
@@ -261,11 +267,11 @@ export function SimulatorApp({
   const initialProfile =
     trainingProfileAt(training, 0) ?? DEFAULT_SCENARIO.profile;
   const [remoteRole, setRemoteRole] = React.useState(() =>
-      embedded ? "full" : getInitialRemoteRole(),
+      embedded || localPreview ? "full" : getInitialRemoteRole(),
     ),
     [borderlessDisplay, setBorderlessDisplay] = React.useState(false),
     [demoSession, setDemoSession] = React.useState(() =>
-      embedded ? DEMO_SESSIONS[0] : getInitialDemoSession(),
+      embedded || localPreview ? DEMO_SESSIONS[0] : getInitialDemoSession(),
     ),
     [remotePeers, setRemotePeers] = React.useState(0),
     [remoteStatus, setRemoteStatus] = React.useState("remote.status.waiting"),
@@ -429,6 +435,15 @@ export function SimulatorApp({
     window.localStorage.setItem("conox.locale", locale);
     document.documentElement.lang = locale;
   }, [locale, embedded]);
+  React.useLayoutEffect(() => {
+    translationRef.current = t;
+    if (eegStatusRef.current)
+      eegStatusRef.current.textContent = t(
+        simulationStateRef.current.suppressed
+          ? "eeg.status.suppression"
+          : "eeg.status.active",
+      );
+  }, [t]);
   (React.useEffect(() => {
     simulationConfigRef.current = {
       drug: primaryDrug,
@@ -609,8 +624,8 @@ export function SimulatorApp({
               (Z.burstEnvelope = Uu),
               eegStatusRef.current &&
                 (eegStatusRef.current.textContent = Z.suppressed
-                  ? t("eeg.status.suppression")
-                  : t("eeg.status.active")));
+                  ? translationRef.current("eeg.status.suppression")
+                  : translationRef.current("eeg.status.active")));
           }
           const Oa = new Array(fe),
             Ia = clamp((Ne - 0.1) / 0.52, 0, 1),
@@ -1118,7 +1133,7 @@ export function SimulatorApp({
             cancelAnimationFrame(ve));
         }
       );
-    }, [t]),
+    }, []),
     React.useEffect(() => {
       const A = rawEegCanvasRef.current;
       if (!A) return;
@@ -1155,8 +1170,8 @@ export function SimulatorApp({
               ...suppression,
             });
             const status = suppression.suppressed
-              ? t("eeg.status.suppression")
-              : t("eeg.status.active");
+              ? translationRef.current("eeg.status.suppression")
+              : translationRef.current("eeg.status.active");
             if (
               eegStatusRef.current &&
               eegStatusRef.current.textContent !== status
@@ -1915,13 +1930,13 @@ export function SimulatorApp({
     changeRemoteRole = (role) => {
       if (embedded) return;
       const nextRole = REMOTE_ROLES.includes(role) ? role : "full";
-      replaceRemoteUrl(nextRole, demoSession);
+      if (!localPreview) replaceRemoteUrl(nextRole, demoSession);
       setRemoteRole(nextRole);
     },
     changeDemoSession = (value) => {
       if (embedded) return;
       const nextDemo = parseDemoSession(value) ?? DEMO_SESSIONS[0];
-      replaceRemoteUrl(remoteRole, nextDemo);
+      if (!localPreview) replaceRemoteUrl(remoteRole, nextDemo);
       setDemoSession(nextDemo);
     },
     controllerUrl = React.useMemo(
@@ -2263,13 +2278,13 @@ export function SimulatorApp({
     else if (order < 0) sendRemoteState(peerId);
   };
   React.useEffect(() => {
-    if (embedded) return;
+    if (embedded || localPreview) return;
     try {
       window.localStorage.setItem(DEMO_STORAGE_KEY, String(demoSession));
     } catch {}
-  }, [demoSession, embedded]);
+  }, [demoSession, embedded, localPreview]);
   React.useEffect(() => {
-    if (embedded) return;
+    if (embedded || localPreview) return;
     const joinedAt = Date.now();
     remoteJoinedAtRef.current = joinedAt;
     remoteRevisionRef.current = {
@@ -2333,9 +2348,9 @@ export function SimulatorApp({
       remoteActionRef.current = null;
       room.leave()?.catch?.(() => {});
     };
-  }, [demoSession, sendRemoteState, embedded]);
+  }, [demoSession, sendRemoteState, embedded, localPreview]);
   React.useEffect(() => {
-    if (embedded) return;
+    if (embedded || localPreview) return;
     const timeoutId = window.setTimeout(() => {
       const json = JSON.stringify(remoteSnapshot);
       if (json === remoteKnownStateRef.current.json) return;
@@ -2350,7 +2365,7 @@ export function SimulatorApp({
       sendRemoteState();
     }, 80);
     return () => window.clearTimeout(timeoutId);
-  }, [remoteSnapshot, sendRemoteState, embedded]);
+  }, [remoteSnapshot, sendRemoteState, embedded, localPreview]);
   React.useLayoutEffect(() => {
     if (!embedded || !trainingControls) return;
     trainingControls.current = {
@@ -2408,8 +2423,8 @@ export function SimulatorApp({
   const monitor = (
     <ConoxMonitor
       borderless={embedded && trainingScreenOnly}
-      brandLabel={embedded ? "Return to game home" : t("brand.open")}
-      brandHref={embedded ? "./" : undefined}
+      brandLabel={embedded ? t("game.home") : t("brand.open")}
+      brandHref={embedded ? `?solution=jeu&lang=${locale}` : undefined}
       brandTarget={embedded ? "_self" : undefined}
       frameControls={
         maskIndices || (embedded && trainingScreenOnly) ? null : (
@@ -2460,6 +2475,7 @@ export function SimulatorApp({
     >
       <ConoxMetrics indices={maskIndices ? null : currentIndices} />
       <ConoxEegPanel
+        ariaLabel={t("eeg.rawLabel")}
         displayView={displayView}
         caption={
           <>
@@ -2716,7 +2732,10 @@ export function SimulatorApp({
             <span>{"25"}</span>
             <span>{"0"}</span>
           </div>
-          <TrendChart samples={trendSamples} />
+          <TrendChart
+            samples={trendSamples}
+            ariaLabel={t("display.trendAria")}
+          />
           <div className="sb-trend-legend">
             <b className="qcon">{"qCON"}</b>
             <b className="qnox">{"qNOX"}</b>
@@ -2812,6 +2831,7 @@ export function SimulatorApp({
   if (embedded) return <div className="game-embedded">{monitor}</div>;
   return (
     <main
+      lang={locale}
       className={`sb-shell role-${remoteRole}${borderlessDisplay ? " display-borderless" : ""}${linkPanelOpen ? " link-open" : ""}`}
     >
       <header className="sb-header">

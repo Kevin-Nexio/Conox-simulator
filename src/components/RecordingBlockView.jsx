@@ -87,16 +87,16 @@ const RecordingBlockView = React.forwardRef(function RecordingBlockView(
     embedded: true,
   };
   const duration = data?.recording?.durationSeconds || 0;
-  const scaleTop = 635;
-  const scaleHeight = 205;
+  const scaleTop = 590;
+  const scaleHeight = 210;
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       ref={ref}
       className="recording-block-view"
       width="1600"
-      height="1200"
-      viewBox="0 0 1600 1200"
+      height="900"
+      viewBox="0 0 1600 900"
       preserveAspectRatio="xMidYMid meet"
       style={{ display: "block", width: "100%", height: "100%" }}
       fontFamily="Arial, Helvetica, sans-serif"
@@ -111,7 +111,7 @@ const RecordingBlockView = React.forwardRef(function RecordingBlockView(
           ))}
         </linearGradient>
       </defs>
-      <rect width="1600" height="1200" fill="#071118" />
+      <rect width="1600" height="900" fill="#071118" />
       <Text x={42} y={46} size={31} color="#f1f7fa" bold>
         {t("recording.title")}
       </Text>
@@ -122,7 +122,7 @@ const RecordingBlockView = React.forwardRef(function RecordingBlockView(
         {profile.name} · {t("recording.experimentalShort")}
       </Text>
 
-      <Box x={42} y={124} width={1516} height={134} fill="#02090d" />
+      <Box x={42} y={124} width={1516} height={110} fill="#02090d" />
       <Text x={64} y={151} size={19} color="#b6c8d1">
         {t("recording.state." + (frame?.monitorState?.kind || "unknown"), {
           code: frame?.status,
@@ -154,11 +154,11 @@ const RecordingBlockView = React.forwardRef(function RecordingBlockView(
         </g>
       ))}
 
-      <Box x={42} y={278} width={1516} height={261} />
-      <Text x={64} y={304} size={20} color="#dceaf0" bold>
+      <Box x={42} y={254} width={1516} height={240} />
+      <Text x={64} y={280} size={20} color="#dceaf0" bold>
         {t("recording.eeg")}
       </Text>
-      <Text x={1534} y={304} size={19} color="#b6c8d1" align="end">
+      <Text x={1534} y={280} size={19} color="#b6c8d1" align="end">
         {normalized.eegWindow} s · {android ? "±" : ""}
         {normalized.amplitude} µV
       </Text>
@@ -166,16 +166,16 @@ const RecordingBlockView = React.forwardRef(function RecordingBlockView(
         {...plotProps}
         kind="eeg"
         x={57}
-        y={329}
+        y={305}
         width={1486}
-        height={201}
+        height={180}
       />
 
-      <Box x={42} y={559} width={1516} height={328} />
-      <Text x={64} y={586} size={20} color="#dceaf0" bold>
+      <Box x={42} y={514} width={946} height={320} />
+      <Text x={64} y={540} size={20} color="#dceaf0" bold>
         {t(`recording.dsa.${profile.id}`)}
       </Text>
-      <Text x={1540} y={586} size={17} color="#b6c8d1" align="end">
+      <Text x={966} y={540} size={17} color="#b6c8d1" align="end">
         {android
           ? "FFT (dB)"
           : nativeSpectrum
@@ -191,14 +191,14 @@ const RecordingBlockView = React.forwardRef(function RecordingBlockView(
           !nativeSpectrum && (
             <g key={label}>
               <line
-                x1={900 + index * 119}
-                x2={920 + index * 119}
-                y1="586"
-                y2="586"
+                x1={650 + index * 119}
+                x2={670 + index * 119}
+                y1="540"
+                y2="540"
                 stroke={color}
                 strokeWidth="3"
               />
-              <Text x={927 + index * 119} y={586} size={17} color={color}>
+              <Text x={677 + index * 119} y={540} size={17} color={color}>
                 {label}
               </Text>
             </g>
@@ -208,14 +208,14 @@ const RecordingBlockView = React.forwardRef(function RecordingBlockView(
         {...plotProps}
         kind="dsa"
         x={57}
-        y={613}
-        width={1372}
-        height={257}
+        y={565}
+        width={800}
+        height={252}
       />
       {nativeSpectrum ? (
         <image
           href={android ? androidLegend : nativeLegend}
-          x="1444"
+          x="884"
           y={scaleTop}
           width="80"
           height={scaleHeight}
@@ -224,7 +224,7 @@ const RecordingBlockView = React.forwardRef(function RecordingBlockView(
       ) : (
         <>
           <rect
-            x="1444"
+            x="884"
             y={scaleTop}
             width="31"
             height={scaleHeight}
@@ -235,7 +235,7 @@ const RecordingBlockView = React.forwardRef(function RecordingBlockView(
             ({ value, fraction }) => (
               <Text
                 key={fraction}
-                x={1482}
+                x={922}
                 y={scaleTop + fraction * scaleHeight}
                 size={17}
               >
@@ -246,22 +246,22 @@ const RecordingBlockView = React.forwardRef(function RecordingBlockView(
         </>
       )}
 
-      <Box x={42} y={907} width={1516} height={232} />
-      <Text x={64} y={934} size={20} color="#dceaf0" bold>
+      <Box x={1008} y={514} width={550} height={320} />
+      <Text x={1030} y={540} size={20} color="#dceaf0" bold>
         {t("recording.trends")}
       </Text>
       {METRICS.filter(([, key]) => key !== "sqi").map(
         ([label, key, color], index) => (
           <g key={key}>
             <line
-              x1={1030 + index * 99}
-              x2={1049 + index * 99}
-              y1="934"
-              y2="934"
+              x1={1030 + index * 124}
+              x2={1049 + index * 124}
+              y1="578"
+              y2="578"
               stroke={color}
               strokeWidth="3"
             />
-            <Text x={1056 + index * 99} y={934} size={17} color={color}>
+            <Text x={1056 + index * 124} y={578} size={17} color={color}>
               {label}
             </Text>
           </g>
@@ -270,12 +270,12 @@ const RecordingBlockView = React.forwardRef(function RecordingBlockView(
       <RecordingPlot
         {...plotProps}
         kind="trends"
-        x={57}
-        y={958}
-        width={1486}
-        height={172}
+        x={1023}
+        y={602}
+        width={520}
+        height={215}
       />
-      <Text x={42} y={1170} size={17} color="#95acb9">
+      <Text x={42} y={865} size={17} color="#95acb9">
         {t(`recording.dsaMethod.${profile.id}`)}
       </Text>
     </svg>

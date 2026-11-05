@@ -18,6 +18,7 @@ const DEFAULT_LOCALE = "de";
 const ui = {
   de: {
     ...RECORDING_UI.de,
+    "game.home": "Zurück zur Spielstartseite",
     "app.subtitle": "RAW EEG · DSA · qCON / qNOX · synthetische Lernsignale",
     "remote.aria": "Remote-Sitzung",
     "remote.role": "Remote-Modus",
@@ -213,6 +214,7 @@ const ui = {
   },
   fr: {
     ...RECORDING_UI.fr,
+    "game.home": "Retour à l’accueil du jeu",
     "app.subtitle":
       "EEG brut · DSA · qCON / qNOX · signaux pédagogiques synthétiques",
     "remote.aria": "Session distante",
@@ -412,6 +414,7 @@ const ui = {
   },
   en: {
     ...RECORDING_UI.en,
+    "game.home": "Return to game home",
     "app.subtitle": "RAW EEG · DSA · qCON / qNOX · synthetic training signals",
     "remote.aria": "Remote session",
     "remote.role": "Remote mode",

@@ -1,7 +1,9 @@
 import { useId } from "react";
+import { useGameI18n } from "./GameI18n.jsx";
 
 // The airway, IV infusion and optional EEG lead have separate destinations.
 export default function PatientScene({ withEeg = false }) {
+  const { t } = useGameI18n();
   const id = useId();
   const blanket = `${id}-blanket`;
   const spectrum = `${id}-spectrum`;
@@ -10,11 +12,7 @@ export default function PatientScene({ withEeg = false }) {
       className="patient-scene"
       viewBox="0 0 1000 540"
       role="img"
-      aria-label={
-        withEeg
-          ? "Illustrative ICU scene. Propofol is delivered by a separate Agilia-style syringe pump through an IV line to the patient's hand. The breathing circuit connects the mouth to the ventilator. A Conox monitor connects to a forehead EEG sensor."
-          : "Illustrative ICU scene. Propofol is delivered by a separate Agilia-style syringe pump through an IV line to the patient's hand. The breathing circuit connects the mouth to the ventilator. A bedside monitor shows ECG and oxygenation traces."
-      }
+      aria-label={t(withEeg ? "room.illustrationEeg" : "room.illustration")}
     >
       <defs>
         <linearGradient id={blanket} x1="0" y1="0" x2="1" y2="1">
@@ -284,7 +282,7 @@ export default function PatientScene({ withEeg = false }) {
       />
       <rect x="783" y="304" width="171" height="98" rx="10" fill="#183b51" />
       <text x="798" y="325" fill="#d5eef6" fontSize="14" fontWeight="700">
-        {"VENTILATOR"}
+        {t("room.ventilator")}
       </text>
       <path
         d="M795 368h9v-24h25v24h20v-24h25v24h20v-24h25v24h23"
@@ -294,7 +292,7 @@ export default function PatientScene({ withEeg = false }) {
         strokeLinejoin="round"
       />
       <text x="798" y="390" fill="#b6dce7" fontSize="12">
-        {"Controlled ventilation"}
+        {t("room.ventilation")}
       </text>
       <path
         d="M794 421h86"
@@ -308,7 +306,7 @@ export default function PatientScene({ withEeg = false }) {
       <rect x="755" y="61" width="221" height="171" rx="24" fill="#45657b" />
       <rect x="768" y="74" width="195" height="143" rx="13" fill="#112d40" />
       <text x="781" y="95" fill="#b5e5dd" fontSize="13" fontWeight="700">
-        {"ECG"}
+        {t("room.ecg")}
       </text>
       <path
         d="M782 120h20l7-10 7 25 8-41 9 26h116"
@@ -327,7 +325,7 @@ export default function PatientScene({ withEeg = false }) {
         strokeWidth="3"
       />
       <text x="781" y="198" fill="#b9d1e0" fontSize="13">
-        {"Blood pressure"}
+        {t("room.bloodPressure")}
       </text>
       <path d="M920 194h27" stroke="#b9d1e0" strokeWidth="3" />
 

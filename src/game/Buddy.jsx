@@ -1,10 +1,6 @@
+import { useGameI18n } from "./GameI18n.jsx";
 import buddyUrl from "./assets/coni.png";
 export default function Buddy() {
-  return (
-    <img
-      className="game-buddy"
-      src={buddyUrl}
-      alt="Coni, your friendly monitor companion"
-    />
-  );
+  const { t } = useGameI18n();
+  return <img className="game-buddy" src={buddyUrl} alt={t("buddy.alt")} />;
 }

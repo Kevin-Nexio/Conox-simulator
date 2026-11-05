@@ -1,5 +1,5 @@
 const SIZES = {
-  blocks: { width: 1600, height: 1200 },
+  blocks: { width: 1600, height: 900 },
   "simulator-frame": { width: 1600, height: 1120 },
   "simulator-screen": { width: 1600, height: 900 },
 };

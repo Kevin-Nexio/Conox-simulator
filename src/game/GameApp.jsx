@@ -1,3 +1,5 @@
+import { useGameI18n } from "./GameI18n.jsx";
+import { GAME_LOCALES } from "./i18n.js";
 import React, {
   useState,
   useEffect,
@@ -11,10 +13,7 @@ import Buddy from "./Buddy.jsx";
 import { Discovery, CASE_KEY, DISCOVERY_STEP_COUNT } from "./Discovery.jsx";
 import {
   SOURCE,
-  METRICS,
-  PATHS,
   STORAGE_KEY,
-  ALL_MISSIONS,
   parseProgress,
   scoreFor,
   mergeResult,
@@ -126,6 +125,7 @@ function AutoFit({ children, className = "" }) {
   );
 }
 function ProgressBar({ done, total = 4 }) {
+  const { t } = useGameI18n();
   return (
     <div
       className={"path-progress"}
@@ -133,7 +133,7 @@ function ProgressBar({ done, total = 4 }) {
       aria-valuenow={done}
       aria-valuemin={0}
       aria-valuemax={total}
-      aria-label={"Completed missions"}
+      aria-label={t("progress.completed")}
     >
       <span
         style={{
@@ -144,6 +144,7 @@ function ProgressBar({ done, total = 4 }) {
   );
 }
 function Dialog({ title, copy, confirm, onConfirm, onCancel }) {
+  const { t } = useGameI18n();
   const cancel = useRef();
   useEffect(() => {
     const before = document.activeElement;
@@ -177,7 +178,7 @@ function Dialog({ title, copy, confirm, onConfirm, onCancel }) {
         <p>{copy}</p>
         <div>
           <button ref={cancel} onClick={onCancel} className={"path-secondary"}>
-            {"Keep playing"}
+            {t("common.keepPlaying")}
           </button>
           <button className={"game-primary"} onClick={onConfirm}>
             {confirm}
@@ -188,30 +189,25 @@ function Dialog({ title, copy, confirm, onConfirm, onCancel }) {
   );
 }
 function Home({ results, onChoose, caseDone }) {
+  const { t, paths: PATHS } = useGameI18n();
   return (
     <AutoFit className={"path-home"}>
       <div className={"path-home-intro"}>
         <div>
-          <span className={"game-eyebrow"}>
-            {"CONOX \xB7 ICU LEARNING LAB"}
-          </span>
+          <span className={"game-eyebrow"}>{t("home.eyebrow")}</span>
           <h1 tabIndex={-1}>
-            {"Explore Conox."}
+            {t("home.title")}
             <br />
-            {"Your way."}
+            {t("home.subtitle")}
           </h1>
-          <p>
-            {"Choose your starting point. We\u2019ll guide you from there."}
-          </p>
+          <p>{t("home.intro")}</p>
         </div>
         <div className={"path-hello"}>
-          <span>{"Hello, curious mind!"}</span>
+          <span>{t("home.hello")}</span>
           <Buddy />
         </div>
       </div>
-      <h2 className={"path-question"}>
-        {"How familiar are you with EEG monitoring?"}
-      </h2>
+      <h2 className={"path-question"}>{t("home.question")}</h2>
       <div className={"path-options"}>
         {PATHS.map((path) => {
           const done = path.missions.filter((m) => results[m.id]).length;
@@ -241,18 +237,18 @@ function Home({ results, onChoose, caseDone }) {
                 <span>
                   {path.id === "discover"
                     ? caseDone
-                      ? "\u2713 Demo explored"
-                      : `${DISCOVERY_STEP_COUNT} simple steps`
+                      ? t("home.demoDone")
+                      : t("home.steps", { count: DISCOVERY_STEP_COUNT })
                     : done
-                      ? `${done} / 4 completed`
-                      : "4 small missions"}
+                      ? t("home.completed", { done, total: 4 })
+                      : t("home.missions")}
                 </span>
                 <b>
                   {path.id === "discover"
-                    ? "Start demo"
+                    ? t("home.startDemo")
                     : done
-                      ? "Continue"
-                      : "Start"}{" "}
+                      ? t("common.continue")
+                      : t("common.start")}{" "}
                   <Icon name={"arrow"} size={18} />
                 </b>
               </span>
@@ -260,13 +256,12 @@ function Home({ results, onChoose, caseDone }) {
           );
         })}
       </div>
-      <p className={"path-home-foot"}>
-        {"Your experience comes first. Choose a path and make it yours."}
-      </p>
+      <p className={"path-home-foot"}>{t("home.foot")}</p>
     </AutoFit>
   );
 }
 function PathSummary({ path, results, onStart, onHome, onReset, onDiscover }) {
+  const { t } = useGameI18n();
   const done = path.missions.filter((m) => results[m.id]).length;
   const points = path.missions.reduce(
     (n, m) => n + (results[m.id]?.score || 0),
@@ -278,31 +273,19 @@ function PathSummary({ path, results, onStart, onHome, onReset, onDiscover }) {
       <div className={"path-map-nav"}>
         <button className={"game-text-button"} onClick={onHome}>
           <Icon name={"back"} />
-          {" Choose a path"}
+          {t("common.choosePath")}
         </button>
         <span>{path.support}</span>
       </div>
       <div className={"path-map-heading"}>
         <div>
-          <span className={"game-eyebrow"}>
-            {"PATH COMPLETE \xB7 NICELY DONE"}
-          </span>
-          <h1 tabIndex={-1}>{"A clearer picture. Well earned."}</h1>
-          <p>
-            {
-              "Revisit a mission or explore another path. Your best scores stay with you."
-            }
-          </p>
+          <span className={"game-eyebrow"}>{t("summary.eyebrow")}</span>
+          <h1 tabIndex={-1}>{t("summary.title")}</h1>
+          <p>{t("summary.intro")}</p>
           <div className={"path-map-stats"}>
-            <strong>
-              {done}
-              {" / 4 complete"}
-            </strong>
-            <span>
-              {points}
-              {" / 400 points"}
-            </span>
-            <span>{"No time bonus"}</span>
+            <strong>{t("summary.complete", { done, total: 4 })}</strong>
+            <span>{t("summary.points", { points })}</span>
+            <span>{t("summary.noBonus")}</span>
           </div>
         </div>
         <Buddy />
@@ -311,15 +294,11 @@ function PathSummary({ path, results, onStart, onHome, onReset, onDiscover }) {
       {path.id === "discover" && (
         <div className={"case-entry-strip"}>
           <div>
-            <b>{"Same RASS. Different EEG."}</b>
-            <p>
-              {
-                "A guided ICU story \xB7 Explore the clinical picture, then add EEG."
-              }
-            </p>
+            <b>{t("summary.storyTitle")}</b>
+            <p>{t("summary.storyCopy")}</p>
           </div>
           <button className={"path-secondary"} onClick={onDiscover}>
-            {"Open the ICU story \u2192"}
+            {t("summary.openStory")}
           </button>
         </div>
       )}
@@ -346,10 +325,10 @@ function PathSummary({ path, results, onStart, onHome, onReset, onDiscover }) {
                 <small>{m.intro}</small>
                 <em>
                   {record
-                    ? `Best: ${record.score}/100`
+                    ? t("summary.best", { score: record.score })
                     : unlocked
-                      ? "Ready to explore"
-                      : `Complete mission ${i} to unlock`}
+                      ? t("summary.ready")
+                      : t("summary.locked", { number: i })}
                 </em>
               </span>
               <Icon name={record ? "check" : "arrow"} />
@@ -359,17 +338,17 @@ function PathSummary({ path, results, onStart, onHome, onReset, onDiscover }) {
       </div>
       <div className={"path-map-bottom"}>
         <button className={"game-text-button"} onClick={onReset}>
-          {"Reset this path"}
+          {t("summary.reset")}
         </button>
         <button
           className={"game-primary"}
           onClick={() => (next === -1 ? onHome() : onStart(next))}
         >
           {next === -1
-            ? "Explore another path"
+            ? t("summary.another")
             : done
-              ? "Continue learning"
-              : "Start this path"}
+              ? t("summary.continue")
+              : t("summary.start")}
           <Icon name={"arrow"} />
         </button>
       </div>
@@ -377,6 +356,7 @@ function PathSummary({ path, results, onStart, onHome, onReset, onDiscover }) {
   );
 }
 function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
+  const { t, metrics: METRICS, formatList } = useGameI18n();
   const [stage, setStage] = useState("observe"),
     [selected, setSelected] = useState([]),
     [matches, setMatches] = useState({}),
@@ -413,14 +393,30 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
       }),
     [m, reference],
   );
-  const answers = useMemo(() => {
-    const a = [...m.options];
+  const answerOrder = useMemo(() => {
+    const a = m.options.map((option) => option.id);
     for (let i = a.length - 1; i > 0; i--) {
       let j = Math.floor(Math.random() * (i + 1));
       [a[i], a[j]] = [a[j], a[i]];
     }
     return a;
-  }, [m]);
+  }, [m.id]);
+  const answers = answerOrder.map((id) =>
+    m.options.find((option) => option.id === id),
+  );
+  const feedbackText = !feedback
+    ? ""
+    : feedback === "observation"
+      ? m.kind === "match"
+        ? t("mission.reviewRoles")
+        : t("mission.reviewEvidence", {
+            metrics: formatList(
+              m.evidence.map(
+                (id) => METRICS.find((item) => item.id === id).label,
+              ),
+            ),
+          })
+      : m.options.find((option) => option.id === feedback)?.feedback;
   useEffect(() => {
     heading.current?.focus({
       preventScroll: true,
@@ -481,11 +477,7 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
     if (stage === "observe") {
       if (!observed) {
         setObsErrors((n) => n + 1);
-        setFeedback(
-          m.kind === "match"
-            ? "Review the roles of the two indices and try again."
-            : `Review ${m.evidence.map((id) => METRICS.find((x) => x.id === id).label).join(" and ")}. Adjust your selection and try again.`,
-        );
+        setFeedback("observation");
         return;
       }
       setStage("reason");
@@ -496,7 +488,7 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
     if (!a || completed.current) return;
     if (!a.correct) {
       setAnswerErrors((prev) => [...prev, a.id]);
-      setFeedback(a.feedback);
+      setFeedback(a.id);
       setChoice("");
       return;
     }
@@ -543,39 +535,35 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
           onClick={() => (stage === "done" ? onExit() : setExit(true))}
         >
           <Icon name={"back"} />
-          {" Choose a path"}
+          {t("common.choosePath")}
         </button>
-        <span>
-          {path.title}
-          {" \xB7 Mission "}
-          {index + 1}
-        </span>
-        <span>{"No time pressure"}</span>
+        <span>{t("mission.nav", { path: path.title, number: index + 1 })}</span>
+        <span>{t("mission.noPressure")}</span>
       </div>
-      <nav className={"game-mobile-tabs"} aria-label={"Game view"}>
+      <nav className={"game-mobile-tabs"} aria-label={t("mission.view")}>
         <button
           aria-pressed={panel === "monitor"}
           onClick={() => setPanel("monitor")}
         >
-          {"Conox monitor"}
+          {t("mission.monitor")}
         </button>
         <button
           aria-pressed={panel === "challenge"}
           onClick={() => setPanel("challenge")}
         >
-          {stage === "done" ? "Your result" : "Your challenge"}
+          {stage === "done" ? t("mission.result") : t("mission.challenge")}
         </button>
       </nav>
       <div className={"game-play-layout"} data-view={panel}>
         <section
           className={"game-observation path-observation"}
           ref={monitor}
-          aria-label={"Conox simulator display"}
+          aria-label={t("mission.display")}
         >
           <GameMonitor scenario={scenario} controls={controls} />
           <p className={"game-monitor-caption"}>
-            {"Live synthetic signals"}
-            <span>{"Explore the original Conox display."}</span>
+            {t("mission.signals")}
+            <span>{t("mission.caption")}</span>
           </p>
           {m.kind === "compare" && (
             <div className={"path-reference-status"}>
@@ -590,8 +578,12 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
             </span>
             <span>{m.title}</span>
           </div>
-          <div className={"game-stepper"} aria-label={"Learning steps"}>
-            {["Explore", "Reason", "Learn"].map((t, i) => (
+          <div className={"game-stepper"} aria-label={t("mission.steps")}>
+            {[
+              t("mission.step.observe"),
+              t("mission.step.reason"),
+              t("mission.step.done"),
+            ].map((t, i) => (
               <span
                 key={t}
                 className={
@@ -608,10 +600,10 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
           </div>
           <h1 ref={heading} tabIndex={-1}>
             {stage === "observe"
-              ? "Take a closer look."
+              ? t("mission.look")
               : stage === "reason"
                 ? m.question
-                : "Nicely done!"}
+                : t("mission.wellDone")}
           </h1>
           {stage === "observe" && (
             <React.Fragment>
@@ -641,10 +633,10 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
                     ))}
                   </div>
                   <p className={"game-selection-count"} aria-live={"polite"}>
-                    {selected.length}
-                    {" / "}
-                    {m.evidence.length}
-                    {" clues selected"}
+                    {t("mission.selected", {
+                      count: selected.length,
+                      total: m.evidence.length,
+                    })}
                   </p>
                 </React.Fragment>
               )}
@@ -654,7 +646,9 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
                     <label key={id}>
                       <strong>{id === "qcon" ? "qCON" : "qNOX"}</strong>
                       <select
-                        aria-label={`Role of ${id === "qcon" ? "qCON" : "qNOX"}`}
+                        aria-label={t("mission.role", {
+                          index: id === "qcon" ? "qCON" : "qNOX",
+                        })}
                         value={matches[id] || ""}
                         onChange={(e) => {
                           setMatches((p) => ({
@@ -664,15 +658,15 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
                           setFeedback("");
                         }}
                       >
-                        <option value={""}>{"Choose its role\u2026"}</option>
+                        <option value={""}>{t("mission.chooseRole")}</option>
                         <option value={"response"}>
-                          {"Probability of response to a noxious stimulus"}
+                          {t("mission.response")}
                         </option>
                         <option value={"quality"}>
-                          {"Quality of the EEG signal"}
+                          {t("mission.quality")}
                         </option>
                         <option value={"consciousness"}>
-                          {"Level of consciousness"}
+                          {t("mission.consciousness")}
                         </option>
                       </select>
                     </label>
@@ -694,13 +688,13 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
                       setAllView(true);
                     }}
                   >
-                    {"All signals "}
+                    {t("mission.allSignals")}
                     {allView && <Icon name={"check"} size={17} />}
                   </button>
                   <p className={"path-tool-status"} aria-live={"polite"}>
                     {allView
-                      ? "Combined view explored. Notice the index trends."
-                      : "Use these controls to change the monitor view."}
+                      ? t("mission.viewExplored")
+                      : t("mission.changeView")}
                   </p>
                 </div>
               )}
@@ -718,31 +712,35 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
                     </button>
                   ))}
                   <p className={"path-tool-status"} aria-live={"polite"}>
-                    {seen.length}
-                    {` / ${references.length} references explored · Independent examples`}
+                    {t("mission.references", {
+                      count: seen.length,
+                      total: references.length,
+                    })}
                   </p>
                 </div>
               )}
               {m.kind === "advisory" && (
                 <div className={"path-advisory"}>
                   <div>
-                    <strong>{"qCON advisory"}</strong>
+                    <strong>{t("advisory.title")}</strong>
                     <button
                       className={`path-toggle ${advisory.enabled ? "on" : ""}`}
                       role={"switch"}
                       aria-checked={advisory.enabled}
-                      aria-label={"Enable qCON advisory"}
+                      aria-label={t("advisory.enable")}
                       onClick={() =>
                         changeAdvisory("enabled", !advisory.enabled)
                       }
                     >
-                      {advisory.enabled ? "On" : "Off"}
+                      {advisory.enabled ? t("advisory.on") : t("advisory.off")}
                     </button>
                   </div>
                   {["lower", "upper"].map((key) => (
                     <label key={key}>
                       <span>
-                        {key === "lower" ? "Lower limit" : "Upper limit"}
+                        {key === "lower"
+                          ? t("advisory.lower")
+                          : t("advisory.upper")}
                         <b>{advisory[key]}</b>
                       </span>
                       <input
@@ -754,18 +752,14 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
                       />
                     </label>
                   ))}
-                  <p>
-                    {"Displayed qCON: "}
-                    <b>{qcon ?? "\u2026"}</b>
-                    {" \xB7 Simulator limits, not clinical targets."}
-                  </p>
+                  <p>{t("advisory.value", { value: qcon ?? "…" })}</p>
                   <p
                     role={"status"}
                     className={triggerSeen ? "path-verified" : ""}
                   >
                     {triggerSeen
-                      ? "\u2713 Threshold crossing observed. You can continue."
-                      : "Enable the switch and move the upper limit below qCON."}
+                      ? t("advisory.observed")
+                      : t("advisory.instruction")}
                   </p>
                 </div>
               )}
@@ -774,7 +768,7 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
           {stage === "reason" && (
             <fieldset className={"game-answers"}>
               <legend className={"sr-only"}>
-                {"Choose the best interpretation"}
+                {t("mission.bestInterpretation")}
               </legend>
               {answers.map((a) => (
                 <label
@@ -793,14 +787,16 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
                     }}
                   />
                   <span>{a.label}</span>
-                  {answerErrors.includes(a.id) && <small>{"Review"}</small>}
+                  {answerErrors.includes(a.id) && (
+                    <small>{t("mission.review")}</small>
+                  )}
                 </label>
               ))}
             </fieldset>
           )}
           {feedback && (
             <p className={"game-answer-feedback"} role={"status"}>
-              {feedback}
+              {feedbackText}
             </p>
           )}
           {stage !== "done" ? (
@@ -810,7 +806,9 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
                 disabled={stage === "observe" ? !ready : !choice}
                 onClick={submit}
               >
-                {stage === "observe" ? "Confirm observation" : "Confirm answer"}
+                {stage === "observe"
+                  ? t("mission.confirmObservation")
+                  : t("mission.confirmAnswer")}
                 <Icon name={"arrow"} size={19} />
               </button>
               <div
@@ -825,8 +823,8 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
                     onClick={() => setHint(!hint)}
                   >
                     <Icon name={"help"} size={18} />
-                    {hint ? "Hide hint" : "Ask Coni"}
-                    <small>{"Free hint"}</small>
+                    {hint ? t("mission.hideHint") : t("mission.askConi")}
+                    <small>{t("mission.freeHint")}</small>
                   </button>
                 </div>
               </div>
@@ -841,7 +839,14 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
               <div className={"game-result"}>
                 <div
                   className={"path-stars"}
-                  aria-label={`${scoreFor(obsErrors, answerErrors.length) >= 85 ? 3 : scoreFor(obsErrors, answerErrors.length) >= 60 ? 2 : 1} out of 3 stars`}
+                  aria-label={t("mission.stars", {
+                    count:
+                      scoreFor(obsErrors, answerErrors.length) >= 85
+                        ? 3
+                        : scoreFor(obsErrors, answerErrors.length) >= 60
+                          ? 2
+                          : 1,
+                  })}
                 >
                   {[0, 60, 85].map((n) => (
                     <span
@@ -862,7 +867,7 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
                 </b>
               </div>
               <div className={"game-takeaway"}>
-                <h2>{"What to remember"}</h2>
+                <h2>{t("mission.takeaway")}</h2>
                 <p>{m.takeaway}</p>
               </div>
               <button
@@ -870,19 +875,16 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
                 aria-expanded={detail}
                 onClick={() => setDetail(!detail)}
               >
-                {detail ? "Hide details" : "Why? See explanation & score"}
+                {detail ? t("mission.hideDetails") : t("mission.details")}
               </button>
               {detail && (
                 <div className={"path-detail"}>
                   <p>{m.guide}</p>
                   <p>
-                    {"100 points \u2212 "}
-                    {obsErrors * 10}
-                    {" for observation retries \u2212 "}
-                    {answerErrors.length * 15}
-                    {
-                      " for answer retries. Hints are free. There is no time bonus."
-                    }
+                    {t("mission.scoreExplanation", {
+                      observation: obsErrors * 10,
+                      answer: answerErrors.length * 15,
+                    })}
                   </p>
                 </div>
               )}
@@ -896,12 +898,12 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
                 {" \u2197"}
               </a>
               <button className={"game-primary"} onClick={onNext}>
-                {index === 3 ? "See path results" : "Next mission"}
+                {index === 3 ? t("mission.pathResults") : t("mission.next")}
                 <Icon name={"arrow"} />
               </button>
               <div className={"path-coach path-success"}>
                 <Buddy />
-                <p>{"Another clue, another step forward."}</p>
+                <p>{t("mission.success")}</p>
               </div>
             </div>
           )}
@@ -909,9 +911,9 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
       </div>
       {exit && (
         <Dialog
-          title={"Leave this attempt?"}
-          copy={"Your completed missions and best scores will be kept."}
-          confirm={"Leave attempt"}
+          title={t("dialog.leaveTitle")}
+          copy={t("dialog.leaveCopy")}
+          confirm={t("dialog.leave")}
           onConfirm={onExit}
           onCancel={() => setExit(false)}
         />
@@ -920,6 +922,7 @@ function Mission({ mission: m, path, index, onExit, onFinish, onNext }) {
   );
 }
 export default function App() {
+  const { t, locale, setLocale, paths: PATHS } = useGameI18n();
   const [caseDone, setCaseDone] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem(CASE_KEY))?.completed === true;
@@ -942,10 +945,6 @@ export default function App() {
     [storageFailed, setStorageFailed] = useState(false);
   const path = PATHS.find((p) => p.id === pathId);
   const main = useRef(null);
-  useEffect(() => {
-    document.title = "Conox Challenge \xB7 Three learning paths";
-    document.documentElement.lang = "en";
-  }, []);
   useEffect(() => {
     try {
       localStorage.setItem(
@@ -989,7 +988,7 @@ export default function App() {
         <div className={"game-brand"}>
           <button
             className="game-home-logo"
-            aria-label="Fresenius · Back to game home"
+            aria-label={t("app.home")}
             onClick={() => setView("home")}
           >
             <img src={logoUrl} alt="Fresenius" />
@@ -1002,7 +1001,7 @@ export default function App() {
               {path.title}
             </span>
             <div className={"game-header-progress"}>
-              <ol aria-label={"Mission progress"}>
+              <ol aria-label={t("app.progress")}>
                 {path.missions.map((m, i) => (
                   <li
                     key={m.id}
@@ -1016,7 +1015,10 @@ export default function App() {
                     aria-current={
                       view === "mission" && i === active ? "step" : void 0
                     }
-                    aria-label={`Mission ${i + 1}${results[m.id] ? ", complete" : ""}`}
+                    aria-label={t(
+                      results[m.id] ? "app.missionComplete" : "app.mission",
+                      { number: i + 1 },
+                    )}
                   >
                     {results[m.id] ? <Icon name={"check"} size={16} /> : i + 1}
                   </li>
@@ -1031,14 +1033,33 @@ export default function App() {
         ) : (
           <span className={"path-header-note"}>
             <Icon name={"sparkles"} size={17} />{" "}
-            {view === "discovery" ? "Discover EEG" : "Learn with Coni"}
+            {view === "discovery" ? t("paths.discover.title") : t("app.learn")}
           </span>
         )}
+        <div
+          className="game-language-switch"
+          role="group"
+          aria-label={t("app.language")}
+        >
+          {GAME_LOCALES.map((language) => (
+            <button
+              key={language.code}
+              type="button"
+              lang={language.code}
+              aria-label={language.name}
+              title={language.name}
+              aria-pressed={locale === language.code}
+              onClick={() => setLocale(language.code)}
+            >
+              {language.code.toUpperCase()}
+            </button>
+          ))}
+        </div>
       </header>
       <main ref={main} className={"game-content"}>
         {storageFailed && (
           <p className={"game-storage-warning"} role={"status"}>
-            {"Local saving is unavailable. Progress is kept for this session."}
+            {t("app.storage")}
           </p>
         )}
         {view === "home" ? (
@@ -1084,16 +1105,14 @@ export default function App() {
         )}
       </main>
       <footer className={"game-footer"}>
-        <span>{"Synthetic training signals \xB7 ICU learning"}</span>
-        <span>{"For learning only \xB7 Not clinical guidance"}</span>
+        <span>{t("app.signals")}</span>
+        <span>{t("app.disclaimer")}</span>
       </footer>
       {reset && (
         <Dialog
-          title={`Reset ${path.title}?`}
-          copy={
-            "Only this path\u2019s scores will be removed. Your other paths will be kept."
-          }
-          confirm={"Reset this path"}
+          title={t("dialog.resetTitle", { path: path.title })}
+          copy={t("dialog.resetCopy")}
+          confirm={t("summary.reset")}
           onConfirm={() => {
             setResults((prev) => {
               const next = {

@@ -37,10 +37,20 @@ import {
 } from "../recordings/caseFile.js";
 import "../styles/recordings.css";
 
-export default function RecordingPlayer({ onClose }) {
-  const [locale, setLocale] = React.useState(getInitialLocale);
+export default function RecordingPlayer({
+  onClose,
+  demoFileFactory,
+  onLoaded,
+  suiteLocale = null,
+  previewCopy,
+}) {
+  const [selectedLocale, setLocale] = React.useState(() =>
+    demoFileFactory ? "fr" : getInitialLocale(),
+  );
+  const locale = suiteLocale ?? selectedLocale;
   const { t, displayViews } = React.useMemo(() => createI18n(locale), [locale]);
   const [data, setData] = React.useState(null);
+  const [isDemo, setIsDemo] = React.useState(false);
   const [referenceProfile, setReferenceProfile] = React.useState(
     DEFAULT_REFERENCE_PROFILE,
   );
@@ -162,6 +172,7 @@ export default function RecordingPlayer({ onClose }) {
       loadFile(new File([sourceBlobRef.current], sourceNameRef.current), {
         referenceProfile: profile,
         restoredState,
+        isDemo,
       });
       return;
     }
@@ -257,6 +268,8 @@ export default function RecordingPlayer({ onClose }) {
         );
         sourceNameRef.current = result.sourceName;
         setData(result);
+        setIsDemo(Boolean(options.isDemo));
+        onLoaded?.();
         setReferenceProfile(result.referenceProfile);
         setLocale(restored.locale);
         positionRef.current = restored.position;
@@ -491,12 +504,28 @@ export default function RecordingPlayer({ onClose }) {
     }
   };
 
+  const loadDemo = async () => {
+    if (locked) return;
+    setBusy(true);
+    const request = ++requestRef.current;
+    try {
+      const file = await demoFileFactory();
+      if (request === requestRef.current)
+        await loadFile(file, { isDemo: true });
+    } catch {
+      if (request === requestRef.current) {
+        setBusy(false);
+        setError("UNKNOWN");
+      }
+    }
+  };
   const recording = data?.recording;
   const errorText =
     error &&
     (RECORDING_UI[locale][`recording.error.${error}`] || t("recording.error"));
   return (
     <main
+      lang={locale}
       className={`sb-shell recording-shell${recording ? " has-recording" : ""}`}
     >
       <header className="sb-header recording-header">
@@ -542,6 +571,19 @@ export default function RecordingPlayer({ onClose }) {
           >
             {t(recording ? "recording.replace" : "recording.choose")}
           </button>
+          {demoFileFactory && !recording && (
+            <button
+              type="button"
+              className="sb-btn lab-demo-button"
+              onClick={loadDemo}
+              disabled={locked}
+            >
+              {previewCopy.tryDemo}
+            </button>
+          )}
+          {recording && isDemo && (
+            <span className="lab-demo-label">{previewCopy.demoLabel}</span>
+          )}
           <input
             ref={fileInputRef}
             type="file"
@@ -648,7 +690,31 @@ export default function RecordingPlayer({ onClose }) {
           </p>
         )}
         {!recording && !busy && (
-          <div className="recording-empty">{t("recording.empty")}</div>
+          <div className="recording-empty">
+            {demoFileFactory ? (
+              <>
+                <span className="lab-empty-kicker">
+                  {previewCopy.emptyKicker}
+                </span>
+                <h2>{previewCopy.emptyTitle}</h2>
+                <p>{previewCopy.emptyDescription}</p>
+                <div className="lab-empty-steps">
+                  <span>
+                    <b>01</b> {previewCopy.emptySteps[0]}
+                  </span>
+                  <span>
+                    <b>02</b> {previewCopy.emptySteps[1]}
+                  </span>
+                  <span>
+                    <b>03</b> {previewCopy.emptySteps[2]}
+                  </span>
+                </div>
+                <small>{previewCopy.emptyLocal}</small>
+              </>
+            ) : (
+              t("recording.empty")
+            )}
+          </div>
         )}
         {recording && (
           <>
